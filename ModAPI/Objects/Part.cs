@@ -3,7 +3,6 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using ModAPI.Triggers;
 using ModAPI.Joint;
-using MSCLoader;
 
 namespace ModAPI.Objects
 {
@@ -144,7 +143,7 @@ namespace ModAPI.Objects
         /// Makes the part a pickable item depending on the provided values.
         /// </summary>
         /// <param name="pickable">Make part pickable?</param>
-        /// <param name="layer">Make part on different layer. if this is <see langword="null"/>, it will give the part an "Untagged" tag.</param>
+        /// <param name="layer">Make part on different layer. if this is <see langword="null"/>, it will give the part the "Parts" layer.</param>
         public void makePartPickable(bool pickable, string layer = null)
         {
             // Written, 14.08.2018
@@ -194,14 +193,10 @@ namespace ModAPI.Objects
             Object.Destroy(fixedJoint);
             JointCallBack jcb = this.parent.GetComponent<JointCallBack>();
             Object.Destroy(jcb);
-            Rigidbody rigidbody = this.part.AddComponent<Rigidbody>();
-            rigidbody = this.tempRigidbody;
             this.partTrigger.triggerGameObject.SetActive(true);
             ModAPI.disassembleAudio.transform.position = this.part.transform.position;
             ModAPI.disassembleAudio.Play();
             this.installed = false;
-
-            //ModConsole.Print("[Disassemble] - parent = " + this.part.transform.parent);
         }
         /// <summary>
         /// Assembles the <see cref="part"/>.
@@ -211,9 +206,6 @@ namespace ModAPI.Objects
             // Written, 10.08.2018
 
             this.makePartPickable(false, this.part.name);
-            Rigidbody rigidbody = this.part.GetComponent<Rigidbody>();
-            this.tempRigidbody = rigidbody;
-            Object.Destroy(rigidbody);
             Transform transform = GameObject.Find(this.part.name).transform;
             transform.SetParent(this.parent.transform, false);
             transform.localPosition = this.partTriggerPosition;
@@ -231,7 +223,7 @@ namespace ModAPI.Objects
             this.installed = true;
         }
 
-        public void update() // Testing
+        public void update()
         {
             // Testing
 
@@ -239,12 +231,10 @@ namespace ModAPI.Objects
             {
                 if (Input.GetKeyDown(KeyCode.Mouse1))
                 {
-                    if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hitInfo, 1, LayerMask.NameToLayer(this.part.name)/*~(1 << LayerMask.NameToLayer(this.part.name))*/) && this.isPartCollider(hitInfo.collider))
+                    if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hitInfo, 1, LayerMask.NameToLayer(this.part.name)) && this.isPartCollider(hitInfo.collider))
                     {
                         this.disassemble();
                     }
-                    ModConsole.Print(hitInfo.collider.gameObject.name);
-                    ModConsole.Print(hitInfo.collider.transform.gameObject.name);
                 }
             }
             else

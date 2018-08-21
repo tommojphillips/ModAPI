@@ -31,7 +31,8 @@ namespace ModAPI.Triggers
         /// <param name="parent">The parent gameobject of the trigger.</param>
         /// <param name="position">The position for the trigger. ('local' related to the parent).</param>
         /// <param name="scale">The scale for the trigger.</param>
-        public Trigger(string triggerName, GameObject parent, Vector3 position, Vector3 scale)
+        /// <param name="visible">Sets whether the trigger should be visualized or not.</param>
+        public Trigger(string triggerName, GameObject parent, Vector3 position, Vector3 scale, bool visible = false)
         {
             // Written, 10.08.2018
 
@@ -41,7 +42,7 @@ namespace ModAPI.Triggers
             this.triggerGameObject.transform.localPosition = position;// setting the position for the trigger.
             this.triggerGameObject.transform.localScale = scale; // setting the scale for the trigger.
             this.triggerGameObject.GetComponent<Collider>().isTrigger = true; // making the gameobject a trigger.
-            this.triggerGameObject.GetComponent<Renderer>().enabled = false; // making the trigger invisible.
+            this.triggerGameObject.GetComponent<Renderer>().enabled = visible;
         }
 
         #endregion
