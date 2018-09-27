@@ -63,7 +63,7 @@ namespace ModAPI
         {
             get
             {
-                PlayerModeEnum pme = PlayerModeEnum.InOther;
+                PlayerModeEnum pme;
                 string currentVechicle = FsmVariables.GlobalVariables.FindFsmString("PlayerCurrentVehicle").Value;
                 switch (currentVechicle)
                 {
@@ -72,6 +72,9 @@ namespace ModAPI
                         break;
                     case "Satsuma":
                         pme = PlayerModeEnum.InSatsuma;
+                        break;
+                    default:
+                         pme = PlayerModeEnum.InOther;
                         break;
                 }
                 return pme;
