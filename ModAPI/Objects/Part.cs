@@ -9,22 +9,14 @@ namespace ModAPI.Objects
     /// <summary>
     /// Represents an attachable gameobject for the satsuma.
     /// </summary>
-    public abstract class Part
+    public abstract class Part : MonoBehaviour
     {
         // Written, 09.08.2018
 
         #region Properties
-
+        
         /// <summary>
-        /// Represents the part as a gameobject.
-        /// </summary>
-        public GameObject part
-        {
-            get;
-            set;
-        }
-        /// <summary>
-        /// Represents the parent for the part.
+        /// Represents the parent for the part. The gameobject that this part connects to.
         /// </summary>
         public GameObject parent
         {
@@ -79,7 +71,7 @@ namespace ModAPI.Objects
         {
             get
             {
-                if (this.part.layer == LayerMask.NameToLayer("Wheel"))
+                if (this.gameObject.layer == LayerMask.NameToLayer("Wheel"))
                     return true;
                 return false;
             }
@@ -92,16 +84,18 @@ namespace ModAPI.Objects
             get;
             private set;
         }
-
+        /// <summary>
+        /// Represents whether to use fixed joint or parenting to attach the object.
+        /// </summary>
+        public bool useFixedJoint
+        {
+            get;
+            set;
+        }
 
         #endregion
 
         #region Fields
-
-        /// <summary>
-        /// Holds the rigidbody for the part when the part is assembled.
-        /// </summary>
-        private Rigidbody tempRigidbody;
 
         #endregion
 
@@ -124,11 +118,9 @@ namespace ModAPI.Objects
         /// <param name="inPartTrigger">The trigger for the part to assign.</param>
         /// <param name="inPartPosition">The position that the part will stay relavited to the parent.</param>
         /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent.</param>
-        public Part(GameObject inPart, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
+        public Part(Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
         {
             // Written, 09.08.2018
-
-            this.part = inPart;            
             this.partTrigger = inPartTrigger;
             this.initializeTriggerCallback();
             this.partTriggerPosition = inPartPosition;
@@ -148,11 +140,11 @@ namespace ModAPI.Objects
         {
             // Written, 14.08.2018
 
-            this.part.layer = LayerMask.NameToLayer(layer ?? "Parts");
+            this.gameObject.layer = LayerMask.NameToLayer(layer ?? "Parts");
             if (pickable)
-                this.part.tag = "PART";
+                this.gameObject.tag = "PART";
             else
-                this.part.tag = "Untagged";
+                this.gameObject.tag = "Untagged";
         }
         /// <summary>
         /// Checks that the parmeter, <paramref name="collider"/>'s <see cref="UnityEngine.Object.name"/> property is equal to the <see cref="part"/>'s
@@ -164,7 +156,7 @@ namespace ModAPI.Objects
             // Written, 10.08.2018
 
             string _name = collider.gameObject.name;
-            if (_name == this.part.name)
+            if (_name == this.gameObject.name)
                 return true;
             return false;
         }
@@ -187,14 +179,17 @@ namespace ModAPI.Objects
             // Written, 09.08.2018
 
             this.makePartPickable(true);
-            Transform transform = GameObject.Find(this.part.name).transform;
-            transform.SetParent(null);
-            FixedJoint fixedJoint = this.parent.GetComponent<FixedJoint>();
-            Object.Destroy(fixedJoint);
-            JointCallBack jcb = this.parent.GetComponent<JointCallBack>();
-            Object.Destroy(jcb);
+            //this.gameObject.transform.SetParent(null);
+            if (this.useFixedJoint)
+            {
+
+                FixedJoint fixedJoint = this.parent.GetComponent<FixedJoint>();
+                Object.Destroy(fixedJoint);
+                JointCallBack jcb = this.parent.GetComponent<JointCallBack>();
+                Object.Destroy(jcb);
+            }
             this.partTrigger.triggerGameObject.SetActive(true);
-            ModAPI.disassembleAudio.transform.position = this.part.transform.position;
+            ModAPI.disassembleAudio.transform.position = this.gameObject.transform.position;
             ModAPI.disassembleAudio.Play();
             this.installed = false;
         }
@@ -205,25 +200,29 @@ namespace ModAPI.Objects
         {
             // Written, 10.08.2018
 
-            this.makePartPickable(false, this.part.name);
-            Transform transform = GameObject.Find(this.part.name).transform;
-            transform.SetParent(this.parent.transform, false);
-            transform.localPosition = this.partTriggerPosition;
-            transform.localRotation = this.partTriggerRotation;
-            FixedJoint fixedJoint = this.parent.AddComponent<FixedJoint>();
-            fixedJoint.connectedBody = this.part.GetComponent<Collider>().attachedRigidbody;
-            fixedJoint.enableCollision = false;
-            fixedJoint.breakForce = this.breakForce;
-            JointCallBack jcb = this.parent.AddComponent<JointCallBack>();
-            jcb.onJointBreak += new Action<float>(this.onJointBreak);
+            this.makePartPickable(false);            
+            this.gameObject.transform.SetParent(this.parent.transform, false);
+            this.gameObject.transform.localPosition = this.partTriggerPosition;
+            this.gameObject.transform.localRotation = this.partTriggerRotation;
+            if (this.useFixedJoint)
+            {
+                FixedJoint fixedJoint = this.parent.AddComponent<FixedJoint>();
+                fixedJoint.connectedBody = this.gameObject.GetComponent<Collider>().attachedRigidbody;
+                fixedJoint.enableCollision = false;
+                fixedJoint.breakForce = this.breakForce;
+                JointCallBack jcb = this.parent.AddComponent<JointCallBack>();
+                jcb.onJointBreak += new Action<float>(this.onJointBreak);
+            }
             this.partTrigger.triggerGameObject.SetActive(false);
             ModAPI.guiAssemble = false;
-            ModAPI.assembleAudio.transform.position = this.part.transform.position;
+            ModAPI.assembleAudio.transform.position = this.gameObject.transform.position;
             ModAPI.assembleAudio.Play();
             this.installed = true;
         }
-
-        public void update()
+        /// <summary>
+        /// Occurs every frame
+        /// </summary>
+        public virtual void Update()
         {
             // Testing
 
@@ -231,7 +230,7 @@ namespace ModAPI.Objects
             {
                 if (Input.GetKeyDown(KeyCode.Mouse1))
                 {
-                    if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hitInfo, 1, LayerMask.NameToLayer(this.part.name)) && this.isPartCollider(hitInfo.collider))
+                    if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hitInfo, 1, this.gameObject.layer) && this.isPartCollider(hitInfo.collider))
                     {
                         this.disassemble();
                     }

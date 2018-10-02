@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\ModAPI.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -50,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Joint\JointCallBack.cs" />
+    <Compile Include="LayerMasksEnum.cs" />
     <Compile Include="ModAPI.cs" />
     <Compile Include="Objects\Part.cs" />
     <Compile Include="PlayerModeEnum.cs" />

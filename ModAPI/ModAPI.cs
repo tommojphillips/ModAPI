@@ -43,17 +43,31 @@ namespace ModAPI
             }
         }
         /// <summary>
-        /// Represents whether the gui interaction icon is shown or not. (Hand Symbol)
+        /// Represents whether or not the gui use icon is shown. (Hand Symbol)
         /// </summary>
-        public static bool guiInteraction
+        public static bool guiUse
         {
             get
             {
-                return PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIinteraction").Value;
+                return PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse").Value;
             }
             set
             {
-                PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIinteraction").Value = value;
+                PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse").Value = value;
+            }
+        }
+        /// <summary>
+        /// Represents whether or not to display gui interaction text.
+        /// </summary>
+        public static string guiInteraction
+        {
+            get
+            {
+                return PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value;
+            }
+            set
+            {
+                PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value = value;
             }
         }
         /// <summary>
@@ -96,6 +110,25 @@ namespace ModAPI
             assembleAudio = go.GetComponent<AudioSource>();
             go = GameObject.Find("MasterAudio/CarBuilding/disassemble");
             disassembleAudio = go.GetComponent<AudioSource>();
+        }
+        /// <summary>
+        /// Displays an interaction text and optional hand symbol. If no parameters are passed into the method (default parameters), turns off the interaction.
+        /// </summary>
+        /// <param name="inText">The text to display.</param>
+        /// <param name="showHand">Whether or not to display the hand symbol.</param>
+        public static void guiInteract(string inText = "", bool showHand = true)
+        {
+            // Written, 30.09.2018
+
+            if (inText == "")
+            {
+                guiUse = false;
+                guiInteraction = inText;
+                return;
+            }
+            guiUse = showHand;
+            guiInteraction = inText;
+
         }
 
         #endregion
