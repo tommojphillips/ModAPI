@@ -16,13 +16,18 @@ namespace ModAPI.Objects
         #region Properties
         
         /// <summary>
+        /// Represents the default save info for when there is no save data passed.
+        /// </summary>
+        public abstract PartSaveInfo defaultPartSaveInfo
+        {
+            get;
+        }
+        /// <summary>
         /// Represents the parent for the part. The gameobject that this part connects to.
         /// </summary>
-        public GameObject parent
+        public abstract GameObject parent
         {
-
             get;
-            set;
         }
         /// <summary>
         /// Represents the trigger for the part.
@@ -132,15 +137,24 @@ namespace ModAPI.Objects
         #region Methods
 
         /// <summary>
+        /// Gets all part data to save info.
+        /// </summary>
+        public PartSaveInfo getSaveInfo()
+        {
+            // Written, 04.10.2018
+
+            return new PartSaveInfo(this);
+        }
+        /// <summary>
         /// Makes the part a pickable item depending on the provided values.
         /// </summary>
         /// <param name="pickable">Make part pickable?</param>
-        /// <param name="layer">Make part on different layer. if this is <see langword="null"/>, it will give the part the "Parts" layer.</param>
-        public void makePartPickable(bool pickable, string layer = null)
+        /// <param name="layer">Make part on different layer</param>
+        public void makePartPickable(bool pickable, LayerMasksEnum layer = LayerMasksEnum.Parts)
         {
             // Written, 14.08.2018
 
-            this.gameObject.layer = LayerMask.NameToLayer(layer ?? "Parts");
+            this.gameObject.layer = layer.getLayer();
             if (pickable)
                 this.gameObject.tag = "PART";
             else
@@ -167,52 +181,45 @@ namespace ModAPI.Objects
         {
             // Written, 10.08.2018
 
-            this.partTrigger.triggerGameObject.AddComponent<TriggerCallback>();
-            this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerEnter += new Action<Collider>(this.onTriggerEnter);
+            this.partTrigger.triggerGameObject.AddComponent<TriggerCallback>().onTriggerStay += new Action<Collider>(this.onTriggerStay);
+            //this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerEnter += new Action<Collider>(this.onTriggerEnter);
             this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerExit += new Action<Collider>(this.onTriggerExit);
             }
         /// <summary>
-        /// Disassembles the <see cref="part"/>.
+        /// Disassembles the <see cref="GameObject.gameObject"/>.
         /// </summary>
         public virtual void disassemble()
         {
             // Written, 09.08.2018
 
             this.makePartPickable(true);
-            //this.gameObject.transform.SetParent(null);
-            if (this.useFixedJoint)
-            {
-
-                FixedJoint fixedJoint = this.parent.GetComponent<FixedJoint>();
-                Object.Destroy(fixedJoint);
-                JointCallBack jcb = this.parent.GetComponent<JointCallBack>();
-                Object.Destroy(jcb);
-            }
+            this.gameObject.transform.SetParent(null);
+            FixedJoint fixedJoint = this.parent.GetComponent<FixedJoint>();
+            Object.Destroy(fixedJoint);
+            JointCallBack jcb = this.parent.GetComponent<JointCallBack>();
+            Object.Destroy(jcb);
             this.partTrigger.triggerGameObject.SetActive(true);
             ModAPI.disassembleAudio.transform.position = this.gameObject.transform.position;
             ModAPI.disassembleAudio.Play();
             this.installed = false;
         }
         /// <summary>
-        /// Assembles the <see cref="part"/>.
+        /// Assembles the <see cref="GameObject.gameObject"/>.
         /// </summary>
         public virtual void assemble()
         {
             // Written, 10.08.2018
 
-            this.makePartPickable(false);            
-            this.gameObject.transform.SetParent(this.parent.transform, false);
+            this.makePartPickable(false);
             this.gameObject.transform.localPosition = this.partTriggerPosition;
             this.gameObject.transform.localRotation = this.partTriggerRotation;
-            if (this.useFixedJoint)
-            {
-                FixedJoint fixedJoint = this.parent.AddComponent<FixedJoint>();
-                fixedJoint.connectedBody = this.gameObject.GetComponent<Collider>().attachedRigidbody;
-                fixedJoint.enableCollision = false;
-                fixedJoint.breakForce = this.breakForce;
-                JointCallBack jcb = this.parent.AddComponent<JointCallBack>();
-                jcb.onJointBreak += new Action<float>(this.onJointBreak);
-            }
+            FixedJoint fixedJoint = this.parent.AddComponent<FixedJoint>();
+            fixedJoint.connectedBody = this.gameObject.GetComponent<Collider>().attachedRigidbody;
+            fixedJoint.enableCollision = false;
+            fixedJoint.breakForce = this.breakForce;
+            this.gameObject.transform.SetParent(this.parent.transform, false);
+            JointCallBack jcb = this.parent.AddComponent<JointCallBack>();
+            jcb.onJointBreak += new Action<float>(this.onJointBreak);
             this.partTrigger.triggerGameObject.SetActive(false);
             ModAPI.guiAssemble = false;
             ModAPI.assembleAudio.transform.position = this.gameObject.transform.position;
@@ -224,62 +231,89 @@ namespace ModAPI.Objects
         /// </summary>
         public virtual void Update()
         {
-            // Testing
+            // Written, 02.10.2018
 
-            if (this.installed)
+            if (!this.partTrigger.triggerGameObject.activeInHierarchy)
             {
-                if (Input.GetKeyDown(KeyCode.Mouse1))
+                if (this.installed)
                 {
-                    if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hitInfo, 1, this.gameObject.layer) && this.isPartCollider(hitInfo.collider))
+                    if (Input.GetKeyDown(KeyCode.Mouse1))
                     {
-                        this.disassemble();
+                        if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hitInfo, 1, this.gameObject.layer) && this.isPartCollider(hitInfo.collider))
+                        {
+                            this.disassemble();
+                        }
                     }
                 }
             }
-            else
+            /*else
             {
-                if (this.isPartInTrigger && isPlayerHoldingPart)
+                if (layer == (int)LayerMasksEnum.Wheel)
                 {
                     if (Input.GetKeyDown(KeyCode.Mouse0))
                     {
-                        this.assemble();
+                        if (this.isPartInTrigger)
+                            this.assemble();
                     }
                 }
-            }
+            }*/
         }
 
         #endregion
 
         #region Event Handlers
 
-        /// <summary>
+        /*/// <summary>
         /// Occurs when the part has entered the trigger.
         /// </summary>
-        /// <param name="collider"></param>
-        private void onTriggerEnter(Collider collider)
+        /// <param name="inCollider"></param>
+        private void onTriggerEnter(Collider inCollider)
         {
             // Written, 10.08.2018
             
-            if (this.isPartCollider(collider) && isPlayerHoldingPart)
+            if (this.isPartCollider(inCollider) && isPlayerHoldingPart)
             {
                 ModAPI.guiAssemble = true;
                 this.isPartInTrigger = true;
             }
-        }
+        }*/
         /// <summary>
         /// Occurs when the part has exited the trigger.
         /// </summary>
-        /// <param name="collider"></param>
-        private void onTriggerExit(Collider collider)
+        /// <param name="inCollider">The collider that exited the trigger.</param>
+        private void onTriggerExit(Collider inCollider)
         {
             // Written, 10.08.2018
             
-            if (this.isPartCollider(collider))
+            if (this.isPartCollider(inCollider))
             {
                 ModAPI.guiAssemble = false;
                 this.isPartInTrigger = false;
             }
-        }        
+        }
+        /// <summary>
+        /// Occurs when the part is in the trigger.
+        /// </summary>
+        /// <param name="inCollider">The collider that's in the trigger.</param>
+        private void onTriggerStay(Collider inCollider)
+        {
+            // Written, 02.10.2018
+
+            if (this.isPlayerHoldingPart)
+            {
+                if (Input.GetKeyDown(KeyCode.Mouse0))
+                {
+                    if (this.isPartInTrigger)
+                        this.assemble();
+                }
+
+                if (this.isPartCollider(inCollider))
+                {
+                    ModAPI.guiAssemble = true;
+                    this.isPartInTrigger = true;
+                }
+            }      
+        }
         /// <summary>
         /// Occurs when the joint is broken.
         /// </summary>

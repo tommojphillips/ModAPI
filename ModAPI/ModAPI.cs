@@ -132,5 +132,140 @@ namespace ModAPI
         }
 
         #endregion
+
+        #region ExMethods
+
+        /// <summary>
+        /// Sends all children of game object to layer.
+        /// </summary>
+        /// <param name="inGameObject">The gameobject to get children from.</param>
+        /// <param name="inLayer">The layer to send gameobject children to.</param>
+        public static void sendChildrenToLayer(this GameObject inGameObject, LayerMasksEnum inLayer)
+        {
+            // Written, 27.09.2018
+
+            for (int i = 0; i < inGameObject.transform.childCount; i++)
+            {
+                inGameObject.transform.GetChild(i).gameObject.toLayer(inLayer);
+            }
+        }
+        /// <summary>
+        /// Sends a gameobject to the desired layer.
+        /// </summary>
+        /// <param name="inGameObject">The gameObject.</param>
+        /// <param name="inLayer">The Layer.</param>
+        public static void toLayer(this GameObject inGameObject, LayerMasksEnum inLayer)
+        {
+            // Written, 02.10.2018
+
+            inGameObject.layer = getLayer(inLayer);
+        }
+        /// <summary>
+        /// Returns the layer.
+        /// </summary>
+        /// <param name="inLayer">The layer to get.</param>
+        public static int getLayer(this LayerMasksEnum inLayer)
+        {
+            // Written, 02.10.2018
+
+            return (int)inLayer;
+        }
+        /// <summary>
+        /// Returns the name of the layer.
+        /// </summary>
+        /// <param name="inLayer">The layer to get.</param>
+        public static string getLayerName(this LayerMasksEnum inLayer)
+        {
+            // Written, 02.10.2018
+
+            string layerName;
+            switch (inLayer)
+            {
+                case LayerMasksEnum.Bolts:
+                    layerName = "Bolts";
+                    break;
+                case LayerMasksEnum.Cloud:
+                    layerName = "Cloud";
+                    break;
+                case LayerMasksEnum.Collider:
+                    layerName = "Collider";
+                    break;
+                case LayerMasksEnum.Collider2:
+                    layerName = "Collider2";
+                    break;
+                case LayerMasksEnum.Dashboard:
+                    layerName = "Dashboard";
+                    break;
+                case LayerMasksEnum.Datsun:
+                    layerName = "Datsun";
+                    break;
+                case LayerMasksEnum.Default:
+                    layerName = "Default";
+                    break;
+                case LayerMasksEnum.DontCollide:
+                    layerName = "DontCollide";
+                    break;
+                case LayerMasksEnum.Forest:
+                    layerName = "Forest";
+                    break;
+                case LayerMasksEnum.Glass:
+                    layerName = "Glass";
+                    break;
+                case LayerMasksEnum.GUI:
+                    layerName = "GUI";
+                    break;
+                case LayerMasksEnum.HingedObjects:
+                    layerName = "HingedObjects";
+                    break;
+                case LayerMasksEnum.IgnoreRaycast:
+                    layerName = "IgnoreRaycast";
+                    break;
+                case LayerMasksEnum.Lifter:
+                    layerName = "Lifter";
+                    break;
+                case LayerMasksEnum.NoRain:
+                    layerName = "NoRain";
+                    break;
+                case LayerMasksEnum.Parts:
+                    layerName = "Parts";
+                    break;
+                case LayerMasksEnum.Player:
+                    layerName = "Player";
+                    break;
+                case LayerMasksEnum.PlayerOnlyColl:
+                    layerName = "PlayerOnlyColl";
+                    break;
+                case LayerMasksEnum.Road:
+                    layerName = "Road";
+                    break;
+                case LayerMasksEnum.Terrain:
+                    layerName = "Terrain";
+                    break;
+                case LayerMasksEnum.Tools:
+                    layerName = "Tools";
+                    break;
+                case LayerMasksEnum.TransparentFX:
+                    layerName = "TransparentFX";
+                    break;
+                case LayerMasksEnum.TriggerOnly:
+                    layerName = "TriggerOnly";
+                    break;
+                case LayerMasksEnum.UI:
+                    layerName = "UI";
+                    break;
+                case LayerMasksEnum.Water:
+                    layerName = "Water";
+                    break;
+                case LayerMasksEnum.Wheel:
+                    layerName = "Wheel";
+                    break;
+                default:
+                    layerName = "Blank";
+                    break;
+            }
+            return layerName;
+        }
+
+        #endregion
     }
 }
