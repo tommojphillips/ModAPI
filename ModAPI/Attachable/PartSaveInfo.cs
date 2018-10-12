@@ -1,6 +1,6 @@
-﻿using ModAPI.Objects;
+﻿using UnityEngine;
 
-namespace ModAPI
+namespace ModApi.Attachable
 {
     /// <summary>
     /// Represents save info about a particluar part.
@@ -12,12 +12,12 @@ namespace ModAPI
         #region Properties
 
         /// <summary>
-        /// Represnets whether or not the part is installed.
+        /// Represents whether or not the part is installed.
         /// </summary>
         public bool isInstalled
         {
             get;
-            private set;
+            set;
         }
         /// <summary>
         /// Part using fixed joints?
@@ -25,7 +25,7 @@ namespace ModAPI
         public bool useFixedJoints
         {
             get;
-            private set;
+            set;
         }
         /// <summary>
         /// Parts breakforce?
@@ -33,7 +33,23 @@ namespace ModAPI
         public float breakForce
         {
             get;
-            private set;
+            set;
+        }
+        /// <summary>
+        /// The position of the gameobject. (not installed; free part)
+        /// </summary>
+        public Vector3 position
+        {
+            get;
+            set;
+        }
+        /// <summary>
+        /// The rotation of the gameobject. (not installed; free part)
+        /// </summary>
+        public Quaternion rotation
+        {
+            get;
+            set;
         }
 
         #endregion
@@ -51,7 +67,15 @@ namespace ModAPI
             this.isInstalled = inPart.installed;
             this.useFixedJoints = inPart.useFixedJoint;
             this.breakForce = inPart.breakForce;
-
+            this.position = inPart.transform.position;
+            this.rotation = inPart.transform.rotation;
+        }
+        /// <summary>
+        /// Initializes a new instance of this.
+        /// </summary>
+        public PartSaveInfo()
+        {
+            // Written, 04.10.2018
         }
 
         #endregion

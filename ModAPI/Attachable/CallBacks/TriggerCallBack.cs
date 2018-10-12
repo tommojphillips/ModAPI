@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ModAPI.Triggers
+namespace ModApi.Attachable.CallBacks
 {
     /// <summary>
     /// Represents call back for triggers.

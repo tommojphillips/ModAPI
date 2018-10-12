@@ -1,32 +1,40 @@
 ﻿using UnityEngine;
 using HutongGames.PlayMaker;
 
-namespace ModAPI
+namespace ModApi
 {
     /// <summary>
-    /// Represents useful properties for playmaker.
+    /// Represents useful properties for interacting with My Summer Car and PlayMaker.
     /// </summary>
-    public static class ModAPI
+    public static class ModClient
     {
         // Written, 10.08.2018
 
         #region Properties
-        
+
+        /// <summary>
+        /// Represents the version of the api.
+        /// </summary>
+        public static string version = "0.1.1.2";// System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString();
         /// <summary>
         /// Represents the assemble assemble audio source.
         /// </summary>
         public static AudioSource assembleAudio
         {
-            get;
-            private set;
+            get
+            {
+                return GameObject.Find("MasterAudio/CarBuilding/assemble").GetComponent<AudioSource>();
+            }
         }
         /// <summary>
         /// Represents the disassemble audio source.
         /// </summary>
         public static AudioSource disassembleAudio
         {
-            get;
-            private set;
+            get
+            {
+                return GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
+            }
         }
         /// <summary>
         /// Represents whether the gui assemble icon is shown or not. (Tick Symbol)
@@ -100,18 +108,6 @@ namespace ModAPI
         #region Methods
 
         /// <summary>
-        /// Sets, <see cref="assembleAudio"/> and <see cref="aisassembleAudio"/> to the audio.
-        /// </summary>
-        public static void intializeAssembleSounds()
-        {
-            // Written, 10.08.2018
-
-            GameObject go = GameObject.Find("MasterAudio/CarBuilding/assemble");
-            assembleAudio = go.GetComponent<AudioSource>();
-            go = GameObject.Find("MasterAudio/CarBuilding/disassemble");
-            disassembleAudio = go.GetComponent<AudioSource>();
-        }
-        /// <summary>
         /// Displays an interaction text and optional hand symbol. If no parameters are passed into the method (default parameters), turns off the interaction.
         /// </summary>
         /// <param name="inText">The text to display.</param>
@@ -136,6 +132,31 @@ namespace ModAPI
         #region ExMethods
 
         /// <summary>
+        /// Checks if player is holding the GameObject, <paramref name="inGameObject"/>.
+        /// </summary>
+        /// <param name="inGameObject">The gameObject to check on.</param>
+        public static bool isPlayerHolding(this GameObject inGameObject)
+        {
+            // Written, 02.10.2018
+
+            if (inGameObject.isOnLayer(LayerMasksEnum.Wheel))
+                return true;
+            return false;
+        }
+        /// <summary>
+        /// Checks if the gameobject is on the layer, <paramref name="inLayer"/>.
+        /// </summary>
+        /// <param name="inGameObject">The gameobject to check layer.</param>
+        /// <param name="inLayer">The layer to check for.</param>
+        public static bool isOnLayer(this GameObject inGameObject, LayerMasksEnum inLayer)
+        {
+            // Written, 02.10.2018
+
+            if (inGameObject.layer == inLayer.layer())
+                return true;
+            return false;
+        }
+        /// <summary>
         /// Sends all children of game object to layer.
         /// </summary>
         /// <param name="inGameObject">The gameobject to get children from.</param>
@@ -144,9 +165,12 @@ namespace ModAPI
         {
             // Written, 27.09.2018
 
+            Transform transform = inGameObject.transform;
+
+            if (transform != null)
             for (int i = 0; i < inGameObject.transform.childCount; i++)
             {
-                inGameObject.transform.GetChild(i).gameObject.toLayer(inLayer);
+                inGameObject.transform.GetChild(i).gameObject.sendToLayer(inLayer);
             }
         }
         /// <summary>
@@ -154,17 +178,20 @@ namespace ModAPI
         /// </summary>
         /// <param name="inGameObject">The gameObject.</param>
         /// <param name="inLayer">The Layer.</param>
-        public static void toLayer(this GameObject inGameObject, LayerMasksEnum inLayer)
+        /// <param name="sendAllChildren">[Optional] sends all children to the layer.</param>
+        public static void sendToLayer(this GameObject inGameObject, LayerMasksEnum inLayer, bool sendAllChildren = false)
         {
             // Written, 02.10.2018
 
-            inGameObject.layer = getLayer(inLayer);
+            inGameObject.layer = layer(inLayer);
+            if (sendAllChildren)
+                inGameObject.sendChildrenToLayer(inLayer);
         }
         /// <summary>
-        /// Returns the layer.
+        /// Returns the layer index number.
         /// </summary>
-        /// <param name="inLayer">The layer to get.</param>
-        public static int getLayer(this LayerMasksEnum inLayer)
+        /// <param name="inLayer">The layer to get index.</param>
+        public static int layer(this LayerMasksEnum inLayer)
         {
             // Written, 02.10.2018
 
@@ -174,7 +201,7 @@ namespace ModAPI
         /// Returns the name of the layer.
         /// </summary>
         /// <param name="inLayer">The layer to get.</param>
-        public static string getLayerName(this LayerMasksEnum inLayer)
+        public static string name(this LayerMasksEnum inLayer)
         {
             // Written, 02.10.2018
 

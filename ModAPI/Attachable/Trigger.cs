@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace ModAPI.Triggers
+namespace ModApi.Attachable
 {
     /// <summary>
     /// Represents a trigger for a part.
@@ -11,6 +11,22 @@ namespace ModAPI.Triggers
 
         #region Properties
 
+        /// <summary>
+        /// Represents the part's position when installed.
+        /// </summary>
+        public Vector3 triggerPosition
+        {
+            get;
+            set;
+        }
+        /// <summary>
+        /// Represents the part's rotation when installed.
+        /// </summary>
+        public Quaternion triggerRotation
+        {
+            get;
+            set;
+        }
         /// <summary>
         /// Represents the trigger game object.
         /// </summary>

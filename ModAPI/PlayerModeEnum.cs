@@ -1,4 +1,4 @@
-﻿namespace ModAPI
+﻿namespace ModApi
 {
     /// <summary>
     /// Represents a player mode.

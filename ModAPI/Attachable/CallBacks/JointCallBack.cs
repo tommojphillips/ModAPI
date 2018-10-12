@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ModAPI.Joint
+namespace ModApi.Attachable.CallBacks
 {
     /// <summary>
     /// Represents a joint call back.
