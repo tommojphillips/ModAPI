@@ -1,52 +1,53 @@
-﻿using System;
+﻿using ModApi.Attachable.CallBacks;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using UnityEngine;
-using ModApi.Attachable.CallBacks;
 
 namespace ModApi.Attachable
 {
     /// <summary>
-    /// Represents an attachable gameobject for the satsuma.
+    /// Represents a pickable and installable part for the satsuma (or anything).
     /// </summary>
-    public abstract class Part : MonoBehaviour
+    public abstract class Part
     {
-        // Written, 09.08.2018
-
         #region Properties
 
         /// <summary>
         /// Represents the default save info for when there is no save data passed.
         /// </summary>
-        public abstract PartSaveInfo defaultPartSaveInfo
+        protected internal abstract PartSaveInfo defaultPartSaveInfo
         {
             get;
         }
         /// <summary>
         /// Represents the parent for the part. The gameobject that this part connects to.
         /// </summary>
-        public abstract GameObject parent
+        protected internal GameObject parent
         {
             get;
         }
         /// <summary>
-        /// Represents the loaded save info. If no loaded info, is <see langword="null"/>.
+        /// Represents the rigid part; the installed/fixed part.
         /// </summary>
-        public PartSaveInfo loadedSaveInfo
-        {
-            get;
-            private set;
-        }
-        /// <summary>
-        /// Represents the trigger for the part.
-        /// </summary>
-        public Trigger partTrigger
+        protected internal abstract GameObject rigidPart
         {
             get;
             set;
         }
         /// <summary>
-        /// Represents the breakforce for the part.
+        /// Represents the active part; the pickable part.
         /// </summary>
-        public float breakForce
+        protected internal abstract GameObject activePart
+        {
+            get;
+            set;
+        }
+        /// <summary>
+        /// Represents the trigger for the part.
+        /// </summary>
+        protected internal Trigger partTrigger
         {
             get;
             set;
@@ -54,7 +55,7 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents if the part is installed to the trigger or not.
         /// </summary>
-        public bool installed
+        protected internal bool installed
         {
             get;
             private set;
@@ -62,11 +63,11 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents whether the player is holding the part.
         /// </summary>
-        public bool isPlayerHoldingPart
+        protected internal bool isPlayerHoldingPart
         {
             get
             {
-                if (this.gameObject.isOnLayer(LayerMasksEnum.Wheel))
+                if (this.activePart.isOnLayer(LayerMasksEnum.Wheel))
                     return true;
                 return false;
             }
@@ -74,60 +75,93 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents whether the part is within the trigger.
         /// </summary>
-        public bool isPartInTrigger
+        protected internal bool isPartInTrigger
         {
             get;
             private set;
         }
         /// <summary>
-        /// Represents whether to use fixed joint or parenting to attach the object.
+        /// Represents the loaded save info. If no loaded info, is <see langword="null"/>.
         /// </summary>
-        public bool useFixedJoint
+        protected internal PartSaveInfo loadedSaveInfo
         {
             get;
-            set;
+            private set;
         }
 
         #endregion
 
-        #region Constructors
-
-        /// <summary>
-        /// Initializes a new instance. Note after assigning, <see cref="partTrigger"/>, call <see cref="initializeTriggerCallback"/>.
-        /// </summary>
-        public Part(PartSaveInfo inPartSaveInfo)
-        {
-            // Written, 10.08.2018
-
-            this.loadedSaveInfo = inPartSaveInfo;
-
-        }
         /// <summary>
         /// Initializes a new instance and assigns object properties to parameters.
         /// </summary>
         /// <param name="inPartSaveInfo">The part save info to load.</param>
-        /// <param name="inPartTrigger">The trigger for the part to assign.</param>
-        /// <param name="inPartPosition">The position that the part will stay relavited to the parent.</param>
-        /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent.</param>
-        public Part(PartSaveInfo inPartSaveInfo, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
+        /// <param name="part">The gameobject to create a part from. note this gameobject expects to have a rigidbody and collider attached.</param>
+        /// <param name="parent">The parent of the gameobject; the gameobject that the part 'installs' to.</param>
+        /// <param name="inPartTrigger">The trigger for the part.</param>
+        /// <param name="inPartPosition">The position that the part will stay relavited to the parent. (when installed).</param>
+        /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent. (when installed).</param>
+        public Part(PartSaveInfo inPartSaveInfo, GameObject part, GameObject parent, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
         {
-            // Written, 09.08.2018
+            // Written, 16.10.2018
 
+            // Setting parent.
+            this.parent = parent;
+            // Getting loaded settings
             this.loadedSaveInfo = inPartSaveInfo;
+            // Setting up trigger for the part.
             this.partTrigger = inPartTrigger;
-            this.partTrigger.triggerPosition = inPartPosition;
-            this.partTrigger.triggerRotation = inPartRotation;
             this.initializeTriggerCallback();
+            // Setting up free part.
+            this.activePart = UnityEngine.Object.Instantiate(part);
+            this.activePart.AddComponent<Rigidbody>();
+            this.activePart.sendChildrenToLayer(LayerMasksEnum.Parts);
+            this.makePartPickable(true);
+            // Setting up installed part.
+            this.rigidPart = UnityEngine.Object.Instantiate(part);
+            UnityEngine.Object.Destroy(this.rigidPart.GetComponent<Rigidbody>());
+            this.rigidPart.AddComponent<Rigid>().part = this;
+            this.rigidPart.sendToLayer(LayerMasksEnum.Parts, true);
+            this.rigidPart.transform.SetParent(this.parent.transform, false);
+            this.rigidPart.transform.localPosition = inPartPosition;
+            this.rigidPart.transform.localRotation = inPartRotation;
+            // Setting up part state.
+            try
+            {
+                if (this.loadedSaveInfo == null)
+                    this.loadedSaveInfo = this.defaultPartSaveInfo;
+                if (this.loadedSaveInfo.installed)
+                {
+                    this.assemble(true);
+                }
+                else
+                {
+                    this.disassemble(true);
+                    this.activePart.transform.position = this.loadedSaveInfo.position;
+                    this.activePart.transform.rotation = this.loadedSaveInfo.rotation;
+                }
+            }
+            catch (Exception ex)
+            {
+                MSCLoader.ModConsole.Error("[ModAPI.Part] - " + ex.ToString());
+            }
         }
 
-        #endregion
-
         #region Methods
-        
+
+        /// <summary>
+        /// Initializes the trigger call backs. (TriggerStay + TriggerExit)
+        /// </summary>
+        protected internal void initializeTriggerCallback()
+        {
+            // Written, 10.08.2018
+
+            this.partTrigger.triggerGameObject.AddComponent<TriggerCallback>().onTriggerStay += new Action<Collider>(this.onTriggerStay);
+            this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerExit += new Action<Collider>(this.onTriggerExit);
+        }
         /// <summary>
         /// Gets all part data to save info.
         /// </summary>
-        public PartSaveInfo getSaveInfo()
+        protected internal PartSaveInfo getSaveInfo()
         {
             // Written, 04.10.2018
 
@@ -138,177 +172,66 @@ namespace ModApi.Attachable
         /// </summary>
         /// <param name="pickable">Make part pickable?</param>
         /// <param name="layer">Make part on different layer</param>
-        public void makePartPickable(bool pickable, LayerMasksEnum layer = LayerMasksEnum.Parts)
+        protected internal void makePartPickable(bool pickable, LayerMasksEnum layer = LayerMasksEnum.Parts)
         {
             // Written, 14.08.2018
-            
+
             if (pickable)
-                this.gameObject.tag = "PART";
+                this.activePart.tag = "PART";
             else
-                this.gameObject.tag = "Untagged";
-            this.gameObject.layer = layer.layer();
+                this.activePart.tag = "Untagged";
+            this.activePart.layer = layer.layer();
         }
         /// <summary>
         /// Checks that the parmeter, <paramref name="collider"/>'s <see cref="UnityEngine.Object.name"/> property is equal to the Part's
         /// <see cref="UnityEngine.Object.name"/> property.
         /// </summary>
-        /// <param name="collider">The Collider.</param>
-        public bool isPartCollider(Collider collider)
+        /// <param name="collider">The collider that hit the trigger.</param>
+        protected internal bool isPartCollider(Collider collider)
         {
             // Written, 10.08.2018
 
             string _name = collider.gameObject.name;
-            if (_name == this.gameObject.name)
+            if (_name == this.activePart.name)
                 return true;
             return false;
         }
         /// <summary>
-        /// Initializes the trigger call backs.
+        /// Disassembles the part.
         /// </summary>
-        public void initializeTriggerCallback()
+        protected internal virtual void disassemble(bool startup = false)
         {
-            // Written, 10.08.2018
+            // Written, 16.10.2018
 
-            this.partTrigger.triggerGameObject.AddComponent<TriggerCallback>().onTriggerStay += new Action<Collider>(this.onTriggerStay);
-            //this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerEnter += new Action<Collider>(this.onTriggerEnter);
-            this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerExit += new Action<Collider>(this.onTriggerExit);
-            }
-        /// <summary>
-        /// Disassembles the <see cref="GameObject.gameObject"/>.
-        /// </summary>
-        public virtual void disassemble()
-        {
-            // Written, 09.08.2018
-            
-            this.gameObject.transform.SetParent(null);
-            FixedJoint fixedJoint = this.parent.GetComponent<FixedJoint>();
-            Destroy(fixedJoint);
-            JointCallBack jcb = this.parent.GetComponent<JointCallBack>();
-            Destroy(jcb);
+            this.activePart.SetActive(true);
+            this.rigidPart.SetActive(false);
             this.partTrigger.triggerGameObject.SetActive(true);
-            ModClient.disassembleAudio.transform.position = this.gameObject.transform.position;
-            ModClient.disassembleAudio.Play();
+            this.activePart.transform.position = this.rigidPart.transform.position;
+            if (!startup)
+            {
+                ModClient.disassembleAudio.transform.position = this.activePart.transform.position;
+                ModClient.disassembleAudio.Play();
+            }
             this.installed = false;
         }
         /// <summary>
-        /// Assembles the <see cref="GameObject.gameObject"/>.
+        /// Assembles the part.
         /// </summary>
         /// <param name="startUp">Optional; if true, does not trigger the sound. (for when loading data)</param>
-        public virtual void assemble(bool startUp = false)
+        protected internal virtual void assemble(bool startUp = false)
         {
-            // Written, 10.08.2018
-
-            this.makePartPickable(false);
-            this.transform.SetParent(this.parent.transform, false);
-            if (this.useFixedJoint)
-            {
-                FixedJoint fixedJoint = this.parent.AddComponent<FixedJoint>();
-                fixedJoint.connectedBody = this.gameObject.GetComponent<Collider>().attachedRigidbody;
-                fixedJoint.enableCollision = false;
-                fixedJoint.breakForce = this.breakForce;
-                JointCallBack jcb = this.parent.AddComponent<JointCallBack>();
-                jcb.onJointBreak += new Action<float>(this.onJointBreak);
-            }
-            else
-            {
-                Destroy(this.gameObject.GetComponent<Rigidbody>());
-                MSCLoader.ModConsole.Print("[MODAPI.Part.assemble(bool)] -  set part, " + this.gameObject.name + "'s parent to: " + this.parent.name);
-            }
-            this.gameObject.transform.localPosition = this.partTrigger.triggerPosition;
-            this.gameObject.transform.localRotation = this.partTrigger.triggerRotation;
+            // Written, 16.10.2018
+                        
+            this.activePart.SetActive(false);
+            this.rigidPart.SetActive(true);
+            this.partTrigger.triggerGameObject.SetActive(false);
             if (!startUp)
             {
                 ModClient.guiAssemble = false;
-                ModClient.assembleAudio.transform.position = this.gameObject.transform.position;
+                ModClient.assembleAudio.transform.position = this.rigidPart.transform.position;
                 ModClient.assembleAudio.Play();
             }
             this.installed = true;
-            this.partTrigger.triggerGameObject.SetActive(false);
-        }
-        /// <summary>
-        /// Occurs every frame.
-        /// </summary>
-        public virtual void Update()
-        {
-            // Written, 02.10.2018
-
-            try
-            {
-                if (!this.partTrigger.triggerGameObject.activeInHierarchy)
-                {
-                    if (this.installed)
-                    {
-                        if (Input.GetKeyDown(KeyCode.Mouse1))
-                        {
-                            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hitInfo, 1, this.gameObject.layer) && this.isPartCollider(hitInfo.collider))
-                            {
-                                this.disassemble();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MSCLoader.ModConsole.Error("[ModAPI.Part.Start] - " + ex.ToString());
-            }
-        }
-        /// <summary>
-        /// Occurs on game start.
-        /// Currently expects <see cref="defaultPartSaveInfo"/> override.
-        /// Attempts to load <see cref="loadedSaveInfo"/> data, if fails- uses <see cref="defaultPartSaveInfo"/> data.
-        /// </summary>
-        public virtual void Start()
-        {
-            // Written, 02.10.2018
-
-            try
-            {
-                PartSaveInfo psi;
-                if (this.loadedSaveInfo == null)
-                    psi = this.defaultPartSaveInfo;
-                else
-                    psi = this.loadedSaveInfo;
-
-                this.breakForce = psi.breakForce;
-                this.useFixedJoint = psi.useFixedJoints;
-                if (psi.isInstalled)
-                {
-                    this.assemble(true);
-                }
-                else
-                {
-                    this.makePartPickable(true);
-                    this.gameObject.sendChildrenToLayer(LayerMasksEnum.Parts);
-                    this.gameObject.transform.position = psi.position;
-                    this.gameObject.transform.rotation = psi.rotation;
-                    this.installed = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                MSCLoader.ModConsole.Error("[ModAPI.Part.Start] - " + ex.ToString());
-            }
-        }
-
-        #endregion
-
-        #region Event Handlers
-
-        /// <summary>
-        /// Occurs when the part has entered the trigger. [NOT IN USE] using <see cref="onTriggerStay(Collider)"/> instead.
-        /// </summary>
-        /// <param name="inCollider">Not Vaild.</param>
-        [Obsolete("Currently as of version: v0.1.6852.22751-alpha 'onTriggerEnter(Collider)' is not used by the api.")]
-        private void onTriggerEnter(Collider inCollider)
-        {
-            // Written, 10.08.2018
-            
-            if (this.isPartCollider(inCollider) && isPlayerHoldingPart)
-            {
-                ModClient.guiAssemble = true;
-                this.isPartInTrigger = true;
-            }
         }
         /// <summary>
         /// Occurs when the part has exited the trigger.
@@ -317,7 +240,7 @@ namespace ModApi.Attachable
         private void onTriggerExit(Collider inCollider)
         {
             // Written, 10.08.2018
-            
+
             if (this.isPartCollider(inCollider))
             {
                 ModClient.guiAssemble = false;
@@ -337,7 +260,10 @@ namespace ModApi.Attachable
                 if (Input.GetKeyDown(KeyCode.Mouse0))
                 {
                     if (this.isPartInTrigger)
+                    {
                         this.assemble();
+                        return;
+                    }
                 }
 
                 if (this.isPartCollider(inCollider))
@@ -345,17 +271,7 @@ namespace ModApi.Attachable
                     ModClient.guiAssemble = true;
                     this.isPartInTrigger = true;
                 }
-            }      
-        }
-        /// <summary>
-        /// Occurs when the joint is broken.
-        /// </summary>
-        /// <param name="force"></param>
-        private void onJointBreak(float force)
-        {
-            // Written, 10.08.2018
-
-            this.disassemble();
+            }
         }
 
         #endregion

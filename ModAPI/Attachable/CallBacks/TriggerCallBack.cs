@@ -13,10 +13,6 @@ namespace ModApi.Attachable.CallBacks
         #region Fields
 
         /// <summary>
-        /// Represents the on trigger enter event.
-        /// </summary>
-        public Action<Collider> onTriggerEnter;
-        /// <summary>
         /// Represents the on trigger exit event.
         /// </summary>
         public Action<Collider> onTriggerExit;
@@ -28,11 +24,6 @@ namespace ModApi.Attachable.CallBacks
         #endregion
 
         #region Methods
-
-        private void OnTriggerEnter(Collider collider)
-        {
-            this.onTriggerEnter(collider);
-        }
 
         private void OnTriggerExit(Collider collider)
         {

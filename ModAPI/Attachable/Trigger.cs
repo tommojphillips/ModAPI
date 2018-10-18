@@ -12,7 +12,15 @@ namespace ModApi.Attachable
         #region Properties
 
         /// <summary>
-        /// Represents the part's position when installed.
+        /// Represents the trigger game object.
+        /// </summary>
+        public GameObject triggerGameObject
+        {
+            get;
+            set;
+        }
+        /// <summary>
+        /// Represents the triggers local position.
         /// </summary>
         public Vector3 triggerPosition
         {
@@ -20,17 +28,9 @@ namespace ModApi.Attachable
             set;
         }
         /// <summary>
-        /// Represents the part's rotation when installed.
+        /// Represents the triggers local rotation.
         /// </summary>
         public Quaternion triggerRotation
-        {
-            get;
-            set;
-        }
-        /// <summary>
-        /// Represents the trigger game object.
-        /// </summary>
-        public GameObject triggerGameObject
         {
             get;
             set;
@@ -47,6 +47,7 @@ namespace ModApi.Attachable
         {
             // Written, 04.10.2018
         }
+
         /// <summary>
         /// Initializes a new instance and creates a trigger at the provided position, rotation and scale.
         /// </summary>

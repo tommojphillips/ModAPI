@@ -14,27 +14,11 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents whether or not the part is installed.
         /// </summary>
-        public bool isInstalled
+        public bool installed
         {
             get;
             set;
-        }
-        /// <summary>
-        /// Part using fixed joints?
-        /// </summary>
-        public bool useFixedJoints
-        {
-            get;
-            set;
-        }
-        /// <summary>
-        /// Parts breakforce?
-        /// </summary>
-        public float breakForce
-        {
-            get;
-            set;
-        }
+        }        
         /// <summary>
         /// The position of the gameobject. (not installed; free part)
         /// </summary>
@@ -64,11 +48,9 @@ namespace ModApi.Attachable
         {
             // Written, 04.10.2018
 
-            this.isInstalled = inPart.installed;
-            this.useFixedJoints = inPart.useFixedJoint;
-            this.breakForce = inPart.breakForce;
-            this.position = inPart.transform.position;
-            this.rotation = inPart.transform.rotation;
+            this.installed = inPart.installed;
+            this.position = inPart.activePart.transform.position;
+            this.rotation = inPart.activePart.transform.rotation;
         }
         /// <summary>
         /// Initializes a new instance of this.
