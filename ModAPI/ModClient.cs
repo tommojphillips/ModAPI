@@ -15,7 +15,7 @@ namespace ModApi
         /// <summary>
         /// Represents the version of the api.
         /// </summary>
-        public static string version = "0.1.1.3";
+        public static string version = "0.1.1.4";
         /// <summary>
         /// Represents the assemble assemble audio source.
         /// </summary>
