@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ModAPI")]
+[assembly: AssemblyTitle("Mod Api")]
 [assembly: AssemblyDescription("ModAPI is an application programming interface designed for the My Summer Car Modding Community.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Tommo J. Productions")]
-[assembly: AssemblyProduct("ModAPI")]
+[assembly: AssemblyProduct("Mod Api")]
 [assembly: AssemblyCopyright("Copyright © Tommo J. Productions 2018")]
 [assembly: AssemblyTrademark("Azine")]
 [assembly: AssemblyCulture("")]
@@ -32,4 +32,4 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("0.1.1.*")]
-[assembly: AssemblyFileVersion("0.1.1.2")]
+[assembly: AssemblyFileVersion("0.1.1.3")]
