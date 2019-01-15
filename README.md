@@ -5,4 +5,4 @@
 
 # Getting Started
 To see this API in action, take a look at the demo i have created, see "<https://github.com/tommojphillips/AttachObjectDemo>".
-A walk-through of how to create your own truck engine install, see "<https://github.com/tommojphillips/ModAPI/wiki/Getting-started-in-v0.1.1.4-alpha>"
+A walk-through of how to create your own truck engine install in version 0.1.1.4, see "<https://github.com/tommojphillips/ModAPI/wiki/Getting-started-in-v0.1.1.4-alpha>"
