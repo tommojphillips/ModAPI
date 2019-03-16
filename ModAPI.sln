@@ -5,11 +5,7 @@ VisualStudioVersion = 16.0.28407.52
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModAPI", "ModAPI\ModAPI.csproj", "{65DDDAC8-54EA-4116-A53D-05B126FD5A49}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AttachObjectDemo", "..\RWD DLC\AttachObjectDemo\AttachObjectDemo\AttachObjectDemo.csproj", "{E03431FE-9CC9-485E-96E1-1B7C212F4118}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Secure Car Jack", "..\Secure Car Jack\Secure Car Jack.csproj", "{310E0B49-FB86-4ACB-B5F7-B415CE36798E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CruiseControlMod", "..\SatsumaCruiseControl_TommoJEdit\Source (current)\SatsumaCruiseControl\CruiseControlMod\CruiseControlMod\CruiseControlMod.csproj", "{05757FA6-901B-459A-B8A2-DB5D60734938}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,24 +20,12 @@ Global
 		{65DDDAC8-54EA-4116-A53D-05B126FD5A49}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65DDDAC8-54EA-4116-A53D-05B126FD5A49}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{65DDDAC8-54EA-4116-A53D-05B126FD5A49}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E03431FE-9CC9-485E-96E1-1B7C212F4118}.AnyCPU|Any CPU.ActiveCfg = Release|Any CPU
-		{E03431FE-9CC9-485E-96E1-1B7C212F4118}.AnyCPU|Any CPU.Build.0 = Release|Any CPU
-		{E03431FE-9CC9-485E-96E1-1B7C212F4118}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E03431FE-9CC9-485E-96E1-1B7C212F4118}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E03431FE-9CC9-485E-96E1-1B7C212F4118}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E03431FE-9CC9-485E-96E1-1B7C212F4118}.Release|Any CPU.Build.0 = Release|Any CPU
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.AnyCPU|Any CPU.ActiveCfg = Release|Any CPU
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.AnyCPU|Any CPU.Build.0 = Release|Any CPU
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{05757FA6-901B-459A-B8A2-DB5D60734938}.AnyCPU|Any CPU.ActiveCfg = Release|Any CPU
-		{05757FA6-901B-459A-B8A2-DB5D60734938}.AnyCPU|Any CPU.Build.0 = Release|Any CPU
-		{05757FA6-901B-459A-B8A2-DB5D60734938}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{05757FA6-901B-459A-B8A2-DB5D60734938}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{05757FA6-901B-459A-B8A2-DB5D60734938}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{05757FA6-901B-459A-B8A2-DB5D60734938}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
