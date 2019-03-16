@@ -1,5 +1,7 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using HutongGames.PlayMaker;
+using ModApi.Attachable;
 
 namespace ModApi
 {
@@ -15,7 +17,7 @@ namespace ModApi
         /// <summary>
         /// Represents the version of the api.
         /// </summary>
-        public static string version = "0.1.1.4";
+        public static string version = "0.1.2.0";
         /// <summary>
         /// Represents the assemble assemble audio source.
         /// </summary>
@@ -34,6 +36,20 @@ namespace ModApi
             get
             {
                 return GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
+            }
+        }
+        /// <summary>
+        /// Represents whether the gui disassemble icon is shown or not. (Circle with line through it.)
+        /// </summary>
+        public static bool guiDisassemble
+        {
+            get
+            {
+                return PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble").Value;
+            }
+            set
+            {
+                PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble").Value = value;
             }
         }
         /// <summary>
@@ -102,6 +118,11 @@ namespace ModApi
                 return pme;
             }
         }
+        /// <summary>
+        /// Represents all parts in the current instance of my summer car. (msc mods that use MODAPI.Attachable.Part
+        /// will be listed here)
+        /// </summary>
+        public static List<Part> activeParts { get; } = new List<Part>();
 
         #endregion
 
@@ -111,20 +132,47 @@ namespace ModApi
         /// Displays an interaction text and optional hand symbol. If no parameters are passed into the method (default parameters), turns off the interaction.
         /// </summary>
         /// <param name="inText">The text to display.</param>
-        /// <param name="showHand">Whether or not to display the hand symbol.</param>
-        public static void guiInteract(string inText = "", bool showHand = true)
+        /// <param name="inGuiInteractSymbol">Whether or not to display a symbol.</param>
+        public static void guiInteract(string inText = "", GuiInteractSymbolEnum inGuiInteractSymbol = GuiInteractSymbolEnum.Hand)
         {
-            // Written, 30.09.2018
+            // Written, 30.09.2018 | Modified, 16.03.2019
 
             if (inText == "")
             {
-                guiUse = false;
+                changeInteractSymbol(GuiInteractSymbolEnum.None, false);
                 guiInteraction = inText;
                 return;
             }
-            guiUse = showHand;
+            changeInteractSymbol(inGuiInteractSymbol, true);
             guiInteraction = inText;
+        }
+        /// <summary>
+        /// displays or removes a particular symbol from the interaction. if <see cref="GuiInteractSymbolEnum.None"/> is passed,
+        /// sets all interactions to the passed boolean value.
+        /// </summary>
+        /// <param name="inGuiInteractSymbol">The gui symbol to change.</param>
+        /// <param name="inValue">The value..</param>
+        private static void changeInteractSymbol(GuiInteractSymbolEnum inGuiInteractSymbol, bool inValue)
+        {
+            // Written, 16.03.2019
 
+            switch (inGuiInteractSymbol)
+            {
+                case GuiInteractSymbolEnum.Hand:
+                    guiUse = inValue;
+                    break;
+                case GuiInteractSymbolEnum.Disassemble:
+                    guiDisassemble = inValue;
+                    break;
+                case GuiInteractSymbolEnum.Assemble:
+                    guiAssemble = inValue;
+                    break;
+                case GuiInteractSymbolEnum.None:
+                    guiUse = inValue;
+                    guiDisassemble = inValue;
+                    guiAssemble = inValue;
+                    break;
+            }
         }
 
         #endregion
@@ -178,13 +226,13 @@ namespace ModApi
         /// </summary>
         /// <param name="inGameObject">The gameObject.</param>
         /// <param name="inLayer">The Layer.</param>
-        /// <param name="sendAllChildren">[Optional] sends all children to the layer.</param>
-        public static void sendToLayer(this GameObject inGameObject, LayerMasksEnum inLayer, bool sendAllChildren = false)
+        /// <param name="inSendAllChildren">[Optional] sends all children to the layer.</param>
+        public static void sendToLayer(this GameObject inGameObject, LayerMasksEnum inLayer, bool inSendAllChildren = false)
         {
             // Written, 02.10.2018
 
             inGameObject.layer = layer(inLayer);
-            if (sendAllChildren)
+            if (inSendAllChildren)
                 inGameObject.sendChildrenToLayer(inLayer);
         }
         /// <summary>

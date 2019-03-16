@@ -1,8 +1,5 @@
-﻿using ModApi.Attachable.CallBacks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
+using ModApi.Attachable.CallBacks;
 using UnityEngine;
 
 namespace ModApi.Attachable
@@ -17,21 +14,21 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents the default save info for when there is no save data passed.
         /// </summary>
-        protected internal abstract PartSaveInfo defaultPartSaveInfo
+        public abstract PartSaveInfo defaultPartSaveInfo
         {
             get;
         }
         /// <summary>
         /// Represents the parent for the part. The gameobject that this part connects to.
         /// </summary>
-        protected internal GameObject parent
+        public GameObject parent
         {
             get;
         }
         /// <summary>
         /// Represents the rigid part; the installed/fixed part.
         /// </summary>
-        protected internal abstract GameObject rigidPart
+        public abstract GameObject rigidPart
         {
             get;
             set;
@@ -39,7 +36,7 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents the active part; the pickable part.
         /// </summary>
-        protected internal abstract GameObject activePart
+        public abstract GameObject activePart
         {
             get;
             set;
@@ -47,7 +44,7 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents the trigger for the part.
         /// </summary>
-        protected internal Trigger partTrigger
+        public Trigger partTrigger
         {
             get;
             set;
@@ -55,7 +52,7 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents if the part is installed to the trigger or not.
         /// </summary>
-        protected internal bool installed
+        public bool installed
         {
             get;
             private set;
@@ -63,7 +60,7 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents whether the player is holding the part.
         /// </summary>
-        protected internal bool isPlayerHoldingPart
+        public bool isPlayerHoldingPart
         {
             get
             {
@@ -75,7 +72,7 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents whether the part is within the trigger.
         /// </summary>
-        protected internal bool isPartInTrigger
+        public bool isPartInTrigger
         {
             get;
             private set;
@@ -83,7 +80,7 @@ namespace ModApi.Attachable
         /// <summary>
         /// Represents the loaded save info. If no loaded info, is <see langword="null"/>.
         /// </summary>
-        protected internal PartSaveInfo loadedSaveInfo
+        public PartSaveInfo loadedSaveInfo
         {
             get;
             private set;
@@ -91,36 +88,37 @@ namespace ModApi.Attachable
 
         #endregion
 
+        #region Constructors 
+
         /// <summary>
         /// Initializes a new instance and assigns object properties to parameters.
         /// </summary>
         /// <param name="inPartSaveInfo">The part save info to load.</param>
-        /// <param name="part">The gameobject to create a part from. note this gameobject expects to have a rigidbody and collider attached.</param>
-        /// <param name="parent">The parent of the gameobject; the gameobject that the part 'installs' to.</param>
+        /// <param name="inPart">The gameobject to create a part from. note this gameobject expects to have a rigidbody and collider attached.</param>
+        /// <param name="inParent">The parent of the gameobject; the gameobject that the part 'installs' to.</param>
         /// <param name="inPartTrigger">The trigger for the part.</param>
         /// <param name="inPartPosition">The position that the part will stay relavited to the parent. (when installed).</param>
         /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent. (when installed).</param>
-        public Part(PartSaveInfo inPartSaveInfo, GameObject part, GameObject parent, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
+        public Part(PartSaveInfo inPartSaveInfo, GameObject inPart, GameObject inParent, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
         {
             // Written, 16.10.2018
 
             // Setting parent.
-            this.parent = parent;
+            this.parent = inParent;
             // Getting loaded settings
             this.loadedSaveInfo = inPartSaveInfo;
             // Setting up trigger for the part.
             this.partTrigger = inPartTrigger;
             this.initializeTriggerCallback();
             // Setting up free part.
-            this.activePart = UnityEngine.Object.Instantiate(part);
+            this.activePart = GameObject.Find(inPart.name) ?? UnityEngine.Object.Instantiate(inPart); // instaniating new part in scene only if part was not found in game scene.
             this.activePart.AddComponent<Rigidbody>();
-            this.activePart.sendChildrenToLayer(LayerMasksEnum.Parts);
             this.makePartPickable(true);
             // Setting up installed part.
-            this.rigidPart = UnityEngine.Object.Instantiate(part);
-            UnityEngine.Object.Destroy(this.rigidPart.GetComponent<Rigidbody>());
-            this.rigidPart.AddComponent<Rigid>().part = this;
-            this.rigidPart.sendToLayer(LayerMasksEnum.Parts, true);
+            this.rigidPart = UnityEngine.Object.Instantiate(inPart);
+            UnityEngine.Object.Destroy(this.rigidPart.GetComponent<Rigidbody>()); // Destorying any rigidbody to stop the gameobject
+            this.rigidPart.AddComponent<Rigid>().part = this;            
+            this.makePartPickable(false, inPartInstance: PartInstanceTypeEnum.Rigid);// Sets the tag to 'Untagged' as this makes the Gameobject not pick-a-up-able.. :)
             this.rigidPart.transform.SetParent(this.parent.transform, false);
             this.rigidPart.transform.localPosition = inPartPosition;
             this.rigidPart.transform.localRotation = inPartRotation;
@@ -144,10 +142,72 @@ namespace ModApi.Attachable
             {
                 MSCLoader.ModConsole.Error("[ModAPI.Part] - " + ex.ToString());
             }
+            ModClient.activeParts.Add(this);
         }
+
+        #endregion
 
         #region Methods
 
+        /// <summary>
+        /// Gets all part data to save info.
+        /// </summary>
+        public PartSaveInfo getSaveInfo()
+        {
+            // Written, 04.10.2018
+
+            return new PartSaveInfo(this);
+        }
+        /// <summary>
+        /// Makes the part a pickable item depending on the provided values.
+        /// </summary>
+        /// <param name="inPickable">Make part pickable?</param>
+        /// <param name="inLayer">Make part on different layer</param>
+        /// <param name="inPartInstance">Represents whether to modify the active or rigid gameobject.</param>
+        public void makePartPickable(bool inPickable, LayerMasksEnum inLayer = LayerMasksEnum.Parts, PartInstanceTypeEnum inPartInstance = PartInstanceTypeEnum.Active)
+        {
+            // Written, 14.08.2018
+
+            if (inPartInstance == PartInstanceTypeEnum.Active)
+            {
+                if (inPickable)
+                    this.activePart.tag = "PART";
+                else
+                    this.activePart.tag = "DontPickThis";
+                this.activePart.layer = inLayer.layer();
+            }
+            else
+            {
+                if (inPickable)
+                    this.rigidPart.tag = "PART";
+                else
+                    this.rigidPart.tag = "DontPickThis";
+                this.rigidPart.layer = inLayer.layer();
+            }
+        }
+        /// <summary>
+        /// Checks that the parmeter, <paramref name="inCollider"/>'s <see cref="UnityEngine.Object.name"/> property is equal to the Part's
+        /// <see cref="UnityEngine.Object.name"/> property.
+        /// </summary>
+        /// <param name="inCollider">The collider that hit the trigger.</param>
+        /// <param name="inPartInstance">Test either rigid or active gameobject's <see cref="UnityEngine.Object.name"/> property againist the colliders parenting gameobject's <see cref="UnityEngine.Object.name"/> property.</param>
+        public bool isPartCollider(Collider inCollider, PartInstanceTypeEnum inPartInstance = PartInstanceTypeEnum.Active)
+        {
+            // Written, 10.08.2018
+
+            string _name = inCollider.gameObject.name;
+            if (inPartInstance == PartInstanceTypeEnum.Active)
+            {
+                if (_name == this.activePart.name)
+                    return true;
+            }
+            else
+            {
+                if (_name == this.rigidPart.name)
+                    return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Initializes the trigger call backs. (TriggerStay + TriggerExit)
         /// </summary>
@@ -159,47 +219,9 @@ namespace ModApi.Attachable
             this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerExit += new Action<Collider>(this.onTriggerExit);
         }
         /// <summary>
-        /// Gets all part data to save info.
-        /// </summary>
-        protected internal PartSaveInfo getSaveInfo()
-        {
-            // Written, 04.10.2018
-
-            return new PartSaveInfo(this);
-        }
-        /// <summary>
-        /// Makes the part a pickable item depending on the provided values.
-        /// </summary>
-        /// <param name="pickable">Make part pickable?</param>
-        /// <param name="layer">Make part on different layer</param>
-        protected internal void makePartPickable(bool pickable, LayerMasksEnum layer = LayerMasksEnum.Parts)
-        {
-            // Written, 14.08.2018
-
-            if (pickable)
-                this.activePart.tag = "PART";
-            else
-                this.activePart.tag = "Untagged";
-            this.activePart.layer = layer.layer();
-        }
-        /// <summary>
-        /// Checks that the parmeter, <paramref name="collider"/>'s <see cref="UnityEngine.Object.name"/> property is equal to the Part's
-        /// <see cref="UnityEngine.Object.name"/> property.
-        /// </summary>
-        /// <param name="collider">The collider that hit the trigger.</param>
-        protected internal bool isPartCollider(Collider collider)
-        {
-            // Written, 10.08.2018
-
-            string _name = collider.gameObject.name;
-            if (_name == this.activePart.name)
-                return true;
-            return false;
-        }
-        /// <summary>
         /// Disassembles the part.
         /// </summary>
-        protected internal virtual void disassemble(bool startup = false)
+        protected internal virtual void disassemble(bool inStartup = false)
         {
             // Written, 16.10.2018
 
@@ -207,7 +229,8 @@ namespace ModApi.Attachable
             this.rigidPart.SetActive(false);
             this.partTrigger.triggerGameObject.SetActive(true);
             this.activePart.transform.position = this.rigidPart.transform.position;
-            if (!startup)
+            this.activePart.transform.rotation = this.rigidPart.transform.rotation;
+            if (!inStartup)
             {
                 ModClient.disassembleAudio.transform.position = this.activePart.transform.position;
                 ModClient.disassembleAudio.Play();
@@ -217,15 +240,15 @@ namespace ModApi.Attachable
         /// <summary>
         /// Assembles the part.
         /// </summary>
-        /// <param name="startUp">Optional; if true, does not trigger the sound. (for when loading data)</param>
-        protected internal virtual void assemble(bool startUp = false)
+        /// <param name="inStartup">Optional; if true, does not trigger the sound. (for when loading data)</param>
+        protected internal virtual void assemble(bool inStartup = false)
         {
             // Written, 16.10.2018
                         
             this.activePart.SetActive(false);
             this.rigidPart.SetActive(true);
             this.partTrigger.triggerGameObject.SetActive(false);
-            if (!startUp)
+            if (!inStartup)
             {
                 ModClient.guiAssemble = false;
                 ModClient.assembleAudio.transform.position = this.rigidPart.transform.position;
@@ -237,7 +260,7 @@ namespace ModApi.Attachable
         /// Occurs when the part has exited the trigger.
         /// </summary>
         /// <param name="inCollider">The collider that exited the trigger.</param>
-        private void onTriggerExit(Collider inCollider)
+        protected internal virtual void onTriggerExit(Collider inCollider)
         {
             // Written, 10.08.2018
 
@@ -251,7 +274,7 @@ namespace ModApi.Attachable
         /// Occurs when the part is in the trigger.
         /// </summary>
         /// <param name="inCollider">The collider that's in the trigger.</param>
-        private void onTriggerStay(Collider inCollider)
+        protected internal virtual void onTriggerStay(Collider inCollider)
         {
             // Written, 02.10.2018
 
