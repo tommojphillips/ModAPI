@@ -7,8 +7,8 @@
     <ProjectGuid>{2CEAE666-CBA5-4FA6-AEE3-D6C5CFB2DE20}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TommoJProductions</RootNamespace>
-    <AssemblyName>modapi_v0120-alpha</AssemblyName>
+    <RootNamespace>TommoJProductions.ModApi</RootNamespace>
+    <AssemblyName>modapi_v0121-alpha</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
@@ -18,10 +18,10 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <OutputPath>bin\Release\</OutputPath>
-    <DocumentationFile>bin\Release\modapi_v0114-alpha.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\modapi_v0121-alpha.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <DocumentationFile>bin\Debug\modapi_v0114-alpha.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\modapi_v0121-alpha.xml</DocumentationFile>
     <OutputPath>bin\Debug\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
@@ -41,6 +41,7 @@
     <Compile Include="Attachable\Rigid.cs" />
     <Compile Include="Attachable\Part.cs" />
     <Compile Include="Attachable\PartSaveInfo.cs" />
+    <Compile Include="GameStates.cs" />
     <Compile Include="GuiInteractSymbolEnum.cs" />
     <Compile Include="LayerMasksEnum.cs" />
     <Compile Include="ModClient.cs" />

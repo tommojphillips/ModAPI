@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace ModApi.Attachable
+namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
     /// Represents a trigger for a part.

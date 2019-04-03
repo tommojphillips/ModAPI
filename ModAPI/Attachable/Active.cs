@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace ModApi.Attachable
+namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
     /// Represents the active instance of the <see cref="Part"/>. Represents logic that is only relevant to the active (free) instance.

@@ -1,4 +1,4 @@
-﻿namespace ModApi
+﻿namespace TommoJProductions.ModApi
 {
     /// <summary>
     /// Represents the types of part instances.

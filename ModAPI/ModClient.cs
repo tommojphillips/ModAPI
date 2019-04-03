@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 using HutongGames.PlayMaker;
-using ModApi.Attachable;
+using MSCLoader;
+using TommoJProductions.ModApi.Attachable;
 
-namespace ModApi
+namespace TommoJProductions.ModApi
 {
     /// <summary>
     /// Represents useful properties for interacting with My Summer Car and PlayMaker.
@@ -12,12 +14,18 @@ namespace ModApi
     {
         // Written, 10.08.2018
 
+        #region Fields
+
+        private const string RESOURCE_DUMP_FILE_NAME = "msc resource dump.txt";
+
+        #endregion
+        
         #region Properties
 
         /// <summary>
         /// Represents the version of the api.
         /// </summary>
-        public static string version = "0.1.2.0";
+        public static string version => "0.1.2.1";
         /// <summary>
         /// Represents the assemble assemble audio source.
         /// </summary>
@@ -123,6 +131,20 @@ namespace ModApi
         /// will be listed here)
         /// </summary>
         public static List<Part> activeParts { get; } = new List<Part>();
+        /// <summary>
+        /// Represents the current scene/level loaded.
+        /// </summary>
+        public static GameStates level
+        {
+            get
+            {
+                if (Application.loadedLevel == 1)
+                    return GameStates.Menu;
+                if (Application.loadedLevel == 3)
+                    return GameStates.Game;
+                return GameStates.None;
+            }
+        }
 
         #endregion
 
@@ -139,7 +161,7 @@ namespace ModApi
 
             if (inText == "")
             {
-                changeInteractSymbol(GuiInteractSymbolEnum.None, false);
+                changeInteractSymbol();
                 guiInteraction = inText;
                 return;
             }
@@ -147,12 +169,47 @@ namespace ModApi
             guiInteraction = inText;
         }
         /// <summary>
+        /// Writes all resouces (<see cref="Object.name"/>) to a file. (msc resources list.txt)
+        /// </summary>
+        public static void writeAllResourcesToFile()
+        {
+            // Written, 05.04.2019
+
+            float time = Time.deltaTime;
+            string text = "MSC Resource list:\r\n\r\n";
+
+            foreach (Object _obj in Resources.FindObjectsOfTypeAll<Object>())
+            {
+                string components = "";
+                if (_obj is GameObject)
+                {
+                    GameObject gameObject = _obj as GameObject;
+
+                    components = "Components:\r\n";
+                    foreach (Object _obj1 in gameObject.GetComponents<Object>())
+                    {
+                        components += string.Format("\t# {0}\r\n", _obj1.GetType().Name);
+                    }
+                }
+                text += string.Format("{0} ({1})\r\n{2}", _obj.name, _obj.GetType().Name, components);
+            }
+            try
+            {
+                System.IO.File.WriteAllText(RESOURCE_DUMP_FILE_NAME, text);
+                ModConsole.Print(string.Format("Successfully wrote resources to a file in {1}ms, {0}", RESOURCE_DUMP_FILE_NAME, time - Time.deltaTime));
+            }
+            catch (System.Exception ex)
+            {
+                ModConsole.Print("An error occured when trying to write all resource names' to a file, Error: " + ex.ToString());
+            }
+        }    
+        /// <summary>
         /// displays or removes a particular symbol from the interaction. if <see cref="GuiInteractSymbolEnum.None"/> is passed,
         /// sets all interactions to the passed boolean value.
         /// </summary>
         /// <param name="inGuiInteractSymbol">The gui symbol to change.</param>
         /// <param name="inValue">The value..</param>
-        private static void changeInteractSymbol(GuiInteractSymbolEnum inGuiInteractSymbol, bool inValue)
+        private static void changeInteractSymbol(GuiInteractSymbolEnum inGuiInteractSymbol = GuiInteractSymbolEnum.None, bool inValue = false)
         {
             // Written, 16.03.2019
 
@@ -174,7 +231,7 @@ namespace ModApi
                     break;
             }
         }
-
+        
         #endregion
 
         #region ExMethods

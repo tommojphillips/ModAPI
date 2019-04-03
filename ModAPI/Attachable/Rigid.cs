@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ModApi.Attachable
+namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
     /// Represents the rigid instance of the <see cref="Part"/>. Represents logic that is only relevant to the rigid (installed) instance. 

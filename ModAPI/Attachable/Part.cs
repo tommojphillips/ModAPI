@@ -1,8 +1,8 @@
 ﻿using System;
-using ModApi.Attachable.CallBacks;
+using TommoJProductions.ModApi.Attachable.CallBacks;
 using UnityEngine;
 
-namespace ModApi.Attachable
+namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
     /// Represents a pickable and installable part for the satsuma (or anything).

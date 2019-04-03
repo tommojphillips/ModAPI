@@ -11,6 +11,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Secure Car Jack", "..\Secur
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CruiseControlMod", "..\SatsumaCruiseControl_TommoJEdit\Source (current)\SatsumaCruiseControl\CruiseControlMod\CruiseControlMod\CruiseControlMod.csproj", "{05757FA6-901B-459A-B8A2-DB5D60734938}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestingModApiV0.1.2.1", "TestingModApiV0.1.2.1\TestingModApiV0.1.2.1.csproj", "{A3258142-67F5-4ECA-B098-D99B19F2E330}"
+	ProjectSection(ProjectDependencies) = postProject
+		{65DDDAC8-54EA-4116-A53D-05B126FD5A49} = {65DDDAC8-54EA-4116-A53D-05B126FD5A49}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		AnyCPU|Any CPU = AnyCPU|Any CPU
@@ -42,6 +47,12 @@ Global
 		{05757FA6-901B-459A-B8A2-DB5D60734938}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{05757FA6-901B-459A-B8A2-DB5D60734938}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{05757FA6-901B-459A-B8A2-DB5D60734938}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3258142-67F5-4ECA-B098-D99B19F2E330}.AnyCPU|Any CPU.ActiveCfg = Release|Any CPU
+		{A3258142-67F5-4ECA-B098-D99B19F2E330}.AnyCPU|Any CPU.Build.0 = Release|Any CPU
+		{A3258142-67F5-4ECA-B098-D99B19F2E330}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3258142-67F5-4ECA-B098-D99B19F2E330}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3258142-67F5-4ECA-B098-D99B19F2E330}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3258142-67F5-4ECA-B098-D99B19F2E330}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
