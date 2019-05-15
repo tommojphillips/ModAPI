@@ -1,5 +1,6 @@
 ﻿using System;
 using TommoJProductions.ModApi.Attachable.CallBacks;
+using TommoJProductions.ModApi.Attachable.Options;
 using UnityEngine;
 
 namespace TommoJProductions.ModApi.Attachable
@@ -24,6 +25,7 @@ namespace TommoJProductions.ModApi.Attachable
         public GameObject parent
         {
             get;
+            private set;
         }
         /// <summary>
         /// Represents the rigid part; the installed/fixed part.
@@ -85,11 +87,26 @@ namespace TommoJProductions.ModApi.Attachable
             get;
             private set;
         }
+        /// <summary>
+        /// Represents the part options.
+        /// </summary>
+        public PartOptions partOptions
+        {
+            get;
+            set;
+        }
 
         #endregion
 
         #region Constructors 
 
+        /// <summary>
+        /// Initializes a new instance. Note, Call <see cref="setUpPart(PartSaveInfo, PartOptions, GameObject, GameObject, Trigger, Vector3, Quaternion)"/> to set up the part.
+        /// </summary>
+        public Part()
+        {
+            // Written, 05.05.2019
+        }
         /// <summary>
         /// Initializes a new instance and assigns object properties to parameters.
         /// </summary>
@@ -101,8 +118,47 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent. (when installed).</param>
         public Part(PartSaveInfo inPartSaveInfo, GameObject inPart, GameObject inParent, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
         {
+            // Written, 05.05.2019
+
+            this.setUpPart(inPartSaveInfo, new PartOptions() { partInitializationProcedure = PartInitializationProcedureEnum.FindThenInstantiate }, inPart, inParent, inPartTrigger, inPartPosition, inPartRotation);
+        }
+        /// <summary>
+        /// Initializes a new instance and assigns object properties to parameters.
+        /// </summary>
+        /// <param name="inPartSaveInfo">The part save info to load.</param>
+        /// <param name="inPartOptions">The part options to pass.</param>
+        /// <param name="inPart">The gameobject to create a part from. note this gameobject expects to have a rigidbody and collider attached.</param>
+        /// <param name="inParent">The parent of the gameobject; the gameobject that the part 'installs' to.</param>
+        /// <param name="inPartTrigger">The trigger for the part.</param>
+        /// <param name="inPartPosition">The position that the part will stay relavited to the parent. (when installed).</param>
+        /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent. (when installed).</param>
+        public Part(PartSaveInfo inPartSaveInfo, PartOptions inPartOptions, GameObject inPart, GameObject inParent, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
+        {
+            // Written, 05.05.2019
+
+            this.setUpPart(inPartSaveInfo, inPartOptions, inPart, inParent, inPartTrigger, inPartPosition, inPartRotation);
+        }
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Sets up the part.
+        /// </summary>
+        /// <param name="inPartSaveInfo">The part save info to load.</param>
+        /// <param name="inPartOptions">The part options to pass.</param>
+        /// <param name="inPart">The gameobject to create a part from. note this gameobject expects to have a rigidbody and collider attached.</param>
+        /// <param name="inParent">The parent of the gameobject; the gameobject that the part 'installs' to.</param>
+        /// <param name="inPartTrigger">The trigger for the part.</param>
+        /// <param name="inPartPosition">The position that the part will stay relavited to the parent. (when installed).</param>
+        /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent. (when installed).</param>
+        public void setUpPart(PartSaveInfo inPartSaveInfo, PartOptions inPartOptions, GameObject inPart, GameObject inParent, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
+        {
             // Written, 16.10.2018
 
+            // setting options.
+            this.partOptions = inPartOptions;
             // Setting parent.
             this.parent = inParent;
             // Getting loaded settings
@@ -111,13 +167,28 @@ namespace TommoJProductions.ModApi.Attachable
             this.partTrigger = inPartTrigger;
             this.initializeTriggerCallback();
             // Setting up free part.
-            this.activePart = GameObject.Find(inPart.name) ?? UnityEngine.Object.Instantiate(inPart); // instaniating new part in scene only if part was not found in game scene.
-            this.activePart.AddComponent<Rigidbody>();
+            switch (this.partOptions.partInitializationProcedure)
+            {
+                case PartInitializationProcedureEnum.FindThenInstantiate:
+                    this.activePart = GameObject.Find(inPart.name) ?? UnityEngine.Object.Instantiate(inPart); // instaniating new part in scene only if part was not found in game scene.
+                    break;
+                case PartInitializationProcedureEnum.Find:
+                    this.activePart = GameObject.Find(inPart.name);
+                    break;
+                case PartInitializationProcedureEnum.Instantiate:
+                    this.activePart = UnityEngine.Object.Instantiate(inPart);
+                    break;
+                case PartInitializationProcedureEnum.Assign:
+                    this.activePart = inPart;
+                    break;
+            }
+            if (this.partOptions.activePartAddRigidbodyComponent)
+                this.activePart.AddComponent<Rigidbody>();
             this.makePartPickable(true);
             // Setting up installed part.
             this.rigidPart = UnityEngine.Object.Instantiate(inPart);
             UnityEngine.Object.Destroy(this.rigidPart.GetComponent<Rigidbody>()); // Destorying any rigidbody to stop the gameobject
-            this.rigidPart.AddComponent<Rigid>().part = this;            
+            this.rigidPart.AddComponent<Rigid>().part = this;
             this.makePartPickable(false, inPartInstance: PartInstanceTypeEnum.Rigid);// Sets the tag to 'Untagged' as this makes the Gameobject not pick-a-up-able.. :)
             this.rigidPart.transform.SetParent(this.parent.transform, false);
             this.rigidPart.transform.localPosition = inPartPosition;
@@ -134,8 +205,11 @@ namespace TommoJProductions.ModApi.Attachable
                 else
                 {
                     this.disassemble(true);
-                    this.activePart.transform.position = this.loadedSaveInfo.position;
-                    this.activePart.transform.rotation = this.loadedSaveInfo.rotation;
+                    if (this.partOptions.activePartSetPositionRotation)
+                    {
+                        this.activePart.transform.position = this.loadedSaveInfo.position;
+                        this.activePart.transform.rotation = this.loadedSaveInfo.rotation;
+                    }
                 }
             }
             catch (Exception ex)
@@ -144,11 +218,6 @@ namespace TommoJProductions.ModApi.Attachable
             }
             ModClient.activeParts.Add(this);
         }
-
-        #endregion
-
-        #region Methods
-
         /// <summary>
         /// Gets all part data to save info.
         /// </summary>
@@ -228,8 +297,13 @@ namespace TommoJProductions.ModApi.Attachable
             this.activePart.SetActive(true);
             this.rigidPart.SetActive(false);
             this.partTrigger.triggerGameObject.SetActive(true);
-            this.activePart.transform.position = this.rigidPart.transform.position;
-            this.activePart.transform.rotation = this.rigidPart.transform.rotation;
+
+
+            if (!inStartup || this.partOptions.activePartSetPositionRotation)
+            {
+                this.activePart.transform.position = this.rigidPart.transform.position;
+                this.activePart.transform.rotation = this.rigidPart.transform.rotation;
+            }
             if (!inStartup)
             {
                 ModClient.disassembleAudio.transform.position = this.activePart.transform.position;

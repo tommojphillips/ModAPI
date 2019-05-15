@@ -397,6 +397,29 @@ namespace TommoJProductions.ModApi
             }
             return layerName;
         }
+        /// <summary>
+        /// Renames the gameobject to the provided name. eg => Truck Engine(xxxxx)
+        /// </summary>
+        /// <param name="inGameObject">The go.</param>
+        /// <param name="inName">The name to rename to.</param>
+        public static void rename(this GameObject inGameObject, string inName)
+        {
+            // Writen, 05.05.2019
+
+            inGameObject.name = string.Format("{0}(xxxxx)", inName);
+        }
+        /// <summary>
+        /// Finds the <see cref="PlayMakerFSM"/> with the provided name on the gameobject.
+        /// The same as <see cref="PlayMakerFSM.FindFsmOnGameObject(GameObject, string)"/> but also searches for inactive <see cref="PlayMakerFSM"/>s on <paramref name="inGameObject"/> and it's children.
+        /// </summary>
+        /// <param name="inGameObject">The gameobject to find <see cref="PlayMakerFSM"/> on.</param>
+        /// <param name="inPlayMakerFsmName">The <see cref="PlayMakerFSM.FsmName"/> (fsm name)</param>
+        public static PlayMakerFSM findFsm(this GameObject inGameObject, string inPlayMakerFsmName)
+        {
+            // Written, 10.05.2019
+
+            return inGameObject.GetComponentsInChildren<PlayMakerFSM>(true).FirstOrDefault(playmakerFsm => playmakerFsm.FsmName == inPlayMakerFsmName);
+        }        
 
         #endregion
     }

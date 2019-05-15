@@ -23,6 +23,7 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DocumentationFile>bin\Debug\modapi_v0121-alpha.xml</DocumentationFile>
     <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="MSCLoader">
@@ -38,6 +39,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attachable\Active.cs" />
+    <Compile Include="Attachable\Options\PartInitializationProcedureEnum.cs" />
+    <Compile Include="Attachable\Options\PartOptions.cs" />
     <Compile Include="Attachable\Rigid.cs" />
     <Compile Include="Attachable\Part.cs" />
     <Compile Include="Attachable\PartSaveInfo.cs" />
@@ -54,6 +57,19 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\My Summer Car\Mods\References" /y</PostBuildEvent>
+    <PostBuildEvent>if "$(ConfigurationName)" == "Debug" (
+copy "$(TargetPath)" "D:\SteamLibrary\steamapps\common\My Summer Car\Mods\References" /y
+copy "$(TargetPath)" "D:\SteamLibrary\steamapps\common\My Summer Car\Mods" /y
+copy "$(TargetDir)$(TargetName).pdb" "D:\SteamLibrary\steamapps\common\My Summer Car\Mods" /y
+copy "$(TargetDir)$(TargetName).xml" "D:\SteamLibrary\steamapps\common\My Summer Car\Mods\References" /y
+cd "D:\SteamLibrary\steamapps\common\My Summer Car\Mods"
+call "D:\SteamLibrary\steamapps\common\My Summer Car\Mods\debug.bat"
+cd "D:\SteamLibrary\steamapps\common\My Summer Car\Mods"
+del "D:\SteamLibrary\steamapps\common\My Summer Car\Mods\$(TargetName).dll"
+del "D:\SteamLibrary\steamapps\common\My Summer Car\Mods\$(TargetName).pdb"
+) ELSE (
+copy "$(TargetPath)" "D:\SteamLibraary\steamapps\common\My Summer Car\Mods\References" /y
+copy "$(TargetDir)$(TargetName).xml" "D:\SteamLibrary\steamapps\common\My Summer Car\Mods\References" /y
+)</PostBuildEvent>
   </PropertyGroup>
 </Project>
