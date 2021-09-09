@@ -43,21 +43,14 @@ namespace ModApi.Attachable
         /// <summary>
         /// Initializes a new instance of this.
         /// </summary>
-        /// <param name="inPart"></param>
+        /// <param name="inPart">The part to save</param>
         public PartSaveInfo(Part inPart)
         {
             // Written, 04.10.2018
 
-            this.installed = inPart.installed;
-            this.position = inPart.activePart.transform.position;
-            this.rotation = inPart.activePart.transform.rotation;
-        }
-        /// <summary>
-        /// Initializes a new instance of this.
-        /// </summary>
-        public PartSaveInfo()
-        {
-            // Written, 04.10.2018
+            installed = inPart.installed;
+            position = inPart.transform.position;
+            rotation = inPart.transform.rotation;
         }
 
         #endregion

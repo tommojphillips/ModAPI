@@ -26,25 +26,23 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="MSCLoader">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
+      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
     </Reference>
     <Reference Include="PlayMaker, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
+      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Attachable\Active.cs" />
-    <Compile Include="Attachable\Rigid.cs" />
     <Compile Include="Attachable\Part.cs" />
+    <Compile Include="Attachable\PartInstallParameters.cs" />
     <Compile Include="Attachable\PartSaveInfo.cs" />
     <Compile Include="GuiInteractSymbolEnum.cs" />
     <Compile Include="LayerMasksEnum.cs" />
     <Compile Include="ModClient.cs" />
-    <Compile Include="PartInstanceTypeEnum.cs" />
     <Compile Include="PlayerModeEnum.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Attachable\Trigger.cs" />
