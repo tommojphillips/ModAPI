@@ -1,8 +1,8 @@
 ﻿using System;
-using ModApi.Attachable.CallBacks;
+using TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable.CallBacks;
 using UnityEngine;
 
-namespace ModApi.Attachable
+namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
 {
     /// <summary>
     /// Represents a pickable and installable part for the satsuma (or anything).
@@ -62,6 +62,14 @@ namespace ModApi.Attachable
             get;
             private set;
         }
+        /// <summary>
+        /// Represents the on assemble event. NOTE: parameter of type bool is startUp parameter.
+        /// </summary>
+        public event Action<bool> onAssemble;
+        /// <summary>
+        /// Represents the on disassemble event. NOTE: parameter of type bool is startUp parameter.
+        /// </summary>
+        public event Action<bool> onDisassemble;
 
         #endregion
 
@@ -78,7 +86,9 @@ namespace ModApi.Attachable
 
             partInstallParameters = inPartInstallParameters;
             loadedSaveInfo = inPartSaveInfo;
-            initializeTriggerCallback(); 
+            TriggerCallback callback = partInstallParameters.trigger.triggerGameObject.AddComponent<TriggerCallback>();
+            callback.onTriggerExit += onTriggerExit;
+            callback.onTriggerStay += onTriggerStay;
             try
             {
                 if (loadedSaveInfo == null)
@@ -143,16 +153,6 @@ namespace ModApi.Attachable
             return false;
         }
         /// <summary>
-        /// Initializes the trigger call backs. (TriggerStay + TriggerExit)
-        /// </summary>
-        protected internal void initializeTriggerCallback()
-        {
-            // Written, 10.08.2018
-
-            partInstallParameters.trigger.triggerGameObject.AddComponent<TriggerCallback>().onTriggerStay += new Action<Collider>(this.onTriggerStay);
-            partInstallParameters.trigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerExit += new Action<Collider>(this.onTriggerExit);
-        }
-        /// <summary>
         /// Disassembles the part.
         /// </summary>
         protected internal virtual void disassemble(bool inStartup = false)
@@ -170,6 +170,7 @@ namespace ModApi.Attachable
                 ModClient.disassembleAudio.Play();
             }
             this.installed = false;*/
+            onDisassemble?.Invoke(inStartup);
         }
         /// <summary>
         /// Assembles the part.
@@ -178,7 +179,7 @@ namespace ModApi.Attachable
         protected internal virtual void assemble(bool inStartup = false)
         {
             // Written, 16.10.2018
-                        
+
             /*this.activePart.SetActive(false);
             this.rigidPart.SetActive(true);
             this.partTrigger.triggerGameObject.SetActive(false);
@@ -189,7 +190,13 @@ namespace ModApi.Attachable
                 ModClient.assembleAudio.Play();
             }
             this.installed = true;*/
+            onAssemble?.Invoke(inStartup);
         }
+
+        #endregion
+
+        #region Event Handlers
+
         /// <summary>
         /// Occurs when the part has exited the trigger.
         /// </summary>

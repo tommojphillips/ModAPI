@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using HutongGames.PlayMaker;
-using ModApi.Attachable;
+using TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable;
 
-namespace ModApi
+namespace TommoJProductions.ModApi.v0_1_3_0_alpha
 {
     /// <summary>
     /// Represents useful properties for interacting with My Summer Car and PlayMaker.

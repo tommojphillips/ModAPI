@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ModApi.Attachable.CallBacks
+namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable.CallBacks
 {
     /// <summary>
     /// Represents call back for triggers.
@@ -15,11 +15,15 @@ namespace ModApi.Attachable.CallBacks
         /// <summary>
         /// Represents the on trigger exit event.
         /// </summary>
-        public Action<Collider> onTriggerExit;
+        public event Action<Collider> onTriggerExit;
         /// <summary>
         /// Represents the on trigger stay event.
         /// </summary>
-        public Action<Collider> onTriggerStay;
+        public event Action<Collider> onTriggerStay;
+        /// <summary>
+        /// Represents the on trigger enter event.
+        /// </summary>
+        public event Action<Collider> onTriggerEnter;
 
         #endregion
 
@@ -27,12 +31,15 @@ namespace ModApi.Attachable.CallBacks
 
         private void OnTriggerExit(Collider collider)
         {
-            this.onTriggerExit(collider);
+            onTriggerExit?.Invoke(collider);
         }
-
         private void OnTriggerStay(Collider collider)
         {
-            this.onTriggerStay(collider);
+            onTriggerStay?.Invoke(collider);
+        }
+        private void OnTriggerEnter(Collider collider)
+        {
+            onTriggerStay?.Invoke(collider);
         }
 
         #endregion

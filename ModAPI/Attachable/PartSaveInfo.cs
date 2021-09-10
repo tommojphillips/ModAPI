@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace ModApi.Attachable
+namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
 {
     /// <summary>
     /// Represents save info about a particluar part.
