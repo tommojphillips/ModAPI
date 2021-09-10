@@ -7,8 +7,8 @@
     <ProjectGuid>{2CEAE666-CBA5-4FA6-AEE3-D6C5CFB2DE20}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TommoJProductions</RootNamespace>
-    <AssemblyName>modapi_v0120-alpha</AssemblyName>
+    <RootNamespace>TommoJProductions.ModApi.v0_1_3_0_alpha</RootNamespace>
+    <AssemblyName>modapi_v0130-alpha</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
@@ -19,10 +19,15 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <OutputPath>bin\Release\</OutputPath>
     <DocumentationFile>bin\Release\modapi_v0114-alpha.xml</DocumentationFile>
+    <Optimize>true</Optimize>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <DocumentationFile>bin\Debug\modapi_v0114-alpha.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\modapi_v0130-alpha.xml</DocumentationFile>
     <OutputPath>bin\Debug\</OutputPath>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="MSCLoader">
