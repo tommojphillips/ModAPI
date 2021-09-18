@@ -20,21 +20,25 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
             set;
         }
         /// <summary>
-        /// Represents the triggers local position.
+        /// Represents the triggers collider.
         /// </summary>
-        public Vector3 triggerPosition
+        public Collider triggerCollider
         {
             get;
             set;
         }
         /// <summary>
-        /// Represents the triggers local rotation.
+        /// Represents the triggers renderer.
         /// </summary>
-        public Quaternion triggerRotation
+        public Renderer triggerRenderer
         {
             get;
             set;
         }
+        /// <summary>
+        /// Represents the default trigger collider scale.
+        /// </summary>
+        private Vector3 defaultScale = new Vector3(0.05f, 0.05f, 0.05f);
 
         #endregion
 
@@ -54,14 +58,14 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
         /// <param name="triggerName">The name of the trigger.</param>
         /// <param name="parent">The parent gameobject of the trigger.</param>
         /// <param name="position">The position for the trigger. ('local' related to the parent).</param>
-        /// <param name="rotation">The rotation for the trigger. ('local') related to the parent.</param>
-        /// <param name="scale">The scale for the trigger.</param>
+        /// <param name="eulerAngles">The rotation for the trigger. ('local') related to the parent.</param>
+        /// <param name="scale">The scale for the trigger. NOTE: if null sets scale to 0.05 on all XYZ axes.</param>
         /// <param name="visible">Sets whether the trigger should be visualized or not.</param>
-        public Trigger(string triggerName, GameObject parent, Vector3 position, Quaternion rotation, Vector3 scale, bool visible = false)
+        public Trigger(string triggerName, GameObject parent, Vector3? position = null, Vector3? eulerAngles = null, Vector3? scale = null, bool visible = false)
         {
             // Written, 10.08.2018
 
-            this.setUpTrigger(triggerName, parent, position, rotation, scale, visible);
+            setUpTrigger(triggerName, parent, position, eulerAngles, scale, visible);
         }
 
         #endregion
@@ -74,21 +78,22 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
         /// <param name="triggerName">The name of the trigger.</param>
         /// <param name="parent">The parent gameobject of the trigger.</param>
         /// <param name="position">The position for the trigger. ('local' related to the parent).</param>
-        /// <param name="rotation">The rotation for the trigger. ('local') related to the parent.</param>
+        /// <param name="eulerAngles">The rotation for the trigger. ('local') related to the parent.</param>
         /// <param name="scale">The scale for the trigger.</param>
         /// <param name="visible">Sets whether the trigger should be visualized or not.</param>
-        public void setUpTrigger(string triggerName, GameObject parent, Vector3 position, Quaternion rotation, Vector3 scale, bool visible = false)
+        public void setUpTrigger(string triggerName, GameObject parent, Vector3? position = null, Vector3? eulerAngles = null, Vector3? scale = null, bool visible = false)
         {
             // Written, 04.10.2018
-
-            this.triggerGameObject = GameObject.CreatePrimitive(PrimitiveType.Cube); // creating trigger gameobject.
-            this.triggerGameObject.transform.SetParent(parent.transform, false); // setting the parent for the trigger.
-            this.triggerGameObject.name = triggerName; // setting the triggers name.
-            this.triggerGameObject.transform.localPosition = position; // setting the position for the trigger.
-            this.triggerGameObject.transform.localRotation = rotation; // setting the rotation for the trigger.
-            this.triggerGameObject.transform.localScale = scale; // setting the scale for the trigger.
-            this.triggerGameObject.GetComponent<Collider>().isTrigger = true; // making the gameobject a trigger.
-            this.triggerGameObject.GetComponent<Renderer>().enabled = visible; // making the gameobject in/visible
+            triggerGameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            triggerGameObject.transform.SetParent(parent.transform, false);
+            triggerGameObject.name = triggerName;
+            triggerGameObject.transform.localPosition = position ?? Vector3.zero;
+            triggerGameObject.transform.localRotation = Quaternion.Euler(eulerAngles ?? Vector3.zero);
+            triggerGameObject.transform.localScale = scale ?? defaultScale;
+            triggerCollider = triggerGameObject.GetComponent<Collider>();
+            triggerCollider.isTrigger = true;
+            triggerRenderer = triggerGameObject.GetComponent<Renderer>();
+            triggerRenderer.enabled = visible;
         }
 
         #endregion

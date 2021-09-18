@@ -2,6 +2,8 @@
 using UnityEngine;
 using HutongGames.PlayMaker;
 using TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable;
+using System.Collections;
+using System;
 
 namespace TommoJProductions.ModApi.v0_1_3_0_alpha
 {
@@ -10,14 +12,42 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha
     /// </summary>
     public static class ModClient
     {
-        // Written, 10.08.2018
+        // Written, 10.08.2018 | Modified 11.09.2021
+
+        #region Constraints
+
+#if DEBUG
+        /// <summary>
+        /// Represents that the complied runtime is fact debug configuration.
+        /// </summary>
+        public const bool IS_DEBUG_CONFIG = true;
+#else
+        /// <summary>
+        /// Represents that the complied runtime is fact release configuration.
+        /// </summary>
+        public const bool IS_DEBUG_CONFIG = false;
+#endif
+
+#if x64
+        /// <summary>
+        /// Represents that the complied runtime is infact x64
+        /// </summary>
+        public const bool IS_X64 = true;
+#else
+        /// <summary>
+        /// Represents that the complied runtime is infact x86
+        /// </summary>
+        public const bool IS_x64 = false;
+#endif
+        /// <summary>
+        /// Represents the complied runtime version of the api.
+        /// </summary>
+        public const string version = "0.1.3.0";
+
+        #endregion
 
         #region Properties
 
-        /// <summary>
-        /// Represents the version of the api.
-        /// </summary>
-        public static string version = "0.1.2.0";
         /// <summary>
         /// Represents the assemble assemble audio source.
         /// </summary>
@@ -122,7 +152,7 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha
         /// Represents all parts in the current instance of my summer car. (msc mods that use MODAPI.Attachable.Part
         /// will be listed here)
         /// </summary>
-        public static List<Part> activeParts { get; } = new List<Part>();
+        public static List<Part> parts { get; } = new List<Part>();
 
         #endregion
 
@@ -179,6 +209,19 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha
 
         #region ExMethods
 
+        /// <summary>
+        /// returns whether the player is currently looking at this part.
+        /// </summary>
+        /// <param name="gameObject">The gameobject to detect againist.</param>
+        public static bool isPlayerLookingAt(this GameObject gameObject)
+        {
+            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 1f, 1 << gameObject.layer))
+            {
+                if (hit.collider.gameObject == gameObject)
+                    return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Checks if player is holding the GameObject, <paramref name="inGameObject"/>.
         /// </summary>
@@ -339,6 +382,64 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha
                     break;
             }
             return layerName;
+        }
+        /// <summary>
+        /// Creates and returns a new rigidbody on the gameobject and assigns parameters listed.
+        /// </summary>
+        /// <param name="gameObject">The gameobject to create a rigidbody on.</param>
+        /// <param name="rigidbodyConstraints">Create rigidbody with these constraints.</param>
+        /// <param name="mass">The mass of the rb.</param>
+        /// <param name="drag">The drag of the rb</param>
+        /// <param name="angularDrag">The angular drag of the rb.</param>
+        /// <param name="isKinematic">is this rigidbody kinmatic?</param>
+        /// <param name="useGravity">is this rigidbody affected by gravity?</param>
+        public static Rigidbody createRigidbody(this GameObject gameObject,
+         RigidbodyConstraints rigidbodyConstraints = RigidbodyConstraints.None, float mass = 1, float drag = 0, float angularDrag = 0.05f, bool isKinematic = false, bool useGravity = true)
+        {
+            // Written, 10.09.2021
+
+            Rigidbody rb = gameObject.AddComponent<Rigidbody>();
+            rb.constraints = rigidbodyConstraints;
+            rb.mass = mass;
+            rb.drag = drag;
+            rb.angularDrag = angularDrag;
+            rb.isKinematic = isKinematic;
+            rb.useGravity = useGravity;
+            return rb;
+        }
+        /// <summary>
+        /// Fixes a transform to another transform.
+        /// </summary>
+        /// <param name="transform">The transform to fix</param>
+        /// <param name="parent">The parent transform to fix <paramref name="transform"/></param>
+        /// <param name="onFixedToParent">action to call when fixed to parent.</param>
+        public static IEnumerator fixToParent(this Transform transform, Transform parent, Action onFixedToParent = null)
+        {
+            while (transform.parent != parent)
+            {
+                transform.parent = parent;
+                yield return new WaitForEndOfFrame();
+            }
+            onFixedToParent?.Invoke();
+            yield break;
+        }
+        /// <summary>
+        /// Sets its position and rotation.
+        /// </summary>
+        /// <param name="transform">The transform to fix</param>
+        /// <param name="pos">The pos to set</param>
+        /// <param name="eulerAngles">the rot to set</param>
+        /// <param name="onFixedTransform">action to call when fixed transform.</param>
+        public static IEnumerator fixTransform(this Transform transform, Vector3 pos, Vector3 eulerAngles, Action onFixedTransform = null)
+        {
+            while (transform.localPosition != pos && transform.localEulerAngles != eulerAngles)
+            {
+                transform.localPosition = pos;
+                transform.localEulerAngles = eulerAngles;
+                yield return new WaitForEndOfFrame();
+            }
+            onFixedTransform?.Invoke();
+            yield break;
         }
 
         #endregion
