@@ -1,148 +1,260 @@
-﻿using System;
-using ModApi.Attachable.CallBacks;
+﻿using MSCLoader;
+using System;
+using System.Collections;
+using System.Linq;
+using TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable.CallBacks;
 using UnityEngine;
 
-namespace ModApi.Attachable
+namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
 {
     /// <summary>
     /// Represents a pickable and installable part for the satsuma (or anything).
     /// </summary>
-    public abstract class Part
+    public class Part : MonoBehaviour
     {
-        #region Properties
+        #region Part Classes
+
+        /// <summary>        
+        /// Represents save info about a particluar part.        
+        /// </summary>
+        public class PartSaveInfo
+        {
+            // Written, 04.10.2018
+
+            #region Properties
+
+            /// <summary>
+            /// Represents whether or not the part is installed.
+            /// </summary>
+            public bool installed
+            {
+                get;
+                set;
+            }
+            /// <summary>
+            /// The install point index that the part is installed to located in <see cref="partInstallParameters" href=".installPoints" />.
+            /// </summary>
+            public int installedPointIndex
+            {
+                get;
+                set;
+            }
+            /// <summary>
+            /// Represents the parts world position.
+            /// </summary>
+            public Vector3 position
+            {
+                get;
+                set;
+            }
+            /// <summary>
+            /// Represents the parts world rotation (euler angles)
+            /// </summary>
+            public Vector3 rotation
+            {
+                get;
+                set;
+            }
+
+            #endregion
+
+            #region Constructors
+
+            /// <summary>
+            /// Initializes a new instance of this.
+            /// </summary>
+            public PartSaveInfo() { }
+            /// <summary>
+            /// Initializes a new instance of this and assigns the parts fields to this.
+            /// </summary>
+            /// <param name="inPart">The part to save</param>
+            public PartSaveInfo(Part inPart)
+            {
+                // Written, 04.10.2018
+
+                installed = inPart.installed;
+                installedPointIndex = inPart.installPointIndex;
+                position = inPart.transform.position;
+                rotation = inPart.transform.eulerAngles;
+            }
+
+            #endregion
+        }
+        
+        #endregion
+        
+        #region Public Fields / Properties
 
         /// <summary>
-        /// Represents the default save info for when there is no save data passed.
+        /// Represents the on assemble event.
         /// </summary>
-        public abstract PartSaveInfo defaultPartSaveInfo
-        {
-            get;
-        }
+        public event Action onAssemble;
         /// <summary>
-        /// Represents the parent for the part. The gameobject that this part connects to.
+        /// Represents the on disassemble event.
         /// </summary>
-        public GameObject parent
-        {
-            get;
-        }
+        public event Action onDisassemble;
         /// <summary>
-        /// Represents the rigid part; the installed/fixed part.
+        /// Represents the default save info for this part.
         /// </summary>
-        public abstract GameObject rigidPart
-        {
-            get;
-            set;
-        }
+        public PartSaveInfo defaultSaveInfo;
         /// <summary>
-        /// Represents the active part; the pickable part.
+        /// Represents all triggers; install points for this part.
         /// </summary>
-        public abstract GameObject activePart
-        {
-            get;
-            set;
-        }
+        public Trigger[] triggers;
         /// <summary>
-        /// Represents the trigger for the part.
-        /// </summary>
-        public Trigger partTrigger
-        {
-            get;
-            set;
-        }
-        /// <summary>
-        /// Represents if the part is installed to the trigger or not.
+        /// Represents if the part is installed or not.
         /// </summary>
         public bool installed
         {
-            get;
-            private set;
+            get => loadedSaveInfo.installed;
+            set => loadedSaveInfo.installed = value;
         }
         /// <summary>
-        /// Represents whether the player is holding the part.
+        /// Represents the current install point index that this part is installed to.
         /// </summary>
-        public bool isPlayerHoldingPart
+        public int installPointIndex
         {
-            get
-            {
-                if (this.activePart.isOnLayer(LayerMasksEnum.Wheel))
-                    return true;
-                return false;
-            }
+            get => loadedSaveInfo.installedPointIndex;
+            set => loadedSaveInfo.installedPointIndex = value;
+        }
+        #endregion
+
+        #region Private Fields
+
+        /// <summary>
+        /// Represents loaded save info.
+        /// </summary>
+        private PartSaveInfo loadedSaveInfo;
+        /// <summary>
+        /// Represents if part in trigger a trigger (install point -any)
+        /// </summary>
+        private bool inTrigger = false;
+        /// <summary>
+        /// Represents if mouse over activated.
+        /// </summary>
+        private bool mouseOver = false;
+        /// <summary>
+        /// Represents the trigger routine.
+        /// </summary>
+        private Coroutine triggerRoutine;
+        /// <summary>
+        /// Represents the installed Routine.
+        /// </summary>
+        private Coroutine installedRoutine;
+        /// <summary>
+        /// Represents the install point colliers (just a list of <see cref="Trigger.triggerCollider"/> in order).
+        /// </summary>
+        private Collider[] installPointColliders;
+        /// <summary>
+        /// Represents the cached rigidbody.
+        /// </summary>
+        private Rigidbody cachedRigidBody;
+        /// <summary>
+        /// Represents the cached mass of the parts rigidbody.mass property.
+        /// </summary>
+        private float cachedMass;
+
+        #endregion
+
+        #region Unity Methods
+
+        /// <summary>
+        /// Represents the awake runtime call
+        /// </summary>
+        void Awake()
+        {
+            cachedRigidBody = gameObject.GetComponent<Rigidbody>();
+            cachedMass = cachedRigidBody?.mass ?? 1;
         }
         /// <summary>
-        /// Represents whether the part is within the trigger.
+        /// Represents the enabled runtime call
         /// </summary>
-        public bool isPartInTrigger
+        void OnEnable()
         {
-            get;
-            private set;
-        }
-        /// <summary>
-        /// Represents the loaded save info. If no loaded info, is <see langword="null"/>.
-        /// </summary>
-        public PartSaveInfo loadedSaveInfo
-        {
-            get;
-            private set;
+            if (installed)
+                StartCoroutine(partInstalled());
         }
 
         #endregion
 
-        #region Constructors 
+        #region IEnumerators
 
         /// <summary>
-        /// Initializes a new instance and assigns object properties to parameters.
+        /// Represents the installed part logic (eg. mousebutton1=>disassemble).
         /// </summary>
-        /// <param name="inPartSaveInfo">The part save info to load.</param>
-        /// <param name="inPart">The gameobject to create a part from. note this gameobject expects to have a rigidbody and collider attached.</param>
-        /// <param name="inParent">The parent of the gameobject; the gameobject that the part 'installs' to.</param>
-        /// <param name="inPartTrigger">The trigger for the part.</param>
-        /// <param name="inPartPosition">The position that the part will stay relavited to the parent. (when installed).</param>
-        /// <param name="inPartRotation">The rotation that the part will stay relavited to the parent. (when installed).</param>
-        public Part(PartSaveInfo inPartSaveInfo, GameObject inPart, GameObject inParent, Trigger inPartTrigger, Vector3 inPartPosition, Quaternion inPartRotation)
+        private IEnumerator partInstalled()
         {
-            // Written, 16.10.2018
+            while (installed)
+            {
+                if (gameObject.isPlayerLookingAt())
+                {
+                    mouseOver = true;
+                    ModClient.guiDisassemble = true;
 
-            // Setting parent.
-            this.parent = inParent;
-            // Getting loaded settings
-            this.loadedSaveInfo = inPartSaveInfo;
-            // Setting up trigger for the part.
-            this.partTrigger = inPartTrigger;
-            this.initializeTriggerCallback();
-            // Setting up free part.
-            this.activePart = GameObject.Find(inPart.name) ?? UnityEngine.Object.Instantiate(inPart); // instaniating new part in scene only if part was not found in game scene.
-            this.activePart.AddComponent<Rigidbody>();
-            this.makePartPickable(true);
-            // Setting up installed part.
-            this.rigidPart = UnityEngine.Object.Instantiate(inPart);
-            UnityEngine.Object.Destroy(this.rigidPart.GetComponent<Rigidbody>()); // Destorying any rigidbody to stop the gameobject
-            this.rigidPart.AddComponent<Rigid>().part = this;            
-            this.makePartPickable(false, inPartInstance: PartInstanceTypeEnum.Rigid);// Sets the tag to 'Untagged' as this makes the Gameobject not pick-a-up-able.. :)
-            this.rigidPart.transform.SetParent(this.parent.transform, false);
-            this.rigidPart.transform.localPosition = inPartPosition;
-            this.rigidPart.transform.localRotation = inPartRotation;
-            // Setting up part state.
-            try
-            {
-                if (this.loadedSaveInfo == null)
-                    this.loadedSaveInfo = this.defaultPartSaveInfo;
-                if (this.loadedSaveInfo.installed)
-                {
-                    this.assemble(true);
+                    if (Input.GetMouseButtonDown(1))
+                    {
+                        disassemble();
+                        mouseOverReset();
+                    }
                 }
-                else
-                {
-                    this.disassemble(true);
-                    this.activePart.transform.position = this.loadedSaveInfo.position;
-                    this.activePart.transform.rotation = this.loadedSaveInfo.rotation;
-                }
+                else if (mouseOver)
+                    mouseOverReset();
+                yield return null;
             }
-            catch (Exception ex)
+        }
+        /// <summary>
+        /// Represents the part in a trigger logic.
+        /// </summary>
+        /// <param name="other">The collider reference that triggered this call.</param>
+        private IEnumerator partInTrigger(Collider other)
+        {
+            inTrigger = true;
+            while (inTrigger)
             {
-                MSCLoader.ModConsole.Error("[ModAPI.Part] - " + ex.ToString());
+                ModClient.guiAssemble = true;
+
+                if (Input.GetMouseButtonDown(0))
+                {
+                    ModClient.guiAssemble = false;
+                    assemble(other);
+                    break;
+                }
+                yield return null;
             }
-            ModClient.activeParts.Add(this);
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        /// <summary>
+        /// Represents the trigger enter callback
+        /// </summary>
+        /// <param name="other">the collider that invoked this callback.</param>
+        /// <param name="callback_ref">The callback reference that invoked this.</param>
+        void callback_onTriggerEnter(Collider other, TriggerCallback callback_ref)
+        {
+            if (!installed && installPointColliders.Contains(callback_ref.callbackCollider) && gameObject.isPlayerHolding())
+            {
+                if (triggerRoutine != null)
+                    StopCoroutine(triggerRoutine);
+                triggerRoutine = StartCoroutine(partInTrigger(callback_ref.callbackCollider));
+            }
+        }
+        /// <summary>
+        /// Represents the trigger exit callback
+        /// </summary>
+        /// <param name="other">the collider that invoked this callback.</param>
+        /// <param name="callback_ref">The callback reference that invoked this.</param>
+        void callback_onTriggerExit(Collider other, TriggerCallback callback_ref)
+        {
+            if (installPointColliders.Contains(callback_ref.callbackCollider))
+            {
+                if (triggerRoutine != null)
+                    StopCoroutine(triggerRoutine);
+                inTrigger = false;
+                ModClient.guiAssemble = false;
+            }
         }
 
         #endregion
@@ -150,151 +262,169 @@ namespace ModApi.Attachable
         #region Methods
 
         /// <summary>
-        /// Gets all part data to save info.
+        /// Initializes this part.
+        /// </summary>
+        /// <param name="saveInfo">The save info to load this part with.</param>
+        /// <param name="triggerRefs">The Install points for this part. (in the form of a trigger)</param>
+        public void initPart(PartSaveInfo saveInfo, params Trigger[] triggerRefs)
+        {
+            // Written, 08.09.2021
+
+            triggers = triggerRefs;
+
+            loadedSaveInfo = saveInfo ?? defaultSaveInfo ?? new PartSaveInfo();
+            installed = loadedSaveInfo.installed;
+            installPointIndex = loadedSaveInfo.installedPointIndex;
+            installPointColliders = new Collider[triggerRefs.Length];
+            if (triggerRefs.Length > 0)
+            {
+                TriggerCallback callback;
+                for (int i = 0; i < triggers.Length; i++)
+                {
+                    installPointColliders[i] = triggers[i].triggerCollider;
+                    callback = triggers[i].triggerGameObject.GetComponent<TriggerCallback>();
+                    if (!callback)
+                        callback = triggers[i].triggerGameObject.AddComponent<TriggerCallback>();
+                    callback.onTriggerExit += callback_onTriggerExit;
+                    callback.onTriggerEnter += callback_onTriggerEnter;
+                }
+                if (installed)
+                    assemble(installPointColliders[installPointIndex], false);
+            }
+            else
+                ModConsole.LogWarning($"no install point defined ({name})");
+            if (!installed)
+            {
+                transform.position = loadedSaveInfo.position;
+                transform.eulerAngles = loadedSaveInfo.rotation;
+            }
+        }
+        /// <summary>
+        /// Attaches this part to the attachment point.
+        /// </summary>
+        /// <param name="installPoint">The attachment point</param>
+        /// <param name="playSound">Play assemble sound?</param>
+        public void assemble(Collider installPoint, bool playSound = true)
+        {
+            installed = true;
+            inTrigger = false;
+
+            installPoint.enabled = false;
+            installPointIndex = Array.IndexOf(installPointColliders, installPoint);
+            triggers[installPointIndex].triggerRenderer.enabled = false;
+            makePartPickable(false);
+            transform.parent = installPoint.transform;
+            transform.localPosition = Vector3.zero;
+            transform.localEulerAngles = Vector3.zero;
+
+            if (cachedRigidBody)
+            {
+                cachedMass = cachedRigidBody.mass;
+                Destroy(cachedRigidBody);
+            }
+
+            if (playSound)
+            {
+                MasterAudio.PlaySound3DAndForget("CarBuilding", transform, variationName: "assemble");
+            }
+
+            onAssemble?.Invoke();
+
+            if (installedRoutine != null)
+                StopCoroutine(installedRoutine);
+            installedRoutine = StartCoroutine(partInstalled());
+
+            ModConsole.Log($"PartMagnet: {gameObject.name} attached on attachment point: {installPoint.name}.");
+        }
+        /// <summary>
+        /// Disassemble this part from the installed point
+        /// </summary>
+        /// <param name="playSound">Play disassemble sound?</param>
+        public void disassemble(bool playSound = true)
+        {
+            installed = false;
+
+            if (installedRoutine != null)
+                StopCoroutine(installedRoutine);
+            if (mouseOver)
+                mouseOverReset();
+
+            makePartPickable(true);
+
+            transform.parent = null;
+
+            triggers[installPointIndex].triggerRenderer.enabled = true;
+
+            installPointColliders[installPointIndex].enabled = true;
+
+            cachedRigidBody = gameObject.AddComponent<Rigidbody>();
+            cachedRigidBody.mass = cachedMass;
+
+            if (playSound)
+            {
+                MasterAudio.PlaySound3DAndForget("CarBuilding", transform, variationName: "disassemble");
+            }
+
+            onDisassemble?.Invoke();
+
+            ModConsole.Log($"Part: {gameObject.name} disassembled from install point: {installPointColliders[installPointIndex].name}.");
+        }
+        /// <summary>
+        /// Sets all part triggers (install points) to <paramref name="active"/>.
+        /// </summary>
+        /// <param name="active">active or not [part]</param>
+        public void setActiveAllTriggers(bool active)
+        {
+            installPointColliders.ToList().ForEach(_trigger => _trigger.enabled = active);
+        }
+        /// <summary>
+        /// Sets a trigger (install point) from <paramref name="index"/> to <paramref name="active"/>.
+        /// </summary>
+        /// <param name="active">active or not [part]</param>
+        /// <param name="index">The idex ofg the trigger to active or not.</param>
+        public void setActiveTrigger(bool active, int index)
+        {
+            installPointColliders[index].enabled = active;
+        }
+        /// <summary>
+        /// Sets the part trigger (install points) that the part is currently installed to <paramref name="active"/>.
+        /// </summary>
+        /// <param name="active">active or not [part]</param>
+        public void setActiveAttachedToTrigger(bool active)
+        {
+            setActiveTrigger(active, installPointIndex);
+        }
+        /// <summary>
+        /// Gets save info for this part. (pos, rot, installed, install index)
         /// </summary>
         public PartSaveInfo getSaveInfo()
         {
-            // Written, 04.10.2018
-
-            return new PartSaveInfo(this);
+            return new PartSaveInfo() { installed = installed, installedPointIndex = installPointIndex, position = transform.position, rotation = transform.eulerAngles };
         }
         /// <summary>
-        /// Makes the part a pickable item depending on the provided values.
-        /// </summary>
-        /// <param name="inPickable">Make part pickable?</param>
-        /// <param name="inLayer">Make part on different layer</param>
-        /// <param name="inPartInstance">Represents whether to modify the active or rigid gameobject.</param>
-        public void makePartPickable(bool inPickable, LayerMasksEnum inLayer = LayerMasksEnum.Parts, PartInstanceTypeEnum inPartInstance = PartInstanceTypeEnum.Active)
+         /// Makes the part a pickable item depending on the provided values.
+         /// </summary>
+         /// <param name="inPickable">Make part pickable?</param>
+         /// <param name="inLayer">Make part on different layer</param>
+        public void makePartPickable(bool inPickable, LayerMasksEnum inLayer = LayerMasksEnum.Parts)
         {
-            // Written, 14.08.2018
+            // Written, 14.08.2018 | Modified, 10.09.2021
 
-            if (inPartInstance == PartInstanceTypeEnum.Active)
-            {
-                if (inPickable)
-                    this.activePart.tag = "PART";
-                else
-                    this.activePart.tag = "DontPickThis";
-                this.activePart.layer = inLayer.layer();
-            }
+            if (inPickable)
+                gameObject.tag = "PART";
             else
-            {
-                if (inPickable)
-                    this.rigidPart.tag = "PART";
-                else
-                    this.rigidPart.tag = "DontPickThis";
-                this.rigidPart.layer = inLayer.layer();
-            }
+                gameObject.tag = "DontPickThis";
+            gameObject.layer = inLayer.layer();
         }
+        
+        
         /// <summary>
-        /// Checks that the parmeter, <paramref name="inCollider"/>'s <see cref="UnityEngine.Object.name"/> property is equal to the Part's
-        /// <see cref="UnityEngine.Object.name"/> property.
+        /// ends (resets) a gui interaction.
         /// </summary>
-        /// <param name="inCollider">The collider that hit the trigger.</param>
-        /// <param name="inPartInstance">Test either rigid or active gameobject's <see cref="UnityEngine.Object.name"/> property againist the colliders parenting gameobject's <see cref="UnityEngine.Object.name"/> property.</param>
-        public bool isPartCollider(Collider inCollider, PartInstanceTypeEnum inPartInstance = PartInstanceTypeEnum.Active)
+        private void mouseOverReset()
         {
-            // Written, 10.08.2018
-
-            string _name = inCollider.gameObject.name;
-            if (inPartInstance == PartInstanceTypeEnum.Active)
-            {
-                if (_name == this.activePart.name)
-                    return true;
-            }
-            else
-            {
-                if (_name == this.rigidPart.name)
-                    return true;
-            }
-            return false;
-        }
-        /// <summary>
-        /// Initializes the trigger call backs. (TriggerStay + TriggerExit)
-        /// </summary>
-        protected internal void initializeTriggerCallback()
-        {
-            // Written, 10.08.2018
-
-            this.partTrigger.triggerGameObject.AddComponent<TriggerCallback>().onTriggerStay += new Action<Collider>(this.onTriggerStay);
-            this.partTrigger.triggerGameObject.GetComponent<TriggerCallback>().onTriggerExit += new Action<Collider>(this.onTriggerExit);
-        }
-        /// <summary>
-        /// Disassembles the part.
-        /// </summary>
-        protected internal virtual void disassemble(bool inStartup = false)
-        {
-            // Written, 16.10.2018
-
-            this.activePart.SetActive(true);
-            this.rigidPart.SetActive(false);
-            this.partTrigger.triggerGameObject.SetActive(true);
-            this.activePart.transform.position = this.rigidPart.transform.position;
-            this.activePart.transform.rotation = this.rigidPart.transform.rotation;
-            if (!inStartup)
-            {
-                ModClient.disassembleAudio.transform.position = this.activePart.transform.position;
-                ModClient.disassembleAudio.Play();
-            }
-            this.installed = false;
-        }
-        /// <summary>
-        /// Assembles the part.
-        /// </summary>
-        /// <param name="inStartup">Optional; if true, does not trigger the sound. (for when loading data)</param>
-        protected internal virtual void assemble(bool inStartup = false)
-        {
-            // Written, 16.10.2018
-                        
-            this.activePart.SetActive(false);
-            this.rigidPart.SetActive(true);
-            this.partTrigger.triggerGameObject.SetActive(false);
-            if (!inStartup)
-            {
-                ModClient.guiAssemble = false;
-                ModClient.assembleAudio.transform.position = this.rigidPart.transform.position;
-                ModClient.assembleAudio.Play();
-            }
-            this.installed = true;
-        }
-        /// <summary>
-        /// Occurs when the part has exited the trigger.
-        /// </summary>
-        /// <param name="inCollider">The collider that exited the trigger.</param>
-        protected internal virtual void onTriggerExit(Collider inCollider)
-        {
-            // Written, 10.08.2018
-
-            if (this.isPartCollider(inCollider))
-            {
-                ModClient.guiAssemble = false;
-                this.isPartInTrigger = false;
-            }
-        }
-        /// <summary>
-        /// Occurs when the part is in the trigger.
-        /// </summary>
-        /// <param name="inCollider">The collider that's in the trigger.</param>
-        protected internal virtual void onTriggerStay(Collider inCollider)
-        {
-            // Written, 02.10.2018
-
-            if (this.isPlayerHoldingPart)
-            {
-                if (Input.GetKeyDown(KeyCode.Mouse0))
-                {
-                    if (this.isPartInTrigger)
-                    {
-                        this.assemble();
-                        return;
-                    }
-                }
-
-                if (this.isPartCollider(inCollider))
-                {
-                    ModClient.guiAssemble = true;
-                    this.isPartInTrigger = true;
-                }
-            }
+            mouseOver = false;
+            ModClient.guiDisassemble = false;
         }
 
         #endregion
