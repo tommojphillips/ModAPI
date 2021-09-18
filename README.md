@@ -14,9 +14,11 @@
 
 # Getting Started
 
-# See Turbo mod to have a mad look at how to implement the new mod api v0.1.3.0-alpha structure. its a lot easier and straight forward. here's the link:
-see "<**https://github.com/tommojphillips/TurboMod/releases/tag/v0.1.1**>"
-[Obsolete] everything below is outdated infomation and won't exactly work from v0.1.3.0-alpha and on-wards.
+- See Turbo mod to have a mad look at how to implement the new mod api v0.1.3.0-alpha structure. its a lot easier and straight forward. here's the link: see "<https://github.com/tommojphillips/TurboMod/releases/tag/v0.1.1>"
+
+
+
+#### [Obsolete] everything below is outdated infomation and won't exactly work from v0.1.3.0-alpha and on-wards.
 - To see this API in action, take a look at the demo i have created with a truck engine that attaches to the roof of satsuma, see "<https://github.com/tommojphillips/AttachObjectDemo>".  
 - A walk-through of how to create your own truck engine install in version 0.1.1.4, see "<https://github.com/tommojphillips/ModAPI/wiki/Getting-started-in-v0.1.1.4-alpha>".  
 - Cruise Control Panel for stock steering wheel created by Nitro and myself. see "https://github.com/tommojphillips/SatsumaCruiseControl"
