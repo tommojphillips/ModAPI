@@ -10,7 +10,7 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
     /// <summary>
     /// Represents a pickable and installable part for the satsuma (or anything).
     /// </summary>
-    public abstract class Part : MonoBehaviour
+    public class Part : MonoBehaviour
     {
         #region Part Classes
 
@@ -60,9 +60,12 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
 
             #region Constructors
 
-            public PartSaveInfo() { }
             /// <summary>
             /// Initializes a new instance of this.
+            /// </summary>
+            public PartSaveInfo() { }
+            /// <summary>
+            /// Initializes a new instance of this and assigns the parts fields to this.
             /// </summary>
             /// <param name="inPart">The part to save</param>
             public PartSaveInfo(Part inPart)
