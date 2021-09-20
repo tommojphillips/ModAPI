@@ -79,7 +79,31 @@ namespace TommoJProductions.ModApi.Attachable
 
             #endregion
         }
-        
+        /// <summary>
+        /// Represents settings for the part class.
+        /// </summary>
+        public class PartSettings 
+        {
+            /// <summary>
+            /// Represents the assemble type of the part.
+            /// </summary>
+            public AssembleType assembleType = AssembleType.static_rigidbodyDelete;
+        }
+        /// <summary>
+        /// Represents supported assemble types.
+        /// </summary>
+        public enum AssembleType 
+        {
+            /// <summary>
+            /// Represents a static assembly via, deleting parts rigidbody.
+            /// </summary>
+            static_rigidbodyDelete,
+            /// <summary>
+            /// Represents a static assembly via, setting the parts rigidbody to kinematic.
+            /// </summary>
+            static_rigidibodySetKinematic
+        }
+
         #endregion
         
         #region Public Fields / Properties
@@ -116,7 +140,12 @@ namespace TommoJProductions.ModApi.Attachable
             get => loadedSaveInfo.installedPointIndex;
             private set => loadedSaveInfo.installedPointIndex = value;
         }
-
+        
+        /// <summary>
+        /// Represents the parts settings.
+        /// </summary>
+        public PartSettings partSettings;
+        
         #endregion
 
         #region Private Fields
@@ -265,10 +294,13 @@ namespace TommoJProductions.ModApi.Attachable
         /// Initializes this part.
         /// </summary>
         /// <param name="saveInfo">The save info to load this part with.</param>
+        /// <param name="partSettings">The part settings to load this part with.</param>
         /// <param name="triggerRefs">The Install points for this part. (in the form of a trigger)</param>
-        public void initPart(PartSaveInfo saveInfo, params Trigger[] triggerRefs)
+        public void initPart(PartSaveInfo saveInfo, PartSettings partSettings = default(PartSettings), params Trigger[] triggerRefs)
         {
             // Written, 08.09.2021
+
+            this.partSettings = partSettings;
 
             triggers = triggerRefs;
 
@@ -313,8 +345,16 @@ namespace TommoJProductions.ModApi.Attachable
 
             if (cachedRigidBody)
             {
-                cachedMass = cachedRigidBody.mass;
-                Destroy(cachedRigidBody);
+                switch (partSettings.assembleType)
+                {
+                    case AssembleType.static_rigidbodyDelete:
+                        cachedMass = cachedRigidBody.mass;
+                        Destroy(cachedRigidBody);
+                        break;
+                    case AssembleType.static_rigidibodySetKinematic:
+                        cachedRigidBody.isKinematic = false;
+                        break;
+                }
             }
 
             if (playSound)
@@ -340,8 +380,17 @@ namespace TommoJProductions.ModApi.Attachable
             makePartPickable(true);
             transform.parent = null;            
             setActiveAttachedToTrigger(true);
-            cachedRigidBody = gameObject.AddComponent<Rigidbody>();
-            cachedRigidBody.mass = cachedMass;
+
+            switch (partSettings.assembleType)
+            {
+                case AssembleType.static_rigidbodyDelete:
+                    cachedRigidBody = gameObject.AddComponent<Rigidbody>();
+                    cachedRigidBody.mass = cachedMass;
+                    break;
+                case AssembleType.static_rigidibodySetKinematic:
+                    cachedRigidBody.isKinematic = true;
+                    break;
+            }
 
             if (playSound)
             {
