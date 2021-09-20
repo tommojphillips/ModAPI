@@ -326,6 +326,7 @@ namespace TommoJProductions.ModApi.Attachable
                 transform.position = loadedSaveInfo.position;
                 transform.eulerAngles = loadedSaveInfo.rotation;
             }
+            ModClient.parts.Add(this);
         }
         /// <summary>
         /// Attaches this part to the attachment point.

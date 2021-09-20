@@ -1,8 +1,4 @@
 ﻿using MSCLoader;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace TommoJProductions.ModApi.Interface
 {
@@ -54,11 +50,19 @@ namespace TommoJProductions.ModApi.Interface
         /// <summary>
         /// Reps modapi version
         /// </summary>
-        public override string Version => "v0.1";
+        public override string Version => "v0.1.1";
         /// <summary>
         /// Reps mod author.
         /// </summary>
         public override string Author => "tommojphillips";
+        /// <summary>
+        /// loads in menu
+        /// </summary>
+        public override bool LoadInMenu => true;
+        /// <summary>
+        /// second pass on
+        /// </summary>
+        public override bool SecondPass => true;
 
         #endregion
 
@@ -72,7 +76,6 @@ namespace TommoJProductions.ModApi.Interface
             // Written, 09.10.2021
 
             preLoad();
-            print("<color=green>ready</color>");
         }
 
         #endregion
@@ -82,9 +85,9 @@ namespace TommoJProductions.ModApi.Interface
         /// <summary>
         /// Reps onMenuLoad.
         /// </summary>
-        public override void MenuOnLoad()
+        public override void OnMenuLoad()
         {
-            load();
+            //load();
         }
         /// <summary>
         /// Reps onLoad.
@@ -96,7 +99,7 @@ namespace TommoJProductions.ModApi.Interface
         /// <summary>
         /// Reps onSecondPassLoad().
         /// </summary>
-        public override void PostLoad()
+        public override void SecondPassOnLoad()
         {
             postLoad();
         }
@@ -113,7 +116,6 @@ namespace TommoJProductions.ModApi.Interface
             // Written, 09.10.2021
 
             ConsoleCommand.Add(new ConsoleCommands());
-            print("Pre-Loaded");
         }
         /// <summary>
         /// Reps load function
@@ -122,7 +124,7 @@ namespace TommoJProductions.ModApi.Interface
         {
             // Written, 09.10.2021
 
-            print("Loaded");
+            ModClient.parts.Clear();
         }
         /// <summary>
         /// Reps post-load function
@@ -131,7 +133,6 @@ namespace TommoJProductions.ModApi.Interface
         {
             // Written, 09.10.2021
 
-            print("Post-Loaded");
         }
         /// <summary>
         /// Reps modapi print-to-console function
