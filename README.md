@@ -10,17 +10,17 @@
  Build Number
  Revision
  
- -> v0.1.3.0
+ LATEST RELEASE --> v0.1.3.1-alpha
 
 # Getting Started
 
-- See Turbo mod to have a mad look at how to implement the new mod api v0.1.3.0-alpha structure. its a lot easier and straight forward. here's the link: see "<https://github.com/tommojphillips/TurboMod/releases/tag/v0.1.1>"
+- See Turbo mod to have a mad look at how to implement the new mod api v0.1.3.*-alpha structure. its a lot easier and straight forward. here's the link: see "<https://github.com/tommojphillips/TurboMod/releases/tag/v0.1.1>"
 
 
 
 #### [Obsolete] everything below is outdated infomation and won't exactly work from v0.1.3.0-alpha and on-wards.
 - To see this API in action, take a look at the demo i have created with a truck engine that attaches to the roof of satsuma, see "<https://github.com/tommojphillips/AttachObjectDemo>".  
-- A walk-through of how to create your own truck engine install in version 0.1.1.4, see "<https://github.com/tommojphillips/ModAPI/wiki/Getting-started-in-v0.1.1.4-alpha>".  
+- A walk-through of how to create your own truck engine install in version v0.1.1.4, see "<https://github.com/tommojphillips/ModAPI/wiki/Getting-started-in-v0.1.1.4-alpha>".  
 - Cruise Control Panel for stock steering wheel created by Nitro and myself. see "https://github.com/tommojphillips/SatsumaCruiseControl"
 - Secure Car jack is a mod that uses <i>mod api v0.1.2.0-alpha</i>, is secures the car jack to the left side of the Satsuma's trunk. See, "https://github.com/tommojphillips/SecureCarJack"  
 Secure car jack v0.1 gives a good representation on how to change/add logic to the assemble/disasemmble logic. I wanted Secure Car Jack to not allow the player to install/secure the jack unless it is folded. so i had to add logic to display an interaction tip to let the player know.
