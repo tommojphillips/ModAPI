@@ -40,6 +40,10 @@
     <DocumentationFile>bin\x86\Release\ModApiInterface.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="modapi_v0131-alpha, Version=0.1.3.1, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References\modapi_v0131-alpha.dll</HintPath>
+    </Reference>
     <Reference Include="MSCLoader">
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
     </Reference>
@@ -52,12 +56,6 @@
     <Compile Include="ConsoleCommands.cs" />
     <Compile Include="ModApiInterface.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ModAPI\ModAPI.csproj">
-      <Project>{65DDDAC8-54EA-4116-A53D-05B126FD5A49}</Project>
-      <Name>ModAPI</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

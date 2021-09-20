@@ -1,4 +1,4 @@
-﻿namespace TommoJProductions.ModApi.v0_1_3_0_alpha
+﻿namespace TommoJProductions.ModApi
 {
     /// <summary>
     /// Represents all layers of my summer car.

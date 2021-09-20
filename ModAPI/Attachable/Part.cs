@@ -1,11 +1,10 @@
-﻿using MSCLoader;
-using System;
+﻿using System;
 using System.Collections;
 using System.Linq;
-using TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable.CallBacks;
+using TommoJProductions.ModApi.Attachable.CallBacks;
 using UnityEngine;
 
-namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
+namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
     /// Represents a pickable and installable part for the satsuma (or anything).
@@ -107,7 +106,7 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
         public bool installed
         {
             get => loadedSaveInfo.installed;
-            set => loadedSaveInfo.installed = value;
+            private set => loadedSaveInfo.installed = value;
         }
         /// <summary>
         /// Represents the current install point index that this part is installed to.
@@ -115,8 +114,9 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
         public int installPointIndex
         {
             get => loadedSaveInfo.installedPointIndex;
-            set => loadedSaveInfo.installedPointIndex = value;
+            private set => loadedSaveInfo.installedPointIndex = value;
         }
+
         #endregion
 
         #region Private Fields
@@ -273,8 +273,6 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
             triggers = triggerRefs;
 
             loadedSaveInfo = saveInfo ?? defaultSaveInfo ?? new PartSaveInfo();
-            installed = loadedSaveInfo.installed;
-            installPointIndex = loadedSaveInfo.installedPointIndex;
             installPointColliders = new Collider[triggerRefs.Length];
             if (triggerRefs.Length > 0)
             {
@@ -291,8 +289,6 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
                 if (installed)
                     assemble(installPointColliders[installPointIndex], false);
             }
-            else
-                ModConsole.LogWarning($"no install point defined ({name})");
             if (!installed)
             {
                 transform.position = loadedSaveInfo.position;
@@ -308,10 +304,8 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
         {
             installed = true;
             inTrigger = false;
-
             installPoint.enabled = false;
             installPointIndex = Array.IndexOf(installPointColliders, installPoint);
-            triggers[installPointIndex].triggerRenderer.enabled = false;
             makePartPickable(false);
             transform.parent = installPoint.transform;
             transform.localPosition = Vector3.zero;
@@ -333,8 +327,6 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
             if (installedRoutine != null)
                 StopCoroutine(installedRoutine);
             installedRoutine = StartCoroutine(partInstalled());
-
-            ModConsole.Log($"PartMagnet: {gameObject.name} attached on attachment point: {installPoint.name}.");
         }
         /// <summary>
         /// Disassemble this part from the installed point
@@ -343,20 +335,11 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
         public void disassemble(bool playSound = true)
         {
             installed = false;
-
-            if (installedRoutine != null)
-                StopCoroutine(installedRoutine);
             if (mouseOver)
                 mouseOverReset();
-
             makePartPickable(true);
-
-            transform.parent = null;
-
-            triggers[installPointIndex].triggerRenderer.enabled = true;
-
-            installPointColliders[installPointIndex].enabled = true;
-
+            transform.parent = null;            
+            setActiveAttachedToTrigger(true);
             cachedRigidBody = gameObject.AddComponent<Rigidbody>();
             cachedRigidBody.mass = cachedMass;
 
@@ -366,8 +349,6 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
             }
 
             onDisassemble?.Invoke();
-
-            ModConsole.Log($"Part: {gameObject.name} disassembled from install point: {installPointColliders[installPointIndex].name}.");
         }
         /// <summary>
         /// Sets all part triggers (install points) to <paramref name="active"/>.
@@ -416,8 +397,6 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable
                 gameObject.tag = "DontPickThis";
             gameObject.layer = inLayer.layer();
         }
-        
-        
         /// <summary>
         /// ends (resets) a gui interaction.
         /// </summary>

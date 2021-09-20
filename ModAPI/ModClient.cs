@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using HutongGames.PlayMaker;
-using TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable;
+using TommoJProductions.ModApi.Attachable;
 using System.Collections;
 using System;
 
-namespace TommoJProductions.ModApi.v0_1_3_0_alpha
+namespace TommoJProductions.ModApi
 {
     /// <summary>
     /// Represents useful properties for interacting with My Summer Car and PlayMaker.
@@ -42,7 +42,7 @@ namespace TommoJProductions.ModApi.v0_1_3_0_alpha
         /// <summary>
         /// Represents the complied runtime version of the api.
         /// </summary>
-        public const string version = "0.1.3.0";
+        public const string version = "0.1.3.1";
 
         #endregion
 

@@ -1,8 +1,6 @@
 ﻿using MSCLoader;
 using System.Collections;
-using System.Linq;
-using TommoJProductions.ModApi.v0_1_3_0_alpha;
-using TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable;
+using TommoJProductions.ModApi.Attachable;
 using UnityEngine;
 
 namespace TommoJProductions.ModApi.Interface

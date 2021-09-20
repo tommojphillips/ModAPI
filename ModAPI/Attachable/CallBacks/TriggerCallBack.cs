@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace TommoJProductions.ModApi.v0_1_3_0_alpha.Attachable.CallBacks
+namespace TommoJProductions.ModApi.Attachable.CallBacks
 {
     /// <summary>
     /// Represents call back for triggers.
