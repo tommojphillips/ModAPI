@@ -14,7 +14,7 @@
 
 # Getting Started
 
-- See Turbo mod to have a mad look at how to implement the new mod api v0.1.4.*-alpha structure. its a lot easier and straight forward. here's the link: see "<https://github.com/tommojphillips/TurboMod/releases/tag/v0.1.1>"
+- See Turbo mod to have a mad look at how to implement the new mod api v0.1.4.*-alpha structure. its a lot easier and straight forward. here's the link: see "<https://github.com/tommojphillips/TurboMod/releases/tag/v0.1.2>"
 - see secure spare tire mod v0.1.2 to see how modapi v0.1.4-alpha is implemented in this mod! see "https://github.com/tommojphillips/SecureSpareTire/releases/tag/0.1.2
 "
 
