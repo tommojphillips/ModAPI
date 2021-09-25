@@ -11,7 +11,7 @@ namespace TommoJProductions.ModApi.Attachable
     /// </summary>
     public class Part : MonoBehaviour
     {
-        #region Part Classes
+        #region Part Classes / Enums
 
         /// <summary>        
         /// Represents save info about a particluar part.        
@@ -88,6 +88,18 @@ namespace TommoJProductions.ModApi.Attachable
             /// Represents the assemble type of the part.
             /// </summary>
             public AssembleType assembleType = AssembleType.static_rigidbodyDelete;
+            /// <summary>
+            /// Represents the layer to send a part that is installed
+            /// </summary>
+            public LayerMasksEnum installedPartToLayer = LayerMasksEnum.Parts;
+            /// <summary>
+            /// Represents the layer to send a part that is not installed
+            /// </summary>
+            public LayerMasksEnum notInstalledPartToLayer = LayerMasksEnum.Parts;
+            /// <summary>
+            /// Represents if <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/> will set pos and rot of part if NOT installed.
+            /// </summary>
+            public bool setPositionRotationOnInitialisePart = true;
         }
         /// <summary>
         /// Represents supported assemble types.
@@ -101,7 +113,11 @@ namespace TommoJProductions.ModApi.Attachable
             /// <summary>
             /// Represents a static assembly via, setting the parts rigidbody to kinematic.
             /// </summary>
-            static_rigidibodySetKinematic
+            static_rigidibodySetKinematic,
+            /// <summary>
+            /// Represents a fixed joint assembly via, adding a fixed joint to connect two rigidbodies together.
+            /// </summary>
+            joint
         }
 
         #endregion
@@ -306,6 +322,7 @@ namespace TommoJProductions.ModApi.Attachable
 
             loadedSaveInfo = saveInfo ?? defaultSaveInfo ?? new PartSaveInfo();
             installPointColliders = new Collider[triggerRefs.Length];
+
             if (triggerRefs.Length > 0)
             {
                 TriggerCallback callback;
@@ -321,7 +338,7 @@ namespace TommoJProductions.ModApi.Attachable
                 if (installed)
                     assemble(installPointColliders[installPointIndex], false);
             }
-            if (!installed)
+            if (!installed && partSettings.setPositionRotationOnInitialisePart)
             {
                 transform.position = loadedSaveInfo.position;
                 transform.eulerAngles = loadedSaveInfo.rotation;
@@ -339,7 +356,7 @@ namespace TommoJProductions.ModApi.Attachable
             inTrigger = false;
             installPoint.enabled = false;
             installPointIndex = Array.IndexOf(installPointColliders, installPoint);
-            makePartPickable(false);
+            makePartPickable(false, partSettings.notInstalledPartToLayer);
             transform.parent = installPoint.transform;
             transform.localPosition = Vector3.zero;
             transform.localEulerAngles = Vector3.zero;
@@ -353,7 +370,7 @@ namespace TommoJProductions.ModApi.Attachable
                         Destroy(cachedRigidBody);
                         break;
                     case AssembleType.static_rigidibodySetKinematic:
-                        cachedRigidBody.isKinematic = false;
+                        cachedRigidBody.isKinematic = true;
                         break;
                 }
             }
@@ -378,7 +395,7 @@ namespace TommoJProductions.ModApi.Attachable
             installed = false;
             if (mouseOver)
                 mouseOverReset();
-            makePartPickable(true);
+            makePartPickable(true, partSettings.installedPartToLayer);
             transform.parent = null;            
             setActiveAttachedToTrigger(true);
 
@@ -389,7 +406,7 @@ namespace TommoJProductions.ModApi.Attachable
                     cachedRigidBody.mass = cachedMass;
                     break;
                 case AssembleType.static_rigidibodySetKinematic:
-                    cachedRigidBody.isKinematic = true;
+                    cachedRigidBody.isKinematic = false;
                     break;
             }
 
