@@ -417,8 +417,8 @@ namespace TommoJProductions.ModApi
         {
             while (transform.parent != parent)
             {
-                transform.parent = parent;
                 yield return new WaitForEndOfFrame();
+                transform.parent = parent;
             }
             onFixedToParent?.Invoke();
             yield break;
@@ -434,9 +434,9 @@ namespace TommoJProductions.ModApi
         {
             while (transform.localPosition != pos && transform.localEulerAngles != eulerAngles)
             {
+                yield return new WaitForEndOfFrame();
                 transform.localPosition = pos;
                 transform.localEulerAngles = eulerAngles;
-                yield return new WaitForEndOfFrame();
             }
             onFixedTransform?.Invoke();
             yield break;

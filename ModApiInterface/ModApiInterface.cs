@@ -62,6 +62,7 @@ namespace TommoJProductions.ModApi.Interface
         /// <summary>
         /// second pass on
         /// </summary>
+        /// 
         public override bool SecondPass => true;
 
         #endregion

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MSCLoader;
+using System;
 using System.Collections;
 using System.Linq;
 using TommoJProductions.ModApi.Attachable.CallBacks;
@@ -89,6 +90,10 @@ namespace TommoJProductions.ModApi.Attachable
             /// </summary>
             public AssembleType assembleType = AssembleType.static_rigidbodyDelete;
             /// <summary>
+            /// Represents '<see cref="AssembleType.joint"/>' settings.
+            /// </summary>
+            public AssemblyTypeJointSettings assemblyTypeJointSettings = new AssemblyTypeJointSettings() { installPointRigidbodies = null };
+            /// <summary>
             /// Represents the layer to send a part that is installed
             /// </summary>
             public LayerMasksEnum installedPartToLayer = LayerMasksEnum.Parts;
@@ -118,6 +123,28 @@ namespace TommoJProductions.ModApi.Attachable
             /// Represents a fixed joint assembly via, adding a fixed joint to connect two rigidbodies together.
             /// </summary>
             joint
+        }
+        /// <summary>
+        /// Represents settings for assembly type, joint
+        /// </summary>
+        public class AssemblyTypeJointSettings 
+        {
+            /// <summary>
+            /// Represents a list of install point rigidbodies for when using assemblyType:Joint
+            /// </summary>
+            public Rigidbody[] installPointRigidbodies;
+            /// <summary>
+            /// Represents the break force to break this joint. NOTE: unbreakable joints are <see cref="float.PositiveInfinity"/>.
+            /// </summary>
+            public float breakForce = float.PositiveInfinity;
+            /// <summary>
+            /// Inits new joint settings class and assigns rbs
+            /// </summary>
+            /// <param name="rigidbodies"></param>
+            public AssemblyTypeJointSettings(params Rigidbody[] rigidbodies) 
+            {
+                installPointRigidbodies = rigidbodies;
+            }
         }
 
         #endregion
@@ -198,6 +225,10 @@ namespace TommoJProductions.ModApi.Attachable
         /// Represents the cached mass of the parts rigidbody.mass property.
         /// </summary>
         private float cachedMass;
+        /// <summary>
+        /// Represents the fixed joint when using <see cref="AssembleType.joint"/>.
+        /// </summary>
+        private FixedJoint joint;
 
         #endregion
 
@@ -218,6 +249,10 @@ namespace TommoJProductions.ModApi.Attachable
         {
             if (installed)
                 StartCoroutine(partInstalled());
+        }
+        void OnJointBreak(float breakForce)
+        {
+            disassemble();
         }
 
         #endregion
@@ -246,6 +281,7 @@ namespace TommoJProductions.ModApi.Attachable
                     mouseOverReset();
                 yield return null;
             }
+            installedRoutine = null;
         }
         /// <summary>
         /// Represents the part in a trigger logic.
@@ -266,6 +302,7 @@ namespace TommoJProductions.ModApi.Attachable
                 }
                 yield return null;
             }
+            triggerRoutine = null;
         }
 
         #endregion
@@ -295,17 +332,26 @@ namespace TommoJProductions.ModApi.Attachable
         {
             if (installPointColliders.Contains(callback_ref.callbackCollider))
             {
+                ModClient.guiAssemble = false;
+                inTrigger = false;
                 if (triggerRoutine != null)
                     StopCoroutine(triggerRoutine);
-                inTrigger = false;
-                ModClient.guiAssemble = false;
             }
+        }
+        void callback_onJointBreak(float breakForce, TriggerCallback callback_ref)
+        {
+            disassemble();
         }
 
         #endregion
 
         #region Methods
 
+        private void vaildiatePart() 
+        {
+            if (partSettings.assembleType == AssembleType.joint && partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length <= 0)
+                ModConsole.Print("NOTE: assembly type is 'joint' but no install point rigidbodies have been assigned!!! error!!!");
+        }
         /// <summary>
         /// Initializes this part.
         /// </summary>
@@ -317,11 +363,13 @@ namespace TommoJProductions.ModApi.Attachable
             // Written, 08.09.2021
 
             this.partSettings = partSettings;
-
+            vaildiatePart();
             triggers = triggerRefs;
 
             loadedSaveInfo = saveInfo ?? defaultSaveInfo ?? new PartSaveInfo();
             installPointColliders = new Collider[triggerRefs.Length];
+
+            makePartPickable(!loadedSaveInfo.installed);
 
             if (triggerRefs.Length > 0)
             {
@@ -334,6 +382,7 @@ namespace TommoJProductions.ModApi.Attachable
                         callback = triggers[i].triggerGameObject.AddComponent<TriggerCallback>();
                     callback.onTriggerExit += callback_onTriggerExit;
                     callback.onTriggerEnter += callback_onTriggerEnter;
+                    //callback.onJointBreak += callback_onJointBreak;
                 }
                 if (installed)
                     assemble(installPointColliders[installPointIndex], false);
@@ -356,7 +405,7 @@ namespace TommoJProductions.ModApi.Attachable
             inTrigger = false;
             installPoint.enabled = false;
             installPointIndex = Array.IndexOf(installPointColliders, installPoint);
-            makePartPickable(false, partSettings.notInstalledPartToLayer);
+            makePartPickable(false);
             transform.parent = installPoint.transform;
             transform.localPosition = Vector3.zero;
             transform.localEulerAngles = Vector3.zero;
@@ -371,6 +420,12 @@ namespace TommoJProductions.ModApi.Attachable
                         break;
                     case AssembleType.static_rigidibodySetKinematic:
                         cachedRigidBody.isKinematic = true;
+                        break;
+                    case AssembleType.joint:
+                        joint = gameObject.AddComponent<FixedJoint>();
+                        joint.connectedBody = partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length > -1 ? partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex] : installPoint.transform.GetComponentInParent<Rigidbody>();
+                        joint.breakForce = partSettings.assemblyTypeJointSettings.breakForce;
+                        joint.breakTorque = joint.breakForce / 2;
                         break;
                 }
             }
@@ -395,7 +450,7 @@ namespace TommoJProductions.ModApi.Attachable
             installed = false;
             if (mouseOver)
                 mouseOverReset();
-            makePartPickable(true, partSettings.installedPartToLayer);
+            makePartPickable(true);
             transform.parent = null;            
             setActiveAttachedToTrigger(true);
 
@@ -407,6 +462,9 @@ namespace TommoJProductions.ModApi.Attachable
                     break;
                 case AssembleType.static_rigidibodySetKinematic:
                     cachedRigidBody.isKinematic = false;
+                    break;
+                case AssembleType.joint:
+                    Destroy(joint);
                     break;
             }
 
@@ -454,7 +512,7 @@ namespace TommoJProductions.ModApi.Attachable
          /// </summary>
          /// <param name="inPickable">Make part pickable?</param>
          /// <param name="inLayer">Make part on different layer</param>
-        public void makePartPickable(bool inPickable, LayerMasksEnum inLayer = LayerMasksEnum.Parts)
+        public void makePartPickable(bool inPickable)
         {
             // Written, 14.08.2018 | Modified, 10.09.2021
 
@@ -462,7 +520,7 @@ namespace TommoJProductions.ModApi.Attachable
                 gameObject.tag = "PART";
             else
                 gameObject.tag = "DontPickThis";
-            gameObject.layer = inLayer.layer();
+            gameObject.layer = (inPickable ? partSettings.notInstalledPartToLayer : partSettings.installedPartToLayer).layer();
         }
         /// <summary>
         /// ends (resets) a gui interaction.

@@ -25,6 +25,10 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         /// </summary>
         public event Action<Collider, TriggerCallback> onTriggerEnter;
         /// <summary>
+        /// Represents the on trigger enter event.
+        /// </summary>
+        public event Action<float, TriggerCallback> onJointBreak;
+        /// <summary>
         /// Represents the collider that invoked this callback.
         /// </summary>
         public Collider callbackCollider { get; private set; }
@@ -48,7 +52,10 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         {
             onTriggerEnter?.Invoke(collider, this);
         }
-
+        private void OnJointBreak(float breakforce)
+        {
+            onJointBreak?.Invoke(breakforce, this);
+        }
         #endregion
     }
 }
