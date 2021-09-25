@@ -12,7 +12,7 @@ namespace TommoJProductions.ModApi
     /// </summary>
     public static class ModClient
     {
-        // Written, 10.08.2018 | Modified 11.09.2021
+        // Written, 10.08.2018 | Modified 25.09.2021
 
         #region Constraints
 
@@ -42,7 +42,7 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the complied runtime version of the api.
         /// </summary>
-        public const string version = "0.1.4";
+        public const string version = "0.1.4.1";
 
         #endregion
 

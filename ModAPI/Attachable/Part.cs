@@ -241,14 +241,22 @@ namespace TommoJProductions.ModApi.Attachable
         {
             cachedRigidBody = gameObject.GetComponent<Rigidbody>();
             cachedMass = cachedRigidBody?.mass ?? 1;
+            checkCoroutinesRunning();
         }
         /// <summary>
         /// Represents the enabled runtime call
         /// </summary>
         void OnEnable()
         {
+            checkCoroutinesRunning();
+        }
+        void OnDisable() 
+        {
             if (installed)
-                StartCoroutine(partInstalled());
+            {
+                if (installedRoutine != null)
+                    StopCoroutine(installedRoutine);
+            }
         }
         void OnJointBreak(float breakForce)
         {
@@ -338,18 +346,26 @@ namespace TommoJProductions.ModApi.Attachable
                     StopCoroutine(triggerRoutine);
             }
         }
-        void callback_onJointBreak(float breakForce, TriggerCallback callback_ref)
-        {
-            disassemble();
-        }
 
         #endregion
 
         #region Methods
 
+        private void checkCoroutinesRunning() 
+        {
+            if (installed)
+            {
+                if (installedRoutine != null)
+                    StopCoroutine(installedRoutine);
+                installedRoutine = StartCoroutine(partInstalled());
+            }
+        }
+        /// <summary>
+        /// Vaildates the part and reports to mod console. called at: <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/>.
+        /// </summary>
         private void vaildiatePart() 
         {
-            if (partSettings.assembleType == AssembleType.joint && partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length <= 0)
+            if (partSettings.assembleType == AssembleType.joint && (partSettings.assemblyTypeJointSettings.installPointRigidbodies?.Length ?? -1) <= 0)
                 ModConsole.Print("NOTE: assembly type is 'joint' but no install point rigidbodies have been assigned!!! error!!!");
         }
         /// <summary>
@@ -358,7 +374,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="saveInfo">The save info to load this part with.</param>
         /// <param name="partSettings">The part settings to load this part with.</param>
         /// <param name="triggerRefs">The Install points for this part. (in the form of a trigger)</param>
-        public void initPart(PartSaveInfo saveInfo, PartSettings partSettings = default(PartSettings), params Trigger[] triggerRefs)
+        public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettings = default(PartSettings), params Trigger[] triggerRefs)
         {
             // Written, 08.09.2021
 
@@ -399,7 +415,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         /// <param name="installPoint">The attachment point</param>
         /// <param name="playSound">Play assemble sound?</param>
-        public void assemble(Collider installPoint, bool playSound = true)
+        public virtual void assemble(Collider installPoint, bool playSound = true)
         {
             installed = true;
             inTrigger = false;
@@ -445,7 +461,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// Disassemble this part from the installed point
         /// </summary>
         /// <param name="playSound">Play disassemble sound?</param>
-        public void disassemble(bool playSound = true)
+        public virtual void disassemble(bool playSound = true)
         {
             installed = false;
             if (mouseOver)
@@ -503,7 +519,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Gets save info for this part. (pos, rot, installed, install index)
         /// </summary>
-        public PartSaveInfo getSaveInfo()
+        public virtual PartSaveInfo getSaveInfo()
         {
             return new PartSaveInfo() { installed = installed, installedPointIndex = installPointIndex, position = transform.position, rotation = transform.eulerAngles };
         }
@@ -514,12 +530,12 @@ namespace TommoJProductions.ModApi.Attachable
          /// <param name="inLayer">Make part on different layer</param>
         public void makePartPickable(bool inPickable)
         {
-            // Written, 14.08.2018 | Modified, 10.09.2021
+            // Written, 14.08.2018 | Modified, 25.09.2021
 
             if (inPickable)
                 gameObject.tag = "PART";
             else
-                gameObject.tag = "DontPickThis";
+                gameObject.tag = "Untagged";
             gameObject.layer = (inPickable ? partSettings.notInstalledPartToLayer : partSettings.installedPartToLayer).layer();
         }
         /// <summary>

@@ -54,9 +54,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <WCFMetadata Include="Connected Services\" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\ModAPI\ModAPI.csproj">
       <Project>{65dddac8-54ea-4116-a53d-05b126fd5a49}</Project>
       <Name>ModAPI</Name>
