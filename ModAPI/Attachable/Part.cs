@@ -237,11 +237,14 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the awake runtime call
         /// </summary>
-        void Start()
+        void Awake()
         {
             cachedRigidBody = gameObject.GetComponent<Rigidbody>();
             cachedMass = cachedRigidBody?.mass ?? 1;
-            checkCoroutinesRunning();
+        }
+        void Start() 
+        {
+            checkCoroutinesRunning();        
         }
         /// <summary>
         /// Represents the enabled runtime call
@@ -415,7 +418,6 @@ namespace TommoJProductions.ModApi.Attachable
             inTrigger = false;
             installPoint.enabled = false;
             installPointIndex = Array.IndexOf(installPointColliders, installPoint);
-            makePartPickable(false);
             transform.parent = installPoint.transform;
             transform.localPosition = Vector3.zero;
             transform.localEulerAngles = Vector3.zero;
@@ -439,6 +441,7 @@ namespace TommoJProductions.ModApi.Attachable
                         break;
                 }
             }
+            makePartPickable(false);
 
             if (playSound)
             {
