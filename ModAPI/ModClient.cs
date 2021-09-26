@@ -42,7 +42,7 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the complied runtime version of the api.
         /// </summary>
-        public const string version = "0.1.4.1";
+        public const string version = "0.1.4.2";
 
         #endregion
 

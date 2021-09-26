@@ -237,7 +237,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the awake runtime call
         /// </summary>
-        void Awake()
+        void Start()
         {
             cachedRigidBody = gameObject.GetComponent<Rigidbody>();
             cachedMass = cachedRigidBody?.mass ?? 1;
@@ -250,13 +250,10 @@ namespace TommoJProductions.ModApi.Attachable
         {
             checkCoroutinesRunning();
         }
-        void OnDisable() 
+        void OnDisable()
         {
-            if (installed)
-            {
-                if (installedRoutine != null)
+            if (installedRoutine != null)
                     StopCoroutine(installedRoutine);
-            }
         }
         void OnJointBreak(float breakForce)
         {
@@ -353,12 +350,9 @@ namespace TommoJProductions.ModApi.Attachable
 
         private void checkCoroutinesRunning() 
         {
-            if (installed)
-            {
-                if (installedRoutine != null)
-                    StopCoroutine(installedRoutine);
-                installedRoutine = StartCoroutine(partInstalled());
-            }
+            if (installedRoutine == null)
+                if (installed)
+                    installedRoutine = StartCoroutine(partInstalled());
         }
         /// <summary>
         /// Vaildates the part and reports to mod console. called at: <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/>.

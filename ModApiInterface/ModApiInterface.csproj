@@ -27,19 +27,11 @@
     <Optimize>true</Optimize>
     <DocumentationFile>bin\x64\Release\ModApiInterface.xml</DocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <PlatformTarget>x86</PlatformTarget>
-    <OutputPath>bin\x86\Debug\</OutputPath>
-    <DefineConstants>DEBUG;</DefineConstants>
-    <DocumentationFile>bin\x86\Debug\ModApiInterface.xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <PlatformTarget>x86</PlatformTarget>
-    <OutputPath>bin\x86\Release\</OutputPath>
-    <Optimize>true</Optimize>
-    <DocumentationFile>bin\x86\Release\ModApiInterface.xml</DocumentationFile>
-  </PropertyGroup>
   <ItemGroup>
+    <Reference Include="modapi_v0142-alpha, Version=0.1.4.2, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References\modapi_v0142-alpha.dll</HintPath>
+    </Reference>
     <Reference Include="MSCLoader">
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
     </Reference>
@@ -52,12 +44,6 @@
     <Compile Include="ConsoleCommands.cs" />
     <Compile Include="ModApiInterface.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ModAPI\ModAPI.csproj">
-      <Project>{65dddac8-54ea-4116-a53d-05b126fd5a49}</Project>
-      <Name>ModAPI</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
