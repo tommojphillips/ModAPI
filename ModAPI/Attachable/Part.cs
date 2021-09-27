@@ -242,21 +242,12 @@ namespace TommoJProductions.ModApi.Attachable
             cachedRigidBody = gameObject.GetComponent<Rigidbody>();
             cachedMass = cachedRigidBody?.mass ?? 1;
         }
-        void Start() 
-        {
-            checkCoroutinesRunning();        
-        }
         /// <summary>
         /// Represents the enabled runtime call
         /// </summary>
         void OnEnable()
         {
             checkCoroutinesRunning();
-        }
-        void OnDisable()
-        {
-            if (installedRoutine != null)
-                    StopCoroutine(installedRoutine);
         }
         void OnJointBreak(float breakForce)
         {
@@ -395,10 +386,11 @@ namespace TommoJProductions.ModApi.Attachable
                         callback = triggers[i].triggerGameObject.AddComponent<TriggerCallback>();
                     callback.onTriggerExit += callback_onTriggerExit;
                     callback.onTriggerEnter += callback_onTriggerEnter;
-                    //callback.onJointBreak += callback_onJointBreak;
                 }
                 if (installed)
+                {
                     assemble(installPointColliders[installPointIndex], false);
+                }
             }
             if (!installed && partSettings.setPositionRotationOnInitialisePart)
             {
@@ -450,9 +442,7 @@ namespace TommoJProductions.ModApi.Attachable
 
             onAssemble?.Invoke();
 
-            if (installedRoutine != null)
-                StopCoroutine(installedRoutine);
-            installedRoutine = StartCoroutine(partInstalled());
+            checkCoroutinesRunning();
         }
         /// <summary>
         /// Disassemble this part from the installed point
@@ -461,6 +451,7 @@ namespace TommoJProductions.ModApi.Attachable
         public virtual void disassemble(bool playSound = true)
         {
             installed = false;
+            installedRoutine = null;
             if (mouseOver)
                 mouseOverReset();
             makePartPickable(true);
