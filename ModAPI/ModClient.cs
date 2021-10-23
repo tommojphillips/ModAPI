@@ -210,12 +210,13 @@ namespace TommoJProductions.ModApi
         #region ExMethods
 
         /// <summary>
-        /// returns whether the player is currently looking at this part.
+        /// returns whether the player is currently looking at a gameobject.
         /// </summary>
         /// <param name="gameObject">The gameobject to detect againist.</param>
-        public static bool isPlayerLookingAt(this GameObject gameObject)
+        /// <param name="withinDistance">raycast within distance from main camera.</param>
+        public static bool isPlayerLookingAt(this GameObject gameObject, float withinDistance = 1)
         {
-            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, 1f, 1 << gameObject.layer))
+            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, withinDistance, 1 << gameObject.layer))
             {
                 if (hit.collider.gameObject == gameObject)
                     return true;

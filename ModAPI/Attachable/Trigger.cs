@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using TommoJProductions.ModApi.Attachable.CallBacks;
+using UnityEngine;
 
 namespace TommoJProductions.ModApi.Attachable
 {
@@ -7,7 +8,7 @@ namespace TommoJProductions.ModApi.Attachable
     /// </summary>
     public class Trigger
     {
-        // Written, 10.08.2018
+        // Written, 10.08.2018 | Updated, 11.2021
 
         #region Properties
 
@@ -19,6 +20,10 @@ namespace TommoJProductions.ModApi.Attachable
             get;
             set;
         }
+        /// <summary>
+        /// Represents the trigger callback reference on the triggers gameobject.
+        /// </summary>
+        public TriggerCallback triggerCallback { get; set; }
         /// <summary>
         /// Represents the triggers collider.
         /// </summary>
@@ -83,7 +88,8 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="visible">Sets whether the trigger should be visualized or not.</param>
         public void setUpTrigger(string triggerName, GameObject parent, Vector3? position = null, Vector3? eulerAngles = null, Vector3? scale = null, bool visible = false)
         {
-            // Written, 04.10.2018
+            // Written, 04.10.2018 | Updated, 09.2021
+
             triggerGameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
             triggerGameObject.transform.SetParent(parent.transform, false);
             triggerGameObject.name = triggerName;
@@ -94,6 +100,7 @@ namespace TommoJProductions.ModApi.Attachable
             triggerCollider.isTrigger = true;
             triggerRenderer = triggerGameObject.GetComponent<Renderer>();
             triggerRenderer.enabled = visible;
+            triggerCallback = triggerGameObject.GetComponent<TriggerCallback>();
         }
 
         #endregion

@@ -12,6 +12,8 @@ namespace TommoJProductions.ModApi.Attachable
     /// </summary>
     public class Part : MonoBehaviour
     {
+        // Written, 27.10.2018 | Updated, 09.2021
+
         #region Part Classes / Enums
 
         /// <summary>        
@@ -204,15 +206,11 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents if mouse over activated.
         /// </summary>
-        private bool mouseOver = false;
+        public bool mouseOver = false;
         /// <summary>
         /// Represents the trigger routine.
         /// </summary>
         private Coroutine triggerRoutine;
-        /// <summary>
-        /// Represents the installed Routine.
-        /// </summary>
-        private Coroutine installedRoutine;
         /// <summary>
         /// Represents the install point colliers (just a list of <see cref="Trigger.triggerCollider"/> in order).
         /// </summary>
@@ -243,12 +241,8 @@ namespace TommoJProductions.ModApi.Attachable
             cachedMass = cachedRigidBody?.mass ?? 1;
         }
         /// <summary>
-        /// Represents the enabled runtime call
+        /// Represents the joint break runtime call
         /// </summary>
-        void OnEnable()
-        {
-            checkCoroutinesRunning();
-        }
         void OnJointBreak(float breakForce)
         {
             disassemble();
@@ -258,30 +252,6 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region IEnumerators
 
-        /// <summary>
-        /// Represents the installed part logic (eg. mousebutton1=>disassemble).
-        /// </summary>
-        private IEnumerator partInstalled()
-        {
-            while (installed)
-            {
-                if (gameObject.isPlayerLookingAt())
-                {
-                    mouseOver = true;
-                    ModClient.guiDisassemble = true;
-
-                    if (Input.GetMouseButtonDown(1))
-                    {
-                        disassemble();
-                        mouseOverReset();
-                    }
-                }
-                else if (mouseOver)
-                    mouseOverReset();
-                yield return null;
-            }
-            installedRoutine = null;
-        }
         /// <summary>
         /// Represents the part in a trigger logic.
         /// </summary>
@@ -301,7 +271,6 @@ namespace TommoJProductions.ModApi.Attachable
                 }
                 yield return null;
             }
-            triggerRoutine = null;
         }
 
         #endregion
@@ -342,19 +311,13 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region Methods
 
-        private void checkCoroutinesRunning() 
-        {
-            if (installedRoutine == null)
-                if (installed)
-                    installedRoutine = StartCoroutine(partInstalled());
-        }
         /// <summary>
         /// Vaildates the part and reports to mod console. called at: <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/>.
         /// </summary>
         private void vaildiatePart() 
         {
-            if (partSettings.assembleType == AssembleType.joint && (partSettings.assemblyTypeJointSettings.installPointRigidbodies?.Length ?? -1) <= 0)
-                ModConsole.Print("NOTE: assembly type is 'joint' but no install point rigidbodies have been assigned!!! error!!!");
+            if (partSettings.assembleType == AssembleType.joint && (partSettings.assemblyTypeJointSettings?.installPointRigidbodies?.Length ?? -1) <= 0)
+                ModConsole.Error("NOTE: assembly type is 'joint' but no install point rigidbodies have been assigned!!! error!!!");
         }
         /// <summary>
         /// Initializes this part.
@@ -366,7 +329,7 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 08.09.2021
 
-            this.partSettings = partSettings;
+            this.partSettings = partSettings ?? new PartSettings();
             vaildiatePart();
             triggers = triggerRefs;
 
@@ -377,15 +340,13 @@ namespace TommoJProductions.ModApi.Attachable
 
             if (triggerRefs.Length > 0)
             {
-                TriggerCallback callback;
                 for (int i = 0; i < triggers.Length; i++)
                 {
                     installPointColliders[i] = triggers[i].triggerCollider;
-                    callback = triggers[i].triggerGameObject.GetComponent<TriggerCallback>();
-                    if (!callback)
-                        callback = triggers[i].triggerGameObject.AddComponent<TriggerCallback>();
-                    callback.onTriggerExit += callback_onTriggerExit;
-                    callback.onTriggerEnter += callback_onTriggerEnter;
+                    if (!triggers[i].triggerCallback)
+                        triggers[i].triggerCallback = triggers[i].triggerGameObject.AddComponent<TriggerCallback>();
+                    triggers[i].triggerCallback.onTriggerExit += callback_onTriggerExit;
+                    triggers[i].triggerCallback.onTriggerEnter += callback_onTriggerEnter;
                 }
                 if (installed)
                 {
@@ -414,6 +375,9 @@ namespace TommoJProductions.ModApi.Attachable
             transform.localPosition = Vector3.zero;
             transform.localEulerAngles = Vector3.zero;
 
+            triggers[installPointIndex].triggerCallback.part = this;
+            triggers[installPointIndex].triggerCallback.triggerInUse = true;
+
             if (cachedRigidBody)
             {
                 switch (partSettings.assembleType)
@@ -427,7 +391,7 @@ namespace TommoJProductions.ModApi.Attachable
                         break;
                     case AssembleType.joint:
                         joint = gameObject.AddComponent<FixedJoint>();
-                        joint.connectedBody = partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length > -1 ? partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex] : installPoint.transform.GetComponentInParent<Rigidbody>();
+                        joint.connectedBody = (partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length > 0 ? partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex] : installPoint.transform.GetComponentInParent<Rigidbody>()) ?? throw new Exception($"[Assemble.{name}] (Joint) Error assigning connected body. could not find a rigidbody in parent. assign a rigidbody manually at 'partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex]'");
                         joint.breakForce = partSettings.assemblyTypeJointSettings.breakForce;
                         joint.breakTorque = joint.breakForce / 2;
                         break;
@@ -441,8 +405,6 @@ namespace TommoJProductions.ModApi.Attachable
             }
 
             onAssemble?.Invoke();
-
-            checkCoroutinesRunning();
         }
         /// <summary>
         /// Disassemble this part from the installed point
@@ -451,12 +413,14 @@ namespace TommoJProductions.ModApi.Attachable
         public virtual void disassemble(bool playSound = true)
         {
             installed = false;
-            installedRoutine = null;
             if (mouseOver)
                 mouseOverReset();
             makePartPickable(true);
             transform.parent = null;            
             setActiveAttachedToTrigger(true);
+
+            triggers[installPointIndex].triggerCallback.part = null;
+            triggers[installPointIndex].triggerCallback.triggerInUse = false;
 
             switch (partSettings.assembleType)
             {
@@ -482,9 +446,12 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Sets all part triggers (install points) to <paramref name="active"/>.
         /// </summary>
-        /// <param name="active">active or not [part]</param>
-        public void setActiveAllTriggers(bool active)
+        /// <param name="active">activate or not [part]</param>
+        /// <param name="disassembleLogic">toggle disassemble logic or not (toggles colliders)</param>
+        public void setActiveAllTriggers(bool active, bool disassembleLogic = false)
         {
+            if (disassembleLogic)
+                triggers.ToList().ForEach(_trigger => _trigger.triggerCallback.disassembleLogicEnabled = active);
             installPointColliders.ToList().ForEach(_trigger => _trigger.enabled = active);
         }
         /// <summary>
@@ -492,16 +459,22 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         /// <param name="active">active or not [part]</param>
         /// <param name="index">The idex ofg the trigger to active or not.</param>
-        public void setActiveTrigger(bool active, int index)
+        /// <param name="disassembleLogic">toggle disassemble logic or not (toggles colliders)</param>
+        public void setActiveTrigger(bool active, int index, bool disassembleLogic = false)
         {
+            if (disassembleLogic)
+                triggers.ToList().ForEach(_trigger => _trigger.triggerCallback.disassembleLogicEnabled = active);
             installPointColliders[index].enabled = active;
         }
         /// <summary>
         /// Sets the part trigger (install points) that the part is currently installed to <paramref name="active"/>.
         /// </summary>
         /// <param name="active">active or not [part]</param>
-        public void setActiveAttachedToTrigger(bool active)
+        /// <param name="disassembleLogic">toggle disassemble logic or not (toggles colliders)</param>
+        public void setActiveAttachedToTrigger(bool active, bool disassembleLogic = false)
         {
+            if (disassembleLogic)
+                triggers.ToList().ForEach(_trigger => _trigger.triggerCallback.disassembleLogicEnabled = active);
             setActiveTrigger(active, installPointIndex);
         }
         /// <summary>
@@ -515,21 +488,20 @@ namespace TommoJProductions.ModApi.Attachable
          /// Makes the part a pickable item depending on the provided values.
          /// </summary>
          /// <param name="inPickable">Make part pickable?</param>
-         /// <param name="inLayer">Make part on different layer</param>
         public void makePartPickable(bool inPickable)
         {
-            // Written, 14.08.2018 | Modified, 25.09.2021
+            // Written, 14.08.2018 | Modified, 30.09.2021
 
             if (inPickable)
                 gameObject.tag = "PART";
             else
-                gameObject.tag = "Untagged";
+                gameObject.tag = "DontPickThis";
             gameObject.layer = (inPickable ? partSettings.notInstalledPartToLayer : partSettings.installedPartToLayer).layer();
         }
         /// <summary>
         /// ends (resets) a gui interaction.
         /// </summary>
-        private void mouseOverReset()
+        public void mouseOverReset()
         {
             mouseOver = false;
             ModClient.guiDisassemble = false;

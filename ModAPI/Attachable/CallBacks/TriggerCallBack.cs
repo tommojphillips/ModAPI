@@ -8,7 +8,7 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
     /// </summary>
     public class TriggerCallback : MonoBehaviour
     {
-        // Written, 10.08.2018
+        // Written, 10.08.2018 | Updated, 10.2021
 
         #region Fields
 
@@ -25,13 +25,22 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         /// </summary>
         public event Action<Collider, TriggerCallback> onTriggerEnter;
         /// <summary>
-        /// Represents the on trigger enter event.
-        /// </summary>
-        public event Action<float, TriggerCallback> onJointBreak;
-        /// <summary>
         /// Represents the collider that invoked this callback.
         /// </summary>
         public Collider callbackCollider { get; private set; }
+        /// <summary>
+        /// Represents if disassemble logic is enabled or not.
+        /// </summary>
+        public bool disassembleLogicEnabled = true;
+        /// <summary>
+        /// Represents that the trigger is in use (part installed on this trigger).
+        /// </summary>
+        internal bool triggerInUse = false;
+        /// <summary>
+        /// Represents the part that is installed to this trigger. note null if no installed part.
+        /// </summary>
+        internal Part part;
+
         #endregion
 
         #region Unity runtime methods
@@ -39,6 +48,28 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         private void Awake()
         {
             callbackCollider = GetComponent<Collider>();
+        }
+        private void Update()
+        {
+            if (part && triggerInUse && disassembleLogicEnabled)
+            {
+                if (part.gameObject.isPlayerLookingAt())
+                {
+                    part.mouseOver = true;
+                    ModClient.guiDisassemble = true;
+                    if (Input.GetMouseButtonDown(1))
+                    {
+                        part.disassemble();
+                    }
+                }
+                else if (part.mouseOver)
+                    part.mouseOverReset();
+            }
+        }
+        private void OnDisable() 
+        {
+            if (part.mouseOver)
+                part.mouseOverReset();
         }
         private void OnTriggerExit(Collider collider)
         {
@@ -52,10 +83,7 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         {
             onTriggerEnter?.Invoke(collider, this);
         }
-        private void OnJointBreak(float breakforce)
-        {
-            onJointBreak?.Invoke(breakforce, this);
-        }
+
         #endregion
     }
 }
