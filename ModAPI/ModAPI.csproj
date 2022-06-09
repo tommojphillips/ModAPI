@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TommoJProductions.ModApi</RootNamespace>
-    <AssemblyName>modapi_v0142-alpha</AssemblyName>
+    <AssemblyName>ModApi</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
@@ -24,13 +24,14 @@
     <OutputPath>bin\x64\Release\</OutputPath>
     <DefineConstants>x64</DefineConstants>
     <Optimize>false</Optimize>
-    <DocumentationFile>bin\x64\Release\modapi_v0142-alpha.xml</DocumentationFile>
+    <DocumentationFile>bin\x64\Release\ModApi.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <PlatformTarget>x64</PlatformTarget>
     <OutputPath>bin\x64\Debug\</OutputPath>
     <DefineConstants>DEBUG;x64</DefineConstants>
-    <DocumentationFile>bin\x64\Debug\modapi_v0142-alpha.xml</DocumentationFile>
+    <DocumentationFile>bin\x64\Debug\ModApi.xml</DocumentationFile>
+    <RegisterForComInterop>false</RegisterForComInterop>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -50,7 +51,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attachable\Bolt.cs" />
     <Compile Include="Attachable\Part.cs" />
+    <Compile Include="ConsoleCommands.cs" />
+    <Compile Include="FsmStateActionCallback.cs" />
     <Compile Include="GuiInteractSymbolEnum.cs" />
     <Compile Include="LayerMasksEnum.cs" />
     <Compile Include="ModClient.cs" />

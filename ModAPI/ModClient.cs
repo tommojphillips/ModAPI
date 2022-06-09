@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
-using HutongGames.PlayMaker;
-using TommoJProductions.ModApi.Attachable;
-using System.Collections;
+﻿using HutongGames.PlayMaker;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using TommoJProductions.ModApi.Attachable;
+using UnityEngine;
+using MSCLoader;
 
 namespace TommoJProductions.ModApi
 {
@@ -46,6 +47,21 @@ namespace TommoJProductions.ModApi
 
         #endregion
 
+        #region fields
+
+        private static PlayMakerFSM pickUp;
+        private static FsmGameObject pickedUpGameObject;
+        private static FsmGameObject raycastHitGameObject;
+        private static AudioSource _assembleAudio;
+        private static AudioSource _disassembleAudio;
+        private static FsmBool _guiDisassemble;
+        private static FsmBool _guiAssemble;
+        private static FsmBool _guiUse;
+        private static FsmString _guiInteraction;
+        private static FsmString _playerCurrentVehicle;
+
+        #endregion
+
         #region Properties
 
         /// <summary>
@@ -55,7 +71,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                return GameObject.Find("MasterAudio/CarBuilding/assemble").GetComponent<AudioSource>();
+                if (_assembleAudio == null)
+                    _assembleAudio = GameObject.Find("MasterAudio/CarBuilding/assemble").GetComponent<AudioSource>();
+                return _assembleAudio;
             }
         }
         /// <summary>
@@ -65,7 +83,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                return GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
+                if (_disassembleAudio == null)
+                    _disassembleAudio = GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
+                return _disassembleAudio;
             }
         }
         /// <summary>
@@ -75,11 +95,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                return PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble").Value;
+                if (_guiDisassemble == null)
+                    _guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
+                return _guiDisassemble.Value;
             }
             set
             {
-                PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble").Value = value;
+                if (_guiDisassemble == null)
+                    _guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
+                _guiDisassemble.Value = value;
             }
         }
         /// <summary>
@@ -89,11 +113,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                return PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble").Value;
+                if (_guiAssemble == null)
+                    _guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
+                return _guiAssemble.Value;
             }
             set
             {
-                PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble").Value = value;
+                if (_guiAssemble == null)
+                    _guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
+                _guiAssemble.Value = value;
             }
         }
         /// <summary>
@@ -103,11 +131,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                return PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse").Value;
+                if (_guiUse == null)
+                    _guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
+                return _guiUse.Value;
             }
             set
             {
-                PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse").Value = value;
+                if (_guiUse == null)
+                    _guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
+                _guiUse.Value = value;
             }
         }
         /// <summary>
@@ -117,11 +149,33 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                return PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value;
+                if (_guiInteraction == null)
+                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value;
+                return _guiInteraction.Value;
             }
             set
             {
-                PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value = value;
+                if (_guiInteraction == null)
+                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value;
+                _guiInteraction.Value = value;
+            }
+        }
+        /// <summary>
+        /// Represents the player current vehicle state.
+        /// </summary>
+        public static string playerCurrentVehicle
+        {
+            get
+            {
+                if (_playerCurrentVehicle == null)
+                    _playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
+                return _playerCurrentVehicle.Value;
+            }
+            set
+            {
+                if (_playerCurrentVehicle == null)
+                    _playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
+                _playerCurrentVehicle.Value = value;
             }
         }
         /// <summary>
@@ -132,8 +186,7 @@ namespace TommoJProductions.ModApi
             get
             {
                 PlayerModeEnum pme;
-                string currentVechicle = FsmVariables.GlobalVariables.FindFsmString("PlayerCurrentVehicle").Value;
-                switch (currentVechicle)
+                switch (playerCurrentVehicle)
                 {
                     case "":
                         pme = PlayerModeEnum.OnFoot;
@@ -142,7 +195,7 @@ namespace TommoJProductions.ModApi
                         pme = PlayerModeEnum.InSatsuma;
                         break;
                     default:
-                         pme = PlayerModeEnum.InOther;
+                        pme = PlayerModeEnum.InOther;
                         break;
                 }
                 return pme;
@@ -153,6 +206,59 @@ namespace TommoJProductions.ModApi
         /// will be listed here)
         /// </summary>
         public static List<Part> parts { get; } = new List<Part>();
+
+
+        /// <summary>
+        /// Gets the pickup playmakerfsm from the hand gameobject.
+        /// </summary>
+        public static PlayMakerFSM getHandPickUpFsm
+        {
+            get
+            {
+                if (pickUp == null)
+                    pickUp = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera/1Hand_Assemble/Hand").GetPlayMaker("PickUp");
+                return pickUp;
+            }
+        }
+        /// <summary>
+        /// Gets the gameobject that the player is holding.
+        /// </summary>
+        public static FsmGameObject getPickedUpGameObject
+        {
+            get
+            {
+                if (pickedUpGameObject == null)
+                    pickedUpGameObject = getHandPickUpFsm.FsmVariables.GetFsmGameObject("PickedObject");
+                return pickedUpGameObject;
+            }
+        }
+        /// <summary>
+        /// Gets the gameobject that the player is looking at.
+        /// </summary>
+        public static FsmGameObject getRaycastHitGameObject
+        {
+            get
+            {
+                if (raycastHitGameObject == null)
+                    raycastHitGameObject = getHandPickUpFsm.FsmVariables.GetFsmGameObject("RaycastHitObject");
+                return raycastHitGameObject;
+            }
+        }
+        /// <summary>
+        /// Returns true if in hand mode. determines state by <see cref="getHandPickUpFsm"/>.Active.
+        /// </summary>
+        public static bool isInHandMode => getHandPickUpFsm.Active;
+
+        #endregion
+
+        #region Constructors
+
+        static ModClient()
+        {
+            print("static constructor hit");
+            ConsoleCommand.Add(new ConsoleCommands());
+            parts.Clear();
+        }
 
         #endregion
 
@@ -169,11 +275,10 @@ namespace TommoJProductions.ModApi
 
             if (inText == "")
             {
-                changeInteractSymbol(GuiInteractSymbolEnum.None, false);
                 guiInteraction = inText;
                 return;
             }
-            changeInteractSymbol(inGuiInteractSymbol, true);
+            changeInteractSymbol(inGuiInteractSymbol);
             guiInteraction = inText;
         }
         /// <summary>
@@ -182,35 +287,69 @@ namespace TommoJProductions.ModApi
         /// </summary>
         /// <param name="inGuiInteractSymbol">The gui symbol to change.</param>
         /// <param name="inValue">The value..</param>
-        private static void changeInteractSymbol(GuiInteractSymbolEnum inGuiInteractSymbol, bool inValue)
+        private static void changeInteractSymbol(GuiInteractSymbolEnum inGuiInteractSymbol)
         {
             // Written, 16.03.2019
 
             switch (inGuiInteractSymbol)
             {
                 case GuiInteractSymbolEnum.Hand:
-                    guiUse = inValue;
+                    guiUse = true;
+                    guiAssemble = false;
+                    guiDisassemble = false;
                     break;
                 case GuiInteractSymbolEnum.Disassemble:
-                    guiDisassemble = inValue;
+                    guiUse = false;
+                    guiAssemble = false;
+                    guiDisassemble = true;
                     break;
                 case GuiInteractSymbolEnum.Assemble:
-                    guiAssemble = inValue;
+                    guiUse = false;
+                    guiAssemble = true;
+                    guiDisassemble = false;
                     break;
                 case GuiInteractSymbolEnum.None:
-                    guiUse = inValue;
-                    guiDisassemble = inValue;
-                    guiAssemble = inValue;
+                    guiUse = false;
+                    guiDisassemble = false;
+                    guiAssemble = false;
                     break;
             }
+        }
+        /// <summary>
+        /// Gets what the player is currently holding. returns null if player is holding nothing.
+        /// </summary>
+        public static GameObject getPlayerHolding() 
+        {
+            // Written, 08.05.2022
+
+            return getPickedUpGameObject.Value;
+        }
+        /// <summary>
+        /// Gets what the player is currently looking at. returns null if player is looking at nothing.
+        /// </summary>
+        public static GameObject getPlayerLooking()
+        {
+            // Written, 08.05.2022
+
+            return getRaycastHitGameObject.Value;
+        }
+        /// <summary>
+        /// Reps modapi print-to-console function
+        /// </summary>
+        public static void print(string format, params object[] args)
+        {
+            // Written, 09.10.2021
+
+            ModConsole.Log(string.Format("<color=grey>[ModAPI] " + format + "</color>", args));
         }
 
         #endregion
 
+
         #region ExMethods
 
         /// <summary>
-        /// returns whether the player is currently looking at a gameobject.
+        /// returns whether the player is currently looking at an gameobject.
         /// </summary>
         /// <param name="gameObject">The gameobject to detect againist.</param>
         /// <param name="withinDistance">raycast within distance from main camera.</param>
@@ -218,7 +357,7 @@ namespace TommoJProductions.ModApi
         {
             if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, withinDistance, 1 << gameObject.layer))
             {
-                if (hit.collider.gameObject == gameObject)
+                if (hit.collider?.gameObject == gameObject)
                     return true;
             }
             return false;
@@ -235,6 +374,7 @@ namespace TommoJProductions.ModApi
                 return true;
             return false;
         }
+
         /// <summary>
         /// Checks if the gameobject is on the layer, <paramref name="inLayer"/>.
         /// </summary>
@@ -260,10 +400,10 @@ namespace TommoJProductions.ModApi
             Transform transform = inGameObject.transform;
 
             if (transform != null)
-            for (int i = 0; i < inGameObject.transform.childCount; i++)
-            {
-                inGameObject.transform.GetChild(i).gameObject.sendToLayer(inLayer);
-            }
+                for (int i = 0; i < inGameObject.transform.childCount; i++)
+                {
+                    inGameObject.transform.GetChild(i).gameObject.sendToLayer(inLayer);
+                }
         }
         /// <summary>
         /// Sends a gameobject to the desired layer.
@@ -418,7 +558,7 @@ namespace TommoJProductions.ModApi
         {
             while (transform.parent != parent)
             {
-                yield return new WaitForEndOfFrame();
+                yield return new WaitForFixedUpdate();
                 transform.parent = parent;
             }
             onFixedToParent?.Invoke();
@@ -435,12 +575,139 @@ namespace TommoJProductions.ModApi
         {
             while (transform.localPosition != pos && transform.localEulerAngles != eulerAngles)
             {
-                yield return new WaitForEndOfFrame();
+                yield return new WaitForFixedUpdate();
                 transform.localPosition = pos;
                 transform.localEulerAngles = eulerAngles;
             }
             onFixedTransform?.Invoke();
             yield break;
+        }
+
+        public enum injectEnum
+        {
+            append,
+            prepend,
+            insert,
+            replace
+        }
+        public static void addNewGlobalTransition(this PlayMakerFSM fsm, FsmEvent _event, string stateName)
+        {
+            FsmTransition[] fsmGlobalTransitions = fsm.FsmGlobalTransitions;
+            List<FsmTransition> temp = new List<FsmTransition>();
+            foreach (FsmTransition t in fsmGlobalTransitions)
+            {
+                temp.Add(t);
+            }
+            temp.Add(new FsmTransition
+            {
+                FsmEvent = _event,
+                ToState = stateName
+            });
+            fsm.Fsm.GlobalTransitions = temp.ToArray();
+        }
+        public static void addNewTransitionToState(this GameObject go, string stateName, string eventName, string toStateName)
+        {
+
+            FsmState state = go.GetPlayMakerState(stateName);
+            List<FsmTransition> temp = new List<FsmTransition>();
+            foreach (FsmTransition t in state.Transitions)
+            {
+                temp.Add(t);
+            }
+            temp.Add(new FsmTransition
+            {
+                FsmEvent = state.Fsm.GetEvent(eventName),
+                ToState = toStateName
+            });
+            state.Transitions = temp.ToArray();
+        }
+        public static void appendNewAction(this FsmState state, Action action)
+        {
+            List<FsmStateAction> temp = new List<FsmStateAction>();
+            foreach (FsmStateAction v in state.Actions)
+            {
+                temp.Add(v);
+            }
+            FsmStateActionCallback callback = new FsmStateActionCallback(action);
+            temp.Add(callback);
+            state.Actions = temp.ToArray();
+        }
+        public static void prependNewAction(this FsmState state, Action action)
+        {
+            List<FsmStateAction> temp = new List<FsmStateAction>();
+            FsmStateActionCallback callback = new FsmStateActionCallback(action);
+            temp.Add(callback);
+            foreach (FsmStateAction v in state.Actions)
+            {
+                temp.Add(v);
+            }
+            state.Actions = temp.ToArray();
+        }
+        public static void insertNewAction(this FsmState state, Action action, int index)
+        {
+            List<FsmStateAction> temp = new List<FsmStateAction>();
+            FsmStateActionCallback callback = new FsmStateActionCallback(action);
+            foreach (FsmStateAction v in state.Actions)
+            {
+                temp.Add(v);
+            }
+            temp.Insert(index, callback);
+            state.Actions = temp.ToArray();
+        }
+        public static void replaceAction(this FsmState state, Action action, int index)
+        {
+            // Written, 13.04.2022
+
+            List<FsmStateAction> temp = new List<FsmStateAction>();
+            FsmStateActionCallback callback = new FsmStateActionCallback(action);
+            for (int i = 0; i < state.Actions.Length; i++)
+            {
+                if (i == index)
+                    temp.Add(callback);
+                else
+                    temp.Add(state.Actions[i]);
+            }
+            state.Actions = temp.ToArray();
+        }
+        public static void injectAction(this PlayMakerFSM playMakerFSM, string stateName, injectEnum injectType, Action callback, int index = 0)
+        {
+            injectAction(playMakerFSM.gameObject, playMakerFSM.FsmName, stateName, injectType, callback, index);
+        }
+        public static void injectAction(this GameObject go, string fsmName, string stateName, injectEnum injectType, Action callback, int index = 0)
+        {
+            PlayMakerFSM fsm = go.GetPlayMaker(fsmName);
+            FsmState state = go.GetPlayMakerState(stateName);
+            switch (injectType)
+            {
+                case injectEnum.append:
+                    state.appendNewAction(callback);
+                    break;
+                case injectEnum.prepend:
+                    state.prependNewAction(callback);
+                    break;
+                case injectEnum.insert:
+                    state.insertNewAction(callback, index);
+                    break;
+                case injectEnum.replace:
+                    state.replaceAction(callback, index);
+                    break;
+            }
+           print($"Inject Action | {injectType}ing {callback.Method.Name} to {go.name}.{fsmName}.{stateName}" + (injectType == injectEnum.insert ? $" at index:{index}" : ""));
+        }
+
+        public static FsmFloat round(this FsmFloat fsmFloat, int decimalPlace = 0)
+        {
+            return fsmFloat.Value.round(decimalPlace);
+        }
+        public static float round(this float _float, int decimalPlace = 0)
+        {
+            // Written, 15.01.2022
+
+            return (float)Math.Round(_float, decimalPlace);
+        }
+        public static float mapValue(this float mainValue, float inValueMin, float inValueMax, float outValueMin, float outValueMax)
+        {
+            return (mainValue - inValueMin) * (outValueMax - outValueMin) / (inValueMax - inValueMin) + outValueMin;
         }
 
         #endregion

@@ -8,8 +8,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("ModAPI is an application programming interface designed for the My Summer Car Modding Community.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Tommo J. Productions")]
-[assembly: AssemblyProduct("Mod Api")]
-[assembly: AssemblyCopyright("Copyright © Tommo J. Productions 2021")]
+[assembly: AssemblyProduct("Mod API v0.1.4.2")]
+[assembly: AssemblyCopyright("Copyright © Tommo J. Productions 2022")]
 [assembly: AssemblyTrademark("Azine")]
 [assembly: AssemblyCulture("")]
 

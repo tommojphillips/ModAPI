@@ -1,6 +1,7 @@
 ﻿using MSCLoader;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using TommoJProductions.ModApi.Attachable.CallBacks;
 using UnityEngine;
@@ -34,7 +35,7 @@ namespace TommoJProductions.ModApi.Attachable
                 set;
             }
             /// <summary>
-            /// The install point index that the part is installed to located in <see cref="partInstallParameters" href=".installPoints" />.
+            /// The install point index that the part is installed to located in <see cref="Part.triggers" />.
             /// </summary>
             public int installedPointIndex
             {
@@ -78,6 +79,18 @@ namespace TommoJProductions.ModApi.Attachable
                 installedPointIndex = inPart.installPointIndex;
                 position = inPart.transform.position;
                 rotation = inPart.transform.eulerAngles;
+            }/// <summary>
+             /// Initializes a new instance of this and assigns the part save info fields to this.
+             /// </summary>
+             /// <param name="inSave">The save info to replicate</param>
+            public PartSaveInfo(PartSaveInfo inSave)
+            {
+                // Written, 01.05.2022
+
+                installed = inSave.installed;
+                installedPointIndex = inSave.installedPointIndex;
+                position = inSave.position;
+                rotation = inSave.rotation;
             }
 
             #endregion
@@ -85,8 +98,12 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents settings for the part class.
         /// </summary>
-        public class PartSettings 
+        public class PartSettings
         {
+            /// <summary>
+            /// Represents the physic Material Settings.
+            /// </summary>
+            public CollisionSettings collisionSettings = new CollisionSettings();
             /// <summary>
             /// Represents the assemble type of the part.
             /// </summary>
@@ -107,11 +124,100 @@ namespace TommoJProductions.ModApi.Attachable
             /// Represents if <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/> will set pos and rot of part if NOT installed.
             /// </summary>
             public bool setPositionRotationOnInitialisePart = true;
+            /// <summary>
+            /// Represents the disassemble collider. collider must not be of IsTrigger. if null, logic uses Parts Gameobject to determine if part is being looked at. otherwise logic uses this collider to determine if part is being looked at.
+            /// </summary>
+            public Collider disassembleCollider = null;
+            /// <summary>
+            /// Represents the assemble collider. collider must be of IsTrigger. if null, logic uses <see cref="installPointColliders"/> to determine if part is in trigger. otherwise logic uses this collider to determine if part is in trigger.
+            /// </summary>
+            public Collider assembleCollider = null;
+            /// <summary>
+            /// Sets the parts colliders physics material if enabled.
+            /// </summary>
+            public bool setPhysicsMaterialOnInitialisePart = false;
+            /// <summary>
+            /// Initializes a new instance of part settings.
+            /// </summary>
+            public PartSettings() { }
+            /// <summary>
+            /// Initializes a new instance of part settings and sets all class fields to the provided settings instance, <paramref name="s"/>.
+            /// </summary>
+            /// <param name="s">The Setting instance to rep.</param>
+            public PartSettings(PartSettings s)
+            {
+                if (s != null)
+                {
+                    assembleType = s.assembleType;
+                    assemblyTypeJointSettings = s.assemblyTypeJointSettings;
+                    installedPartToLayer = s.installedPartToLayer;
+                    notInstalledPartToLayer = s.notInstalledPartToLayer;
+                    setPositionRotationOnInitialisePart = s.setPositionRotationOnInitialisePart;
+                    collisionSettings.installedCollisionDetectionMode = s.collisionSettings.installedCollisionDetectionMode;
+                    collisionSettings.notInstalledCollisionDetectionMode = s.collisionSettings.notInstalledCollisionDetectionMode;
+                    setPhysicsMaterialOnInitialisePart = s.setPhysicsMaterialOnInitialisePart;
+                    collisionSettings.physicMaterial = s.collisionSettings.physicMaterial;
+                    disassembleCollider = s.disassembleCollider;
+                    assembleCollider = s.assembleCollider;
+                }
+            }
+        }
+        /// <summary>
+        /// Represents the parts collision settings.
+        /// </summary>
+        public class CollisionSettings
+        {
+            // Written, 29.05.2022
+
+            /// <summary>
+            /// Represents all types of applying physic material
+            /// </summary>
+            public enum PhysicMaterialType
+            {
+                /// <summary>
+                /// set physic material on all found colliders on part.
+                /// </summary>
+                setOnAllFoundColliders,
+                /// <summary>
+                /// set physic material on provided collider/s (<see cref="providedColliders"/>).
+                /// </summary>
+                setOnProvidedColliders,
+            }  
+            /// <summary>
+            /// Represents the default part physic material.
+            /// </summary>
+            public static readonly PhysicMaterial defaultPhysicMaterial = new PhysicMaterial("ModAPI.Part.defaultPhysicMaterial")
+            {
+                staticFriction = 0.4f,
+                dynamicFriction = 0.6f,
+            };
+            /// <summary>
+            /// Represents the collision detection mode on installed parts.
+            /// </summary>
+            public CollisionDetectionMode installedCollisionDetectionMode = CollisionDetectionMode.Discrete;
+            /// <summary>
+            /// Represents the collision detection mode on not installed parts. (pickable items)
+            /// </summary>
+            public CollisionDetectionMode notInstalledCollisionDetectionMode = CollisionDetectionMode.Continuous;
+            /// <summary>
+            /// Represents the physic material.
+            /// </summary>
+            public PhysicMaterial physicMaterial = defaultPhysicMaterial;
+            /// <summary>
+            /// Represents the current physic material type setting.
+            /// </summary>
+            public PhysicMaterialType physicMaterialType = PhysicMaterialType.setOnAllFoundColliders;
+
+            /// <summary>
+            /// Provided colliders. used to set physic mat on initailizePart if <see cref="setPhysicsMaterialOnInitialisePart"/> is true.
+            /// and <see cref="physicMaterialType"/> is set to <see cref="PhysicMaterialType.setOnProvidedColliders"/>.
+            /// </summary>
+            public Collider[] providedColliders;
         }
         /// <summary>
         /// Represents supported assemble types.
         /// </summary>
-        public enum AssembleType 
+        public enum AssembleType
         {
             /// <summary>
             /// Represents a static assembly via, deleting parts rigidbody.
@@ -129,7 +235,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents settings for assembly type, joint
         /// </summary>
-        public class AssemblyTypeJointSettings 
+        public class AssemblyTypeJointSettings
         {
             /// <summary>
             /// Represents a list of install point rigidbodies for when using assemblyType:Joint
@@ -143,15 +249,15 @@ namespace TommoJProductions.ModApi.Attachable
             /// Inits new joint settings class and assigns rbs
             /// </summary>
             /// <param name="rigidbodies"></param>
-            public AssemblyTypeJointSettings(params Rigidbody[] rigidbodies) 
+            public AssemblyTypeJointSettings(params Rigidbody[] rigidbodies)
             {
                 installPointRigidbodies = rigidbodies;
             }
         }
 
         #endregion
-        
-        #region Public Fields / Properties
+
+        #region Fields / Properties
 
         /// <summary>
         /// Represents the on assemble event.
@@ -162,9 +268,21 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public event Action onDisassemble;
         /// <summary>
-        /// Represents the default save info for this part.
+        /// Represents the on pre assemble event.
         /// </summary>
-        public PartSaveInfo defaultSaveInfo;
+        public event Action onPreAssemble;
+        /// <summary>
+        /// Represents the on pre disassemble event.
+        /// </summary>
+        public event Action onPreDisassemble;
+        /// <summary>
+        /// Represents the on pre init part event. invoked after fields are assigned but before init part logic has run.
+        /// </summary>
+        public event Action onPreInitPart;
+        /// <summary>
+        /// Represents the on post init part event. invoked after init part logic has run.
+        /// </summary>
+        public event Action onPostInitPart;
         /// <summary>
         /// Represents all triggers; install points for this part.
         /// </summary>
@@ -185,16 +303,29 @@ namespace TommoJProductions.ModApi.Attachable
             get => loadedSaveInfo.installedPointIndex;
             private set => loadedSaveInfo.installedPointIndex = value;
         }
-        
+        /// <summary>
+        /// Represents the default save info for this part.
+        /// </summary>
+        public PartSaveInfo defaultSaveInfo 
+        {
+            get { return _defaultSaveInfo; }
+            set { _defaultSaveInfo = new PartSaveInfo(value); }
+        }
+
         /// <summary>
         /// Represents the parts settings.
         /// </summary>
         public PartSettings partSettings;
-        
-        #endregion
 
-        #region Private Fields
+        /// <summary>
+        /// Represents all bolts for the part.
+        /// </summary>
+        public Bolt[] bolts;
 
+        /// <summary>
+        /// Represents default save info.
+        /// </summary>
+        private PartSaveInfo _defaultSaveInfo;
         /// <summary>
         /// Represents loaded save info.
         /// </summary>
@@ -218,15 +349,19 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the cached rigidbody.
         /// </summary>
-        private Rigidbody cachedRigidBody;
+        public Rigidbody cachedRigidBody { get; private set; }
         /// <summary>
         /// Represents the cached mass of the parts rigidbody.mass property.
         /// </summary>
-        private float cachedMass;
+        public float cachedMass;
         /// <summary>
         /// Represents the fixed joint when using <see cref="AssembleType.joint"/>.
         /// </summary>
-        private FixedJoint joint;
+        public FixedJoint joint;
+        /// <summary>
+        /// Represents if part has been initialized (<see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/> invoked
+        /// </summary>
+        private bool initialized = false;
 
         #endregion
 
@@ -277,6 +412,7 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region Event Handlers
 
+
         /// <summary>
         /// Represents the trigger enter callback
         /// </summary>
@@ -284,11 +420,12 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="callback_ref">The callback reference that invoked this.</param>
         void callback_onTriggerEnter(Collider other, TriggerCallback callback_ref)
         {
-            if (!installed && installPointColliders.Contains(callback_ref.callbackCollider) && gameObject.isPlayerHolding())
+            if (!installed && colliderCheck(callback_ref) && gameObject.isPlayerHolding())
             {
-                if (triggerRoutine != null)
-                    StopCoroutine(triggerRoutine);
-                triggerRoutine = StartCoroutine(partInTrigger(callback_ref.callbackCollider));
+                if (triggerRoutine == null)
+                {
+                    triggerRoutine = StartCoroutine(partInTrigger(callback_ref.callbackCollider));
+                }
             }
         }
         /// <summary>
@@ -298,12 +435,15 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="callback_ref">The callback reference that invoked this.</param>
         void callback_onTriggerExit(Collider other, TriggerCallback callback_ref)
         {
-            if (installPointColliders.Contains(callback_ref.callbackCollider))
+            if (colliderCheck(callback_ref))
             {
+                if (triggerRoutine != null)
+                {
+                    StopCoroutine(triggerRoutine);
+                    triggerRoutine = null;
+                }
                 ModClient.guiAssemble = false;
                 inTrigger = false;
-                if (triggerRoutine != null)
-                    StopCoroutine(triggerRoutine);
             }
         }
 
@@ -312,9 +452,17 @@ namespace TommoJProductions.ModApi.Attachable
         #region Methods
 
         /// <summary>
+        /// Check for deciding if part is in trigger to be installed
+        /// </summary>
+        /// <param name="callback">the callback that triggered this.</param>
+        private bool colliderCheck(TriggerCallback callback) 
+        {
+            return partSettings.assembleCollider == null ? installPointColliders.Contains(callback.callbackCollider) : callback.callbackCollider == partSettings.assembleCollider;
+        }
+        /// <summary>
         /// Vaildates the part and reports to mod console. called at: <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/>.
         /// </summary>
-        private void vaildiatePart() 
+        private void vaildiatePart()
         {
             if (partSettings.assembleType == AssembleType.joint && (partSettings.assemblyTypeJointSettings?.installPointRigidbodies?.Length ?? -1) <= 0)
                 ModConsole.Error("NOTE: assembly type is 'joint' but no install point rigidbodies have been assigned!!! error!!!");
@@ -323,42 +471,69 @@ namespace TommoJProductions.ModApi.Attachable
         /// Initializes this part.
         /// </summary>
         /// <param name="saveInfo">The save info to load this part with.</param>
-        /// <param name="partSettings">The part settings to load this part with.</param>
+        /// <param name="partSettingsRef">The part settings to load this part with.</param>
         /// <param name="triggerRefs">The Install points for this part. (in the form of a trigger)</param>
-        public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettings = default(PartSettings), params Trigger[] triggerRefs)
+        public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettingsRef = default(PartSettings), params Trigger[] triggerRefs)
         {
             // Written, 08.09.2021
 
-            this.partSettings = partSettings ?? new PartSettings();
-            vaildiatePart();
-            triggers = triggerRefs;
-
-            loadedSaveInfo = saveInfo ?? defaultSaveInfo ?? new PartSaveInfo();
-            installPointColliders = new Collider[triggerRefs.Length];
-
-            makePartPickable(!loadedSaveInfo.installed);
-
-            if (triggerRefs.Length > 0)
+            if (!initialized)
             {
-                for (int i = 0; i < triggers.Length; i++)
+                initialized = true;
+                partSettings = new PartSettings(partSettingsRef);
+                triggers = triggerRefs;
+
+                loadedSaveInfo = new PartSaveInfo(saveInfo ?? defaultSaveInfo);
+                installPointColliders = new Collider[triggerRefs.Length];
+                makePartPickable(!loadedSaveInfo.installed);
+
+                onPreInitPart?.Invoke();
+                vaildiatePart();
+
+                if (triggerRefs.Length > 0)
                 {
-                    installPointColliders[i] = triggers[i].triggerCollider;
-                    if (!triggers[i].triggerCallback)
-                        triggers[i].triggerCallback = triggers[i].triggerGameObject.AddComponent<TriggerCallback>();
-                    triggers[i].triggerCallback.onTriggerExit += callback_onTriggerExit;
-                    triggers[i].triggerCallback.onTriggerEnter += callback_onTriggerEnter;
+                    for (int i = 0; i < triggers.Length; i++)
+                    {
+                        Trigger t = triggers[i];
+                        installPointColliders[i] = t.triggerCollider;
+                        if (!t.triggerCallback)
+                            t.triggerCallback = t.triggerGameObject.AddComponent<TriggerCallback>();
+                        t.triggerCallback.onTriggerExit += callback_onTriggerExit;
+                        t.triggerCallback.onTriggerEnter += callback_onTriggerEnter;
+                    }
+                    if (installed)
+                    {
+                        assemble(installPointColliders[installPointIndex], false);
+                    }
                 }
-                if (installed)
+                if (!installed && partSettings.setPositionRotationOnInitialisePart)
                 {
-                    assemble(installPointColliders[installPointIndex], false);
+                    transform.position = loadedSaveInfo.position;
+                    transform.eulerAngles = loadedSaveInfo.rotation;
                 }
+                if (partSettings.setPhysicsMaterialOnInitialisePart)
+                {
+                    IEnumerable<Collider> colliders;
+                    switch (partSettings.collisionSettings.physicMaterialType)
+                    {
+                        case CollisionSettings.PhysicMaterialType.setOnAllFoundColliders:
+                            colliders = GetComponents<Collider>().Where(_col => !_col.isTrigger);
+                            break;
+                        default:
+                        case CollisionSettings.PhysicMaterialType.setOnProvidedColliders:
+                            colliders = partSettings.collisionSettings.providedColliders;
+                            break;
+                    }
+                    foreach (Collider collider in colliders)
+                    {
+                        collider.material = partSettings.collisionSettings.physicMaterial;
+                    }
+                }
+                onPostInitPart?.Invoke();
+                ModClient.parts.Add(this);
             }
-            if (!installed && partSettings.setPositionRotationOnInitialisePart)
-            {
-                transform.position = loadedSaveInfo.position;
-                transform.eulerAngles = loadedSaveInfo.rotation;
-            }
-            ModClient.parts.Add(this);
+            else
+                throw new Exception($"[ModAPI] error: Part, {name} is already initialized");
         }
         /// <summary>
         /// Attaches this part to the attachment point.
@@ -367,6 +542,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="playSound">Play assemble sound?</param>
         public virtual void assemble(Collider installPoint, bool playSound = true)
         {
+            onPreAssemble?.Invoke();
             installed = true;
             inTrigger = false;
             installPoint.enabled = false;
@@ -374,7 +550,6 @@ namespace TommoJProductions.ModApi.Attachable
             transform.parent = installPoint.transform;
             transform.localPosition = Vector3.zero;
             transform.localEulerAngles = Vector3.zero;
-
             triggers[installPointIndex].triggerCallback.part = this;
             triggers[installPointIndex].triggerCallback.triggerInUse = true;
 
@@ -391,7 +566,7 @@ namespace TommoJProductions.ModApi.Attachable
                         break;
                     case AssembleType.joint:
                         joint = gameObject.AddComponent<FixedJoint>();
-                        joint.connectedBody = (partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length > 0 ? partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex] : installPoint.transform.GetComponentInParent<Rigidbody>()) ?? throw new Exception($"[Assemble.{name}] (Joint) Error assigning connected body. could not find a rigidbody in parent. assign a rigidbody manually at 'partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex]'");
+                        joint.connectedBody = (partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length > 0 ? partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex] : installPointColliders[installPointIndex].transform.GetComponentInParent<Rigidbody>()) ?? throw new Exception($"[Assemble.{name}] (Joint) Error assigning connected body. could not find a rigidbody in parent. assign a rigidbody manually at 'partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex]'");
                         joint.breakForce = partSettings.assemblyTypeJointSettings.breakForce;
                         joint.breakTorque = joint.breakForce / 2;
                         break;
@@ -412,13 +587,12 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="playSound">Play disassemble sound?</param>
         public virtual void disassemble(bool playSound = true)
         {
+            onPreDisassemble?.Invoke();
             installed = false;
             if (mouseOver)
-                mouseOverReset();
-            makePartPickable(true);
-            transform.parent = null;            
+                mouseOverGuiDisassembleEnable(false);
             setActiveAttachedToTrigger(true);
-
+            transform.parent = null;
             triggers[installPointIndex].triggerCallback.part = null;
             triggers[installPointIndex].triggerCallback.triggerInUse = false;
 
@@ -435,6 +609,7 @@ namespace TommoJProductions.ModApi.Attachable
                     Destroy(joint);
                     break;
             }
+            makePartPickable(true);
 
             if (playSound)
             {
@@ -485,26 +660,37 @@ namespace TommoJProductions.ModApi.Attachable
             return new PartSaveInfo() { installed = installed, installedPointIndex = installPointIndex, position = transform.position, rotation = transform.eulerAngles };
         }
         /// <summary>
-         /// Makes the part a pickable item depending on the provided values.
-         /// </summary>
-         /// <param name="inPickable">Make part pickable?</param>
+        /// Makes the part a pickable item depending on the provided values.
+        /// </summary>
+        /// <param name="inPickable">Make part pickable?</param>
         public void makePartPickable(bool inPickable)
         {
-            // Written, 14.08.2018 | Modified, 30.09.2021
+            // Written, 14.08.2018 | Modified, 30.09.2021 | Modified, 04.06.2022
 
             if (inPickable)
+            {
                 gameObject.tag = "PART";
+                gameObject.layer = partSettings.notInstalledPartToLayer.layer();
+
+                if (cachedRigidBody)
+                    cachedRigidBody.collisionDetectionMode = partSettings.collisionSettings.notInstalledCollisionDetectionMode;
+            }
             else
+            {
                 gameObject.tag = "DontPickThis";
-            gameObject.layer = (inPickable ? partSettings.notInstalledPartToLayer : partSettings.installedPartToLayer).layer();
+                gameObject.layer = partSettings.installedPartToLayer.layer();
+
+                if (cachedRigidBody)
+                    cachedRigidBody.collisionDetectionMode = partSettings.collisionSettings.installedCollisionDetectionMode;
+            }
         }
         /// <summary>
-        /// ends (resets) a gui interaction.
+        /// ends or starts a disassembly gui interaction.
         /// </summary>
-        public void mouseOverReset()
+        public void mouseOverGuiDisassembleEnable(bool enable)
         {
-            mouseOver = false;
-            ModClient.guiDisassemble = false;
+            mouseOver = enable;
+            ModClient.guiDisassemble = enable;
         }
 
         #endregion

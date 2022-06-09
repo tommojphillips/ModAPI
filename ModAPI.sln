@@ -5,11 +5,6 @@ VisualStudioVersion = 16.0.28407.52
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModAPI", "ModAPI\ModAPI.csproj", "{65DDDAC8-54EA-4116-A53D-05B126FD5A49}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModApiInterface", "ModApiInterface\ModApiInterface.csproj", "{59C5939B-FA7D-4A62-9778-9653502CBB35}"
-	ProjectSection(ProjectDependencies) = postProject
-		{65DDDAC8-54EA-4116-A53D-05B126FD5A49} = {65DDDAC8-54EA-4116-A53D-05B126FD5A49}
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Secure Car Jack", "..\SecureCarJack\Secure Car Jack.csproj", "{310E0B49-FB86-4ACB-B5F7-B415CE36798E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{65DDDAC8-54EA-4116-A53D-05B126FD5A49} = {65DDDAC8-54EA-4116-A53D-05B126FD5A49}
@@ -26,6 +21,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurboMod", "..\TurboMod\Tur
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureWarningTriangle", "..\SecureWarningTriangle\SecureWarningTriangle\SecureWarningTriangle.csproj", "{5B6103E6-1AFF-417A-9491-82264B22AC21}"
+	ProjectSection(ProjectDependencies) = postProject
+		{65DDDAC8-54EA-4116-A53D-05B126FD5A49} = {65DDDAC8-54EA-4116-A53D-05B126FD5A49}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,10 +35,6 @@ Global
 		{65DDDAC8-54EA-4116-A53D-05B126FD5A49}.Debug|x64.Build.0 = Debug|x64
 		{65DDDAC8-54EA-4116-A53D-05B126FD5A49}.Release|x64.ActiveCfg = Release|x64
 		{65DDDAC8-54EA-4116-A53D-05B126FD5A49}.Release|x64.Build.0 = Release|x64
-		{59C5939B-FA7D-4A62-9778-9653502CBB35}.Debug|x64.ActiveCfg = Debug|x64
-		{59C5939B-FA7D-4A62-9778-9653502CBB35}.Debug|x64.Build.0 = Debug|x64
-		{59C5939B-FA7D-4A62-9778-9653502CBB35}.Release|x64.ActiveCfg = Release|x64
-		{59C5939B-FA7D-4A62-9778-9653502CBB35}.Release|x64.Build.0 = Release|x64
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.Debug|x64.ActiveCfg = Debug|x64
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.Debug|x64.Build.0 = Debug|x64
 		{310E0B49-FB86-4ACB-B5F7-B415CE36798E}.Release|x64.ActiveCfg = Release|x64

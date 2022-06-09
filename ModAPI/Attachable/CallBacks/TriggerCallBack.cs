@@ -53,23 +53,26 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         {
             if (part && triggerInUse && disassembleLogicEnabled)
             {
-                if (part.gameObject.isPlayerLookingAt())
+                bool t = (part.partSettings.disassembleCollider == null ? part.gameObject : part.partSettings.disassembleCollider.gameObject).isPlayerLookingAt();
+                if (t)
                 {
-                    part.mouseOver = true;
-                    ModClient.guiDisassemble = true;
+                    part.mouseOverGuiDisassembleEnable(true);
                     if (Input.GetMouseButtonDown(1))
-                    {
+                    {                        
                         part.disassemble();
                     }
                 }
                 else if (part.mouseOver)
-                    part.mouseOverReset();
+                    part.mouseOverGuiDisassembleEnable(false);
             }
         }
-        private void OnDisable() 
+        private void OnDisable()
         {
-            if (part.mouseOver)
-                part.mouseOverReset();
+            if (triggerInUse)
+            {
+                if (part.mouseOver)
+                    part.mouseOverGuiDisassembleEnable(false);
+            }
         }
         private void OnTriggerExit(Collider collider)
         {
