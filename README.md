@@ -10,7 +10,7 @@
  Build Number
  Revision
  
- LATEST RELEASE --> v0.1.4.1-alpha
+ LATEST RELEASE --> v0.1.4.2
 
 # Getting Started
 
