@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using UnityEngine;
 
 namespace TommoJProductions.ModApi.Attachable.CallBacks
@@ -10,20 +11,25 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
     {
         // Written, 10.08.2018 | Updated, 10.2021
 
-        #region Fields
+        #region Events
 
         /// <summary>
         /// Represents the on trigger exit event.
         /// </summary>
-        public event Action<Collider, TriggerCallback> onTriggerExit;
+        public event Action<Part, TriggerCallback> onTriggerExit;
         /// <summary>
         /// Represents the on trigger stay event.
         /// </summary>
-        public event Action<Collider, TriggerCallback> onTriggerStay;
+        public event Action<Part, TriggerCallback> onTriggerStay;
         /// <summary>
         /// Represents the on trigger enter event.
         /// </summary>
-        public event Action<Collider, TriggerCallback> onTriggerEnter;
+        public event Action<Part, TriggerCallback> onTriggerEnter;
+
+        #endregion
+
+        #region Fields
+
         /// <summary>
         /// Represents the collider that invoked this callback.
         /// </summary>
@@ -33,13 +39,28 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         /// </summary>
         public bool disassembleLogicEnabled = true;
         /// <summary>
-        /// Represents that the trigger is in use (part installed on this trigger).
+        /// Represents the part that is currently installed to this trigger. note null if no installed part.
         /// </summary>
-        internal bool triggerInUse = false;
+        public Part part { get; internal set; }
         /// <summary>
-        /// Represents the part that is installed to this trigger. note null if no installed part.
+        /// Represents the trigger that is instance is linked to.
         /// </summary>
-        internal Part part;
+        public Trigger trigger { get; internal set; }
+        /// <summary>
+        /// Represents the gui check.
+        /// </summary>
+        public static bool guiCheck => !ModClient.guiUse && !ModClient.guiAssemble && !ModClient.playerInMenu;
+
+        private bool colliderCheck;
+
+        #endregion
+
+        #region Methods
+
+        private bool triggerCheck(Collider col) 
+        {
+            return trigger.parts.Any(p => p.gameObject == col.gameObject);
+        }
 
         #endregion
 
@@ -51,14 +72,16 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         }
         private void Update()
         {
-            if (part && triggerInUse && disassembleLogicEnabled)
+            if (part && disassembleLogicEnabled)
             {
-                bool t = (part.partSettings.disassembleCollider == null ? part.gameObject : part.partSettings.disassembleCollider.gameObject).isPlayerLookingAt();
-                if (t)
+                colliderCheck = (part.partSettings.disassembleCollider == null ? part.gameObject : part.partSettings.disassembleCollider.gameObject).isPlayerLookingAt();
+                if (colliderCheck && guiCheck && ModClient.isHandEmpty)
                 {
+                    if (ModClient.guiDrive)
+                        ModClient.guiDrive = false;
                     part.mouseOverGuiDisassembleEnable(true);
                     if (Input.GetMouseButtonDown(1))
-                    {                        
+                    {
                         part.disassemble();
                     }
                 }
@@ -68,7 +91,7 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         }
         private void OnDisable()
         {
-            if (triggerInUse)
+            if (part)
             {
                 if (part.mouseOver)
                     part.mouseOverGuiDisassembleEnable(false);
@@ -76,15 +99,18 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         }
         private void OnTriggerExit(Collider collider)
         {
-            onTriggerExit?.Invoke(collider, this);
+            if (triggerCheck(collider))
+                onTriggerExit?.Invoke(collider.GetComponent<Part>(), this);
         }
         private void OnTriggerStay(Collider collider)
         {
-            onTriggerStay?.Invoke(collider, this);
+            if (triggerCheck(collider))
+                onTriggerStay?.Invoke(collider.GetComponent<Part>(), this);
         }
         private void OnTriggerEnter(Collider collider)
         {
-            onTriggerEnter?.Invoke(collider, this);
+            if (triggerCheck(collider))
+               onTriggerEnter?.Invoke(collider.GetComponent<Part>(), this);
         }
 
         #endregion

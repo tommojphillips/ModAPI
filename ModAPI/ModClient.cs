@@ -5,6 +5,12 @@ using System.Collections.Generic;
 using TommoJProductions.ModApi.Attachable;
 using UnityEngine;
 using MSCLoader;
+using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
+using System.Reflection;
+using System.Linq;
+using System.ComponentModel;
+using static UnityEngine.GUILayout;
+using TommoJProductions.ModApi.Attachable.CallBacks;
 
 namespace TommoJProductions.ModApi
 {
@@ -15,50 +21,116 @@ namespace TommoJProductions.ModApi
     {
         // Written, 10.08.2018 | Modified 25.09.2021
 
-        #region Constraints
+        #region enums
 
-#if DEBUG
         /// <summary>
-        /// Represents that the complied runtime is fact debug configuration.
+        /// Represents inject types for <see cref="injectAction"/>
         /// </summary>
-        public const bool IS_DEBUG_CONFIG = true;
-#else
+        public enum InjectEnum
+        {
+            /// <summary>
+            /// Rpresents inject type, append. appends an action a fsmState
+            /// </summary>
+            append,
+            /// <summary>
+            /// Rpresents inject type, prepend. prepends an action a fsmState
+            /// </summary>
+            prepend,
+            /// <summary>
+            /// Rpresents inject type, insert. insert an action in a fsmState at an index.
+            /// </summary>
+            insert,
+            /// <summary>
+            /// Rpresents inject type, replace. replace an action in a fsmState at an index.
+            /// </summary>
+            replace
+        }
         /// <summary>
-        /// Represents that the complied runtime is fact release configuration.
+        /// Represents callback types
         /// </summary>
-        public const bool IS_DEBUG_CONFIG = false;
-#endif
+        public enum CallbackTypeEnum
+        {
+            /// <summary>
+            /// Represents the on enter callback.
+            /// </summary>
+            onEnter,
+            /// <summary>
+            /// Represents the on  fixed update callback. 
+            /// </summary>
+            onFixedUpdate,
+            /// <summary>
+            /// Represents the on update callback. 
+            /// </summary>
+            onUpdate,
+            /// <summary>
+            /// Represents the on gui callback.
+            /// </summary>
+            onGui
+        }
+        /// <summary>
+        /// Represents all databases in game.
+        /// </summary>
+        [Description("Database")]
+        public enum Databases
+        {
+            // Written, 04.07.2022
 
-#if x64
-        /// <summary>
-        /// Represents that the complied runtime is infact x64
-        /// </summary>
-        public const bool IS_X64 = true;
-#else
-        /// <summary>
-        /// Represents that the complied runtime is infact x86
-        /// </summary>
-        public const bool IS_x64 = false;
-#endif
-        /// <summary>
-        /// Represents the complied runtime version of the api.
-        /// </summary>
-        public const string version = "0.1.4.2";
+            /// <summary>
+            /// Represents the motor database.
+            /// </summary>
+            [Description("DatabaseMotor")]
+            motor,
+            /// <summary>
+            /// Represents the mechanics database.
+            /// </summary>
+            [Description("DatabaseMechanics")]
+            mechanics,
+            /// <summary>
+            /// Represents the orders database.
+            /// </summary>
+            [Description("DatabaseOrders")]
+            orders,
+            /// <summary>
+            /// Represents the body database.
+            /// </summary>
+            [Description("DatabaseBody")]
+            body
+        }
 
         #endregion
 
         #region fields
 
-        private static PlayMakerFSM pickUp;
-        private static FsmGameObject pickedUpGameObject;
-        private static FsmGameObject raycastHitGameObject;
+        /// <summary>
+        /// Represents the complied runtime version of the api.
+        /// </summary>
+        public const string version = VersionInfo.version;
+
+        private static PlayMakerFSM _pickUp;
+        private static FsmGameObject _pickedUpGameObject;
+        private static FsmGameObject _raycastHitGameObject;
         private static AudioSource _assembleAudio;
         private static AudioSource _disassembleAudio;
         private static FsmBool _guiDisassemble;
         private static FsmBool _guiAssemble;
         private static FsmBool _guiUse;
+        private static FsmBool _guiDrive;
+        private static FsmBool _handEmpty;
+        private static FsmBool _playerInMenu;
         private static FsmString _guiInteraction;
         private static FsmString _playerCurrentVehicle;
+        private static FieldInfo _modsFolderFieldInfo;
+        private static FsmFloat _toolsize;
+        private static string[] maskNames;
+        private static string propertyString = "";
+#if DEBUG
+        internal static bool devMode = true;
+#else
+        internal static bool devMode = false;
+#endif
+
+        internal static Part _inspectingPart = null;
+        internal static BoltCallback _inspectingBolt = null;
 
         #endregion
 
@@ -150,14 +222,50 @@ namespace TommoJProductions.ModApi
             get
             {
                 if (_guiInteraction == null)
-                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value;
+                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
                 return _guiInteraction.Value;
             }
             set
             {
                 if (_guiInteraction == null)
-                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction").Value;
+                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
                 _guiInteraction.Value = value;
+            }
+        }
+        /// <summary>
+        /// Represents whether or not to display gui drive icon.
+        /// </summary>
+        public static bool guiDrive
+        {
+            get
+            {
+                if (_guiDrive == null)
+                    _guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
+                return _guiDrive.Value;
+            }
+            set
+            {
+                if (_guiDrive == null)
+                    _guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
+                _guiDrive.Value = value;
+            }
+        }
+        /// <summary>
+        /// Represents whether or not to display gui drive icon.
+        /// </summary>
+        public static bool playerInMenu
+        {
+            get
+            {
+                if (_playerInMenu == null)
+                    _playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
+                return _playerInMenu.Value;
+            }
+            set
+            {
+                if (_playerInMenu == null)
+                    _playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
+                _playerInMenu.Value = value;
             }
         }
         /// <summary>
@@ -206,6 +314,10 @@ namespace TommoJProductions.ModApi
         /// will be listed here)
         /// </summary>
         public static List<Part> parts { get; } = new List<Part>();
+        /// <summary>
+        /// Represents all bolts in the current instance of my summer car. (Parts that use bolts will be listed here)
+        /// </summary>
+        public static List<Bolt> bolts { get; } = new List<Bolt>();
 
 
         /// <summary>
@@ -215,9 +327,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (pickUp == null)
-                    pickUp = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera/1Hand_Assemble/Hand").GetPlayMaker("PickUp");
-                return pickUp;
+                if (_pickUp == null)
+                    _pickUp = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera/1Hand_Assemble/Hand")?.GetPlayMaker("PickUp");
+                return _pickUp;
             }
         }
         /// <summary>
@@ -227,9 +339,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (pickedUpGameObject == null)
-                    pickedUpGameObject = getHandPickUpFsm.FsmVariables.GetFsmGameObject("PickedObject");
-                return pickedUpGameObject;
+                if (_pickedUpGameObject == null)
+                    _pickedUpGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("PickedObject");
+                return _pickedUpGameObject;
             }
         }
         /// <summary>
@@ -239,30 +351,290 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (raycastHitGameObject == null)
-                    raycastHitGameObject = getHandPickUpFsm.FsmVariables.GetFsmGameObject("RaycastHitObject");
-                return raycastHitGameObject;
+                if (_raycastHitGameObject == null)
+                    _raycastHitGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("RaycastHitObject");
+                return _raycastHitGameObject;
             }
         }
         /// <summary>
         /// Returns true if in hand mode. determines state by <see cref="getHandPickUpFsm"/>.Active.
         /// </summary>
         public static bool isInHandMode => getHandPickUpFsm.Active;
-
-        #endregion
-
-        #region Constructors
-
-        static ModClient()
+        /// <summary>
+        /// Returns true if player is not holding anything
+        /// </summary>
+        public static bool isHandEmpty
         {
-            print("static constructor hit");
-            ConsoleCommand.Add(new ConsoleCommands());
-            parts.Clear();
+            get
+            {
+                if (_handEmpty == null)
+                    _handEmpty = getHandPickUpFsm?.FsmVariables.FindFsmBool("HandEmpty");
+                return _handEmpty.Value;
+            }
         }
+        /// <summary>
+        /// Gets modloaer mods folder field info.
+        /// </summary>
+        public static FieldInfo getModsFolderFi
+        {
+            // W, 02.07.2022
+
+            get
+            {
+                if (_modsFolderFieldInfo == null)
+                    _modsFolderFieldInfo = typeof(ModLoader).GetField("ModsFolder", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.GetField);
+                return _modsFolderFieldInfo;
+            }
+        }
+        /// <summary>
+        /// Gets the currently used mods folder path.
+        /// </summary>
+        public static string getModsFolder => (string)getModsFolderFi.GetValue(null);
+        /// <summary>
+        /// Gets the currently used tool.
+        /// </summary>
+        public static Bolt.BoltSize getTool
+        {
+            get
+            {
+                if (_toolsize == null)
+                    _toolsize = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera/SelectItem").GetPlayMaker("Selection").FsmVariables.FindFsmFloat("OldWrench");
+                return (Bolt.BoltSize)(_toolsize.Value * 100);
+            }
+        }
+        /// <summary>
+        /// Represents if mod api is set up.
+        /// </summary>
+        public static bool modApiSetUp => ModApiLoader.modapiGo;
 
         #endregion
 
         #region Methods
+
+        /// <summary>
+        /// Teleports a part to a world position.
+        /// </summary>
+        /// <param name="part">The part to teleport.</param>
+        /// <param name="force">force a uninstall if required?</param>
+        /// <param name="position">The position to teleport the part to.</param>
+        public static void teleport(this Part part, bool force, Vector3 position)
+        {
+            // Written, 09.07.2022
+
+            if (part.installed && force)
+                part.disassemble();
+            part.transform.teleport(position);
+        }
+        /// <summary>
+        /// Teleports a gameobject to a world position.
+        /// </summary>
+        /// <param name="gameobject">The gameobject to teleport</param>
+        /// <param name="position">The position to teleport the go to.</param>
+        public static void teleport(this GameObject gameobject, Vector3 position)
+        {
+            // Written, 09.07.2022
+
+            gameobject.transform.teleport(position);
+        }
+        /// <summary>
+        /// Teleports a gameobject to a world position.
+        /// </summary>
+        /// <param name="transform">The transform to teleport</param>
+        /// <param name="position">The position to teleport the go to.</param>
+        public static void teleport(this Transform transform, Vector3 position)
+        {
+            // Written, 09.07.2022
+
+            Rigidbody rb = transform.GetComponent<Rigidbody>();
+            if (rb)
+                if (!rb.isKinematic)
+                    rb = null;
+                else
+                    rb.isKinematic = true;
+            transform.root.position = position;
+            if (rb)
+                rb.isKinematic = false;
+        }
+        /// <summary>
+        /// Gets <see cref="DescriptionAttribute.Description"/> on provided object type. if attribute doesn't exist, returns <see cref="MemberInfo.Name"/>
+        /// </summary>
+        /// <param name="mi">the member info to get info from.</param>
+        public static string getDescription(this MemberInfo mi)
+        {
+            // Written, 07.07.2022
+
+            object o = mi.GetCustomAttributes(typeof(DescriptionAttribute), false);
+            DescriptionAttribute[] d = o as DescriptionAttribute[];
+            if (d != null && d.Length > 0)
+            {
+                return d[0].Description;
+            }
+            return mi.Name;
+        }
+        /// <summary>
+        /// [GUI] draws a vector3 that can be edited.
+        /// </summary>
+        /// <param name="propertyName">The property vector3 name</param>
+        /// <param name="vector3">the reference vector3 to draw/edit</param>
+        public static void drawPropertyVector3(string propertyName, ref Vector3 vector3)
+        {
+            // Written, 03.07.2022
+
+            using (new VerticalScope())
+            {
+                drawProperty(propertyName);
+                using (new HorizontalScope())
+                {
+                    drawPropertyEdit("x", ref vector3.x);
+                    drawPropertyEdit("y", ref vector3.y);
+                    drawPropertyEdit("z", ref vector3.z);
+                }
+            }
+        }
+        /// <summary>
+        /// [GUI] draws a vector3 that can be edited.
+        /// </summary>
+        /// <param name="propertyName">The property vector3 name</param>
+        /// <param name="vector3">the reference vector3 to draw/edit</param>
+        public static Vector3 drawPropertyVector3(string propertyName, Vector3 vector3)
+        {
+            // Written, 04.07.2022
+
+            drawPropertyVector3(propertyName, ref vector3);
+            return vector3;
+        }
+        /// <summary>
+        /// [GUI] draws an enum that can be edited
+        /// </summary>
+        /// <typeparam name="T">The type of enum</typeparam>
+        /// <param name="e">Reference enum (selected)</param>
+        public static void drawPropertyEnum<T>(ref T e) where T : Enum
+        {
+            // Written, 25.05.2022
+
+            Type t = e.GetType();
+            Array a = Enum.GetNames(t);
+            string n = t.getDescription();
+            using (new VerticalScope())
+            {
+                drawProperty(n + ":");
+                using (new HorizontalScope())
+                {
+                    foreach (string i in a)
+                    {
+                        n = t.GetField(i).getDescription();
+                        if (Toggle(e.ToString() == i, n))
+                            e = (T)Enum.Parse(t, i);
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// [GUI] draws an enum that can be edited
+        /// </summary>
+        /// <typeparam name="T">The type of enum</typeparam>
+        /// <param name="e">Reference enum (selected)</param>
+        public static T drawPropertyEnum<T>(T e) where T : Enum
+        {
+            // Written, 04.07.2022
+
+            drawPropertyEnum(ref e);
+            return e;
+        }
+        /// <summary>
+        /// [GUI] draws a property that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property float name</param>
+        /// <param name="property">the reference float to draw/edit</param>
+        /// <param name="maxLength">max length of textfield</param>
+        public static void drawPropertyEdit(string propertyName, ref float property, int maxLength = 10)
+        {
+            using (new HorizontalScope())
+            {
+                drawProperty(propertyName);
+                propertyString = TextField(property.ToString(), maxLength);
+            }
+            float.TryParse(propertyString, out property);
+        }
+        /// <summary>
+        /// [GUI] draws a property that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property float name</param>
+        /// <param name="property">the reference float to draw/edit</param>
+        /// <param name="maxLength">max length of textfield</param>
+        public static float drawPropertyEdit(string propertyName, float property, int maxLength = 10)
+        {
+            // Written, 04.07.2022
+
+            drawPropertyEdit(propertyName, ref property, maxLength);
+            return property;
+        }
+        /// <summary>
+        /// [GUI] draws a bool that can be edited
+        /// </summary>
+        /// <param name="propertyName">the property bool name</param>
+        /// <param name="property">the reference bool to draw/edit</param>
+        public static void drawPropertyBool(string propertyName, ref bool property)
+        {
+            property = Toggle(property, " " + propertyName);
+        }
+        /// <summary>
+        /// [GUI] draws a bool that can be edited
+        /// </summary>
+        /// <param name="propertyName">the property bool name</param>
+        /// <param name="property">the reference bool to draw/edit</param>
+        public static bool drawPropertyBool(string propertyName, bool property)
+        {
+            // Written, 04.07.2022
+
+            drawPropertyBool(propertyName, ref property);
+            return property;
+        }
+        /// <summary>
+        /// [GUI] draws a property.
+        /// </summary>
+        /// <param name="propertyName">The property object name</param>
+        /// <param name="property">the reference of the property to draw.</param>
+        public static void drawProperty(string propertyName, object property = null)
+        {
+            if (property != null)
+                Label($"{propertyName}: {property}");
+            else
+                Label($"{propertyName}");
+        }
+        /// <summary>
+        /// [GUI] draws a property. eg => <see cref="Part.partSettings"/>.drawProperty("assembleType") would draw a property as such: "assembleType: joint". if member has <see cref="DescriptionAttribute"/> will use the description as the property title. Works with fields, properties and enums
+        /// </summary>
+        /// <param name="t">The class instance get value from.</param>
+        /// <param name="memberName">The class member name to get a field/property instance from.</param>
+        public static void drawProperty<T>(this T t, string memberName) where T : class
+        {
+            // Written, 08.07.2022
+
+            Type _t = t.GetType();
+            FieldInfo fi = _t.GetField(memberName);
+            PropertyInfo pi = null;
+            if (fi == null)
+                pi = _t.GetProperty(memberName);
+            string title = "null";
+            object value = "null";
+            if (_t.IsEnum)
+            {
+                title = _t.getDescription();
+                value = _t.GetField(memberName).getDescription();
+            }
+            else if (fi != null)
+            {
+                title = fi.getDescription();
+                value = fi.GetValue(t);
+            }
+            else if (pi != null)
+            {
+                title = pi.getDescription();
+                value = pi.GetValue(t, null);
+            }
+            Label($"{title}: {value}");
+        }
 
         /// <summary>
         /// Displays an interaction text and optional hand symbol. If no parameters are passed into the method (default parameters), turns off the interaction.
@@ -273,13 +645,10 @@ namespace TommoJProductions.ModApi
         {
             // Written, 30.09.2018 | Modified, 16.03.2019
 
-            if (inText == "")
-            {
-                guiInteraction = inText;
-                return;
-            }
-            changeInteractSymbol(inGuiInteractSymbol);
             guiInteraction = inText;
+            if (inText == "")
+                return;
+            changeInteractSymbol(inGuiInteractSymbol);
         }
         /// <summary>
         /// displays or removes a particular symbol from the interaction. if <see cref="GuiInteractSymbolEnum.None"/> is passed,
@@ -316,24 +685,6 @@ namespace TommoJProductions.ModApi
             }
         }
         /// <summary>
-        /// Gets what the player is currently holding. returns null if player is holding nothing.
-        /// </summary>
-        public static GameObject getPlayerHolding() 
-        {
-            // Written, 08.05.2022
-
-            return getPickedUpGameObject.Value;
-        }
-        /// <summary>
-        /// Gets what the player is currently looking at. returns null if player is looking at nothing.
-        /// </summary>
-        public static GameObject getPlayerLooking()
-        {
-            // Written, 08.05.2022
-
-            return getRaycastHitGameObject.Value;
-        }
-        /// <summary>
         /// Reps modapi print-to-console function
         /// </summary>
         public static void print(string format, params object[] args)
@@ -342,14 +693,247 @@ namespace TommoJProductions.ModApi
 
             ModConsole.Log(string.Format("<color=grey>[ModAPI] " + format + "</color>", args));
         }
+        /// <summary>
+        /// Gets the layermask. Used to make raycast masks.
+        /// </summary>
+        /// <param name="masks">layermasks</param>
+        public static int getMask(params LayerMasksEnum[] masks)
+        {
+            // Written, 03.07.2022
+
+            maskNames = new string[masks.Length];
+            for (int i = 0; i < masks.Length; i++)
+            {
+                maskNames[i] = masks[i].ToString();
+            }
+            return LayerMask.GetMask(maskNames);
+        }
+        /// <summary>
+        /// Raycasts for a type of behaviour
+        /// </summary>
+        /// <typeparam name="T">the type of behaviour to raycast for.</typeparam>
+        /// <param name="centerOfScreen">if true. uses the center of the screen regardless where the mouse is.</param>
+        /// <returns></returns>
+        public static T raycastForBehaviour<T>(bool centerOfScreen = false) where T : MonoBehaviour
+        {
+            RaycastHit hitInfo;
+            bool hasHit = Physics.Raycast(centerOfScreen ? Camera.main.ViewportPointToRay(Vector3.one * 0.5f) : Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo);
+            T t = null;
+            if (hasHit)
+            {
+                t = hitInfo.collider.GetComponent<T>();
+            }
+            return t;
+        }
+        public static IEnumerator devModeFunc()
+        {
+            while (devMode)
+            {
+                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.P))
+                {
+                    if (_inspectingPart)
+                        _inspectingPart.inspectingPart = false;
+                    _inspectingPart = raycastForBehaviour<Part>();
+                    if (_inspectingPart)
+                        _inspectingPart.inspectingPart = true;
+                }
+                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.B))
+                {
+                    if (_inspectingBolt)
+                        _inspectingBolt.inspectingBolt = false;
+                    _inspectingBolt = raycastForBehaviour<BoltCallback>();
+                    if (_inspectingBolt)
+                        _inspectingBolt.inspectingBolt = true;
+                }
+                yield return null;
+            }
+        }
 
         #endregion
-
 
         #region ExMethods
 
         /// <summary>
-        /// returns whether the player is currently looking at an gameobject.
+        /// Creates a new vector3 from an old one.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <returns></returns>
+        public static Vector3 clone(this Vector3 v)
+        {
+            return new Vector3(v.x, v.y, v.z);
+        }
+        /// <summary>
+        /// executes an action on all objects of an array.
+        /// </summary>
+        /// <typeparam name="T">The type of array</typeparam>
+        /// <param name="objects">the instance of the array</param>
+        /// <param name="func">the function to perform on all elements of the array.</param>
+        public static void forEach<T>(this T[] objects, Action<T> func) where T : class
+        {
+            // Written, 11.07.2022
+
+            for (int i = 0; i < objects.Count(); i++)
+            {
+                func.Invoke(objects[i]);
+            }
+        }
+        /// <summary>
+        /// Gets the first found behaviour in the parent.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        /// <param name="func">the function to check with.</param>
+        /// <returns></returns>
+        public static T getBehaviourInParent<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
+        {
+            // Written, 02.07.2022
+
+            Transform parent = gameObject.transform.parent;
+            if (parent)
+            {
+                T t = parent.GetComponent<T>();
+                if (t && func.Invoke(t))
+                {
+                    return t;
+                }
+                return parent.gameObject.getBehaviourInParent(func);
+            }
+            return null;
+        }
+        /// <summary>
+        /// Gets the first found behaviour in the parent.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        /// <returns></returns>
+        public static T getBehaviourInParent<T>(this GameObject gameObject) where T : MonoBehaviour
+        {
+            // Written, 02.07.2022
+
+            return getBehaviourInParent<T>(gameObject, func => true);
+        }
+        /// <summary>
+        /// Gets all behaviours found in all parents.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        /// <param name="func">the function to check with.</param>
+        /// <returns></returns>
+        public static T[] getBehavioursInParent<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
+        {
+            // Written, 02.07.2022
+
+            List<T> values = new List<T>();
+            Transform parent = gameObject.transform.parent;
+            if (parent)
+            {
+                T t = parent.GetComponent<T>();
+                if (t && func.Invoke(t))
+                {
+                    values.Add(t);
+                }
+                T[] v = parent.gameObject.getBehavioursInParent(func);
+                if (v != null && v.Length > 0)
+                    values.AddRange(v);
+            }
+            if (values.Count == 0)
+                return null;
+            return values.ToArray();
+        }
+        /// <summary>
+        /// Gets all behaviours found in all parents.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        /// <returns></returns>
+        public static T[] getBehavioursInParent<T>(this GameObject gameObject) where T : MonoBehaviour
+        {
+            // Written, 02.07.2022
+
+            return getBehavioursInParent<T>(gameObject, func => true);
+        }
+        /// <summary>
+        /// Gets the first found behaviour in the children.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        /// <param name="func">the function to check with.</param>
+        /// <returns></returns>
+        public static T getBehaviourInChildren<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
+        {
+            // Written, 11.07.2022
+
+            if (gameObject.transform.childCount > 0)
+            {
+                for (int i = 0; i < gameObject.transform.childCount; i++)
+                {
+                    Transform child = gameObject.transform.GetChild(i);
+                    T t = child.GetComponent<T>();
+                    if (t && func.Invoke(t))
+                    {
+                        return t;
+                    }
+                    return child.gameObject.getBehaviourInChildren<T>();
+                }
+            }
+            return null;
+        }
+        /// <summary>
+        /// Gets the first found behaviour in the children.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        public static T getBehaviourInChildren<T>(this GameObject gameObject) where T : MonoBehaviour
+        {
+            // Written, 11.07.2022
+
+            return getBehaviourInChildren<T>(gameObject, func => true);
+        }
+        /// <summary>
+        /// Gets all behaviours found in all children.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        /// <param name="func">the function to check with.</param>
+        /// <returns></returns>
+        public static T[] getBehavioursInChildren<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
+        {
+            // Written, 02.07.2022
+
+            if (gameObject.transform.childCount > 0)
+            {
+                List<T> values = new List<T>();
+                for (int i = 0; i < gameObject.transform.childCount; i++)
+                {
+                    Transform child = gameObject.transform.GetChild(i);
+                    T t = child.GetComponent<T>();
+                    if (t && func.Invoke(t))
+                    {
+                        values.Add(t);
+                    }
+                    T[] v = child.gameObject.getBehavioursInChildren(func);
+                    if (v != null && v.Length > 0)
+                        values.AddRange(v);
+                }
+                if (values.Count == 0)
+                    return null;
+                return values.ToArray();
+            }
+            return null;
+        }
+        /// <summary>
+        /// Gets all behaviours found in all children.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        public static T[] getBehavioursInChildren<T>(this GameObject gameObject) where T : MonoBehaviour
+        {
+            // Written, 02.07.2022
+
+            return getBehavioursInChildren<T>(gameObject, func => true);
+        }
+        /// <summary>
+        /// returns whether the player is currently looking at an gameobject. By raycast.
         /// </summary>
         /// <param name="gameObject">The gameobject to detect againist.</param>
         /// <param name="withinDistance">raycast within distance from main camera.</param>
@@ -363,7 +947,7 @@ namespace TommoJProductions.ModApi
             return false;
         }
         /// <summary>
-        /// Checks if player is holding the GameObject, <paramref name="inGameObject"/>.
+        /// Checks if player is holding the GameObject, <paramref name="inGameObject"/>. by checking if <paramref name="inGameObject"/>'s <see cref="GameObject.layer"/> equals <see cref="LayerMasksEnum.Wheel"/>
         /// </summary>
         /// <param name="inGameObject">The gameObject to check on.</param>
         public static bool isPlayerHolding(this GameObject inGameObject)
@@ -374,7 +958,24 @@ namespace TommoJProductions.ModApi
                 return true;
             return false;
         }
+        /// <summary>
+        /// checks if the player is holding this gameobject. returns false if player is holding nothing. by checking Players pickedupgameobject FSM
+        /// </summary>
+        public static bool isPlayerHoldingByPickup(this GameObject go)
+        {
+            // Written, 08.05.2022
 
+            return getPickedUpGameObject?.Value == go;
+        }
+        /// <summary>
+        /// Checks if the player is looking at this gameobject. returns false if player is looking at nothing. by checking Players raycasthitgameobject FSM
+        /// </summary>
+        public static bool isPlayerLookingAtByPickUp(this GameObject go)
+        {
+            // Written, 08.05.2022
+
+            return getRaycastHitGameObject?.Value == go;
+        }
         /// <summary>
         /// Checks if the gameobject is on the layer, <paramref name="inLayer"/>.
         /// </summary>
@@ -534,8 +1135,8 @@ namespace TommoJProductions.ModApi
         /// <param name="angularDrag">The angular drag of the rb.</param>
         /// <param name="isKinematic">is this rigidbody kinmatic?</param>
         /// <param name="useGravity">is this rigidbody affected by gravity?</param>
-        public static Rigidbody createRigidbody(this GameObject gameObject,
-         RigidbodyConstraints rigidbodyConstraints = RigidbodyConstraints.None, float mass = 1, float drag = 0, float angularDrag = 0.05f, bool isKinematic = false, bool useGravity = true)
+        public static Rigidbody createRigidbody(this GameObject gameObject, RigidbodyConstraints rigidbodyConstraints = RigidbodyConstraints.None, float mass = 1,
+            float drag = 0, float angularDrag = 0.05f, bool isKinematic = false, bool useGravity = true)
         {
             // Written, 10.09.2021
 
@@ -554,15 +1155,13 @@ namespace TommoJProductions.ModApi
         /// <param name="transform">The transform to fix</param>
         /// <param name="parent">The parent transform to fix <paramref name="transform"/></param>
         /// <param name="onFixedToParent">action to call when fixed to parent.</param>
-        public static IEnumerator fixToParent(this Transform transform, Transform parent, Action onFixedToParent = null)
+        public static IEnumerator fixToParent(this Transform transform, Transform parent)
         {
             while (transform.parent != parent)
             {
-                yield return new WaitForFixedUpdate();
                 transform.parent = parent;
+                yield return null;
             }
-            onFixedToParent?.Invoke();
-            yield break;
         }
         /// <summary>
         /// Sets its position and rotation.
@@ -571,26 +1170,62 @@ namespace TommoJProductions.ModApi
         /// <param name="pos">The pos to set</param>
         /// <param name="eulerAngles">the rot to set</param>
         /// <param name="onFixedTransform">action to call when fixed transform.</param>
-        public static IEnumerator fixTransform(this Transform transform, Vector3 pos, Vector3 eulerAngles, Action onFixedTransform = null)
+        public static IEnumerator fixTransform(this Transform transform, Vector3 pos, Vector3 eulerAngles)
         {
             while (transform.localPosition != pos && transform.localEulerAngles != eulerAngles)
             {
-                yield return new WaitForFixedUpdate();
                 transform.localPosition = pos;
                 transform.localEulerAngles = eulerAngles;
+                yield return null;
             }
-            onFixedTransform?.Invoke();
-            yield break;
         }
-
-        public enum injectEnum
+        private static FsmStateActionCallback determineAndCreateCallbackType(CallbackTypeEnum type, Action action, bool everyFrame = false)
         {
-            append,
-            prepend,
-            insert,
-            replace
+            // Written, 13.06.2022
+
+            switch (type)
+            {
+                case CallbackTypeEnum.onFixedUpdate:
+                    return new OnFixedUpdateCallback(action, everyFrame);
+                case CallbackTypeEnum.onUpdate:
+                    return new OnUpdateCallback(action, everyFrame);
+                case CallbackTypeEnum.onGui:
+                    return new OnGuiCallback(action, everyFrame);
+                default:
+                case CallbackTypeEnum.onEnter:
+                    return new OnEnterCallback(action, everyFrame);
+            }
         }
-        public static void addNewGlobalTransition(this PlayMakerFSM fsm, FsmEvent _event, string stateName)
+        private static FsmStateActionCallback determineAndCreateActionType(this FsmState state, InjectEnum injectType, Action action, CallbackTypeEnum callbackType, bool everyFrame, int index = 0)
+        {
+            // Written, 18.06.2022
+
+            FsmStateActionCallback cb;
+            switch (injectType)
+            {
+                case InjectEnum.prepend:
+                    cb = state.prependNewAction(action, callbackType, everyFrame);
+                    break;
+                case InjectEnum.insert:
+                    cb = state.insertNewAction(action, index, callbackType, everyFrame);
+                    break;
+                case InjectEnum.replace:
+                    cb = state.replaceAction(action, index, callbackType, everyFrame);
+                    break;
+                default:
+                case InjectEnum.append:
+                    cb = state.appendNewAction(action, callbackType, everyFrame);
+                    break;
+            }
+            return cb;
+        }
+        /// <summary>
+        /// adds a new global transition.
+        /// </summary>
+        /// <param name="fsm"></param>
+        /// <param name="_event"></param>
+        /// <param name="toStateName"></param>
+        public static FsmTransition addNewGlobalTransition(this PlayMakerFSM fsm, FsmEvent _event, string toStateName)
         {
             FsmTransition[] fsmGlobalTransitions = fsm.FsmGlobalTransitions;
             List<FsmTransition> temp = new List<FsmTransition>();
@@ -598,113 +1233,184 @@ namespace TommoJProductions.ModApi
             {
                 temp.Add(t);
             }
-            temp.Add(new FsmTransition
+            FsmTransition ft = new FsmTransition
             {
                 FsmEvent = _event,
-                ToState = stateName
-            });
+                ToState = toStateName
+            };
+            temp.Add(ft);
             fsm.Fsm.GlobalTransitions = temp.ToArray();
+            print($"Adding new global transition, to fsm, {fsm.gameObject.name}.{fsm.name}. {_event.Name} transitions this fsm state to {toStateName}");
+            return ft;
         }
-        public static void addNewTransitionToState(this GameObject go, string stateName, string eventName, string toStateName)
+        /// <summary>
+        /// Adds a new local transition.
+        /// </summary>
+        /// <param name="state">The state to add a transition.</param>
+        /// <param name="eventName">The event that triggers this transition.</param>
+        /// <param name="toStateName">the state it should change to when transition is triggered.</param>
+        public static FsmTransition addNewTransitionToState(this FsmState state, string eventName, string toStateName)
         {
-
-            FsmState state = go.GetPlayMakerState(stateName);
             List<FsmTransition> temp = new List<FsmTransition>();
             foreach (FsmTransition t in state.Transitions)
             {
                 temp.Add(t);
             }
-            temp.Add(new FsmTransition
+            FsmTransition ft = new FsmTransition
             {
                 FsmEvent = state.Fsm.GetEvent(eventName),
                 ToState = toStateName
-            });
+            };
+            temp.Add(ft);
             state.Transitions = temp.ToArray();
+            print($"Adding new local transition, to state, {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. {eventName} transitions this fsm from {state.Name} to {toStateName}");
+            return ft;
         }
-        public static void appendNewAction(this FsmState state, Action action)
+        /// <summary>
+        /// Appends a new action in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="action">the action to append.</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback appendNewAction(this FsmState state, Action action, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
             List<FsmStateAction> temp = new List<FsmStateAction>();
             foreach (FsmStateAction v in state.Actions)
             {
                 temp.Add(v);
             }
-            FsmStateActionCallback callback = new FsmStateActionCallback(action);
-            temp.Add(callback);
+            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
+            temp.Add(cb);
             state.Actions = temp.ToArray();
+            print($"Appending new action {action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {callbackType} {(everyFrame ? "every frame" : "once")}.");
+            return cb;
         }
-        public static void prependNewAction(this FsmState state, Action action)
+        /// <summary>
+        /// prepends a new action in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="action">the action to prepend.</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback prependNewAction(this FsmState state, Action action, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
             List<FsmStateAction> temp = new List<FsmStateAction>();
-            FsmStateActionCallback callback = new FsmStateActionCallback(action);
-            temp.Add(callback);
+            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
+            temp.Add(cb);
             foreach (FsmStateAction v in state.Actions)
             {
                 temp.Add(v);
             }
             state.Actions = temp.ToArray();
+            print($"Prepending new {action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {(everyFrame ? "every frame" : "once")}.");
+            return cb;
         }
-        public static void insertNewAction(this FsmState state, Action action, int index)
+        /// <summary>
+        /// Inserts a new action in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="action">the action to insert.</param>
+        /// <param name="index">the index to insert action</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback insertNewAction(this FsmState state, Action action, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
             List<FsmStateAction> temp = new List<FsmStateAction>();
-            FsmStateActionCallback callback = new FsmStateActionCallback(action);
             foreach (FsmStateAction v in state.Actions)
             {
                 temp.Add(v);
             }
-            temp.Insert(index, callback);
+            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
+            temp.Insert(index, cb);
             state.Actions = temp.ToArray();
+            print($"Inserting new {action.Method.Name} into {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(everyFrame ? "every frame" : "once")}.");
+            return cb;
         }
-        public static void replaceAction(this FsmState state, Action action, int index)
+        /// <summary>
+        /// Replaces an action in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="action">the action to replace.</param>
+        /// <param name="index">the index to replace action</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback replaceAction(this FsmState state, Action action, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
             // Written, 13.04.2022
 
             List<FsmStateAction> temp = new List<FsmStateAction>();
-            FsmStateActionCallback callback = new FsmStateActionCallback(action);
+            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
             for (int i = 0; i < state.Actions.Length; i++)
             {
                 if (i == index)
-                    temp.Add(callback);
+                    temp.Add(cb);
                 else
                     temp.Add(state.Actions[i]);
             }
             state.Actions = temp.ToArray();
+            print($"Replacing {action.Method.Name} with {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(everyFrame ? "every frame" : "once")}.");
+            return cb;
         }
-        public static void injectAction(this PlayMakerFSM playMakerFSM, string stateName, injectEnum injectType, Action callback, int index = 0)
+        /// <summary>
+        /// Represents inject action logic.
+        /// </summary>
+        /// <param name="playMakerFSM">The playermaker to search on.</param>
+        /// <param name="stateName">the state name to inject on.</param>
+        /// <param name="injectType">inject type.</param>
+        /// <param name="callback">inject callback</param>
+        /// <param name="index">index to inject at. NOTE: only applies to <see cref="InjectEnum.insert"/> and <see cref="InjectEnum.replace"/></param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback injectAction(this PlayMakerFSM playMakerFSM, string stateName, InjectEnum injectType, Action callback, int index = 0, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
-            injectAction(playMakerFSM.gameObject, playMakerFSM.FsmName, stateName, injectType, callback, index);
+            return injectAction(playMakerFSM.gameObject, playMakerFSM.FsmName, stateName, injectType, callback, index, callbackType, everyFrame);
         }
-        public static void injectAction(this GameObject go, string fsmName, string stateName, injectEnum injectType, Action callback, int index = 0)
+        /// <summary>
+        /// Represents inject action logic.
+        /// </summary>
+        /// <param name="go">The gamobject to search on.</param>
+        /// <param name="fsmName">the playmaker fsm name to search on</param>
+        /// <param name="stateName">the state name to inject on.</param>
+        /// <param name="injectType">inject type.</param>
+        /// <param name="callback">inject callback</param>
+        /// <param name="index">index to inject at. NOTE: only applies to <see cref="InjectEnum.insert"/> and <see cref="InjectEnum.replace"/></param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback injectAction(this GameObject go, string fsmName, string stateName, InjectEnum injectType, Action callback, int index = 0, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
             PlayMakerFSM fsm = go.GetPlayMaker(fsmName);
             FsmState state = go.GetPlayMakerState(stateName);
-            switch (injectType)
-            {
-                case injectEnum.append:
-                    state.appendNewAction(callback);
-                    break;
-                case injectEnum.prepend:
-                    state.prependNewAction(callback);
-                    break;
-                case injectEnum.insert:
-                    state.insertNewAction(callback, index);
-                    break;
-                case injectEnum.replace:
-                    state.replaceAction(callback, index);
-                    break;
-            }
-           print($"Inject Action | {injectType}ing {callback.Method.Name} to {go.name}.{fsmName}.{stateName}" + (injectType == injectEnum.insert ? $" at index:{index}" : ""));
+            return state.determineAndCreateActionType(injectType, callback, callbackType, everyFrame, index);
         }
-
+        /// <summary>
+        /// Rounds to <paramref name="decimalPlace"/>
+        /// </summary>
+        /// <param name="fsmFloat">The fsmFloat to round</param>
+        /// <param name="decimalPlace">how many decimal places. eg. 2 = 0.01</param>
         public static FsmFloat round(this FsmFloat fsmFloat, int decimalPlace = 0)
         {
             return fsmFloat.Value.round(decimalPlace);
         }
+        /// <summary>
+        /// Rounds to <paramref name="decimalPlace"/>
+        /// </summary>
+        /// <param name="_float">The float to round</param>
+        /// <param name="decimalPlace">how many decimal places. eg. 2 = 0.01</param>
         public static float round(this float _float, int decimalPlace = 0)
         {
             // Written, 15.01.2022
 
             return (float)Math.Round(_float, decimalPlace);
         }
+        /// <summary>
+        /// Maps a value and its range to another. eg. (v=1 min=0, max=2). could map to (v=2 min=1 max=3).
+        /// </summary>
+        /// <param name="mainValue">the value to map</param>
+        /// <param name="inValueMin">value min</param>
+        /// <param name="inValueMax">value max</param>
+        /// <param name="outValueMin">result min</param>
+        /// <param name="outValueMax">result max</param>
         public static float mapValue(this float mainValue, float inValueMin, float inValueMax, float outValueMin, float outValueMax)
         {
             return (mainValue - inValueMin) * (outValueMax - outValueMin) / (inValueMax - inValueMin) + outValueMin;

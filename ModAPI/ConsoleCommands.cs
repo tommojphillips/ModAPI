@@ -1,7 +1,10 @@
 ﻿using MSCLoader;
+using System;
 using System.Collections;
 using TommoJProductions.ModApi.Attachable;
+using TommoJProductions.ModApi.Attachable.CallBacks;
 using UnityEngine;
+using static TommoJProductions.ModApi.ModClient;
 
 namespace TommoJProductions.ModApi
 {
@@ -22,42 +25,70 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the base help message.
         /// </summary>
-        public override string Help => "use \"modapi help\" to see command list!";
+        public override string Help => "use \"modapi [?]/[help]\" to see command list!";
         /// <summary>
         /// Represents the general help list.
         /// </summary>
         const string helpListGeneral = "<color=yellow>modapi help</color> - shows this list\n" +
-            "<color=yellow>modapi help debug</color> - shows debug help list\n " +
-            "<color=yellow>modapi version</color> - reports modapi version\n";
+            "<color=yellow>modapi help [db]/[debug]</color> - shows debug help list\n " +
+            "<color=yellow>modapi help [dv]/[developer]</color> - shows developer help list\n " +
+            "<color=yellow>modapi [v]/[ver]/[version]</color> - reports modapi version\n";
         /// <summary>
         /// Represents the debug help list.
         /// </summary>
-        const string helpListDebug = "<color=yellow>modapi help debug</color> - shows this list\n" +
-            "<color=yellow>modapi debug editpartinstalltransform</color> - use \"modapi help debug editpartinstalltransform\"\n" +
-            "<color=yellow>modapi debug teleportpart</color> - use \"modapi help debug teleportpart\"\n" +
-            "<color=yellow>modapi debug listparts</color> - Lists all parts loaded in game\n" +
-            "<color=yellow></color> - \n" +
-            "<color=yellow></color> - \n";
+        const string helpListDebug = "<color=yellow>modapi help [db]/[debug]</color> - shows this list\n" +
+            "<color=yellow>modapi debug [tpp]/[teleportpart]</color> - use \"modapi help debug teleportpart\"\n" +
+            "<color=yellow>modapi debug [lp]/[listparts]</color> - Lists all parts loaded in game - use \"modapi help debug listparts\"\n" +
+            "<color=yellow>modapi debug [lb]/[listbolts]</color> - Lists all bolts loaded in game - use \"modapi help debug listbolts\"\n";
+        /// <summary>
+        /// Represents the dev help list.
+        /// </summary>
+        const string helpListDev = "<color=yellow>modapi help [dv]/[dev]/[developer]</color> - shows this list\n" +
+            "<color=yellow>modapi dev [ep]/[editpart]</color> - use \"modapi help dev editpart\"\n" +
+            "<color=yellow>modapi dev [eb]/[editbolt]</color> - use \"modapi help dev editbolt\"";
         /// <summary>
         /// Represents the teleport part help list.
         /// </summary>
-        const string helpListTeleportPart = "<color=yellow>modapi help debug teleportpart</color> - shows this list\n" +
-            "usage: <color=yellow>modapi debug teleportpart</color> [partName] - Teleports the part to the player.\n" +
-            "<color=yellow></color> - \n" +
-            "<color=yellow></color> - \n";
+        const string helpListTeleportPart = "<color=yellow>modapi help debug [tpp]/[tppart]/[teleportpart]</color> - shows this list\n" +
+            "usage: <color=yellow>modapi debug teleportpart</color> [partName] - Teleports the part to the player.\n";
         /// <summary>
-        /// Represents the edit install transform help list.
+        /// <summary>
+        /// Represents the teleport part help list.
         /// </summary>
-        const string helpListEditInstallTransformPart = "<color=yellow>modapi help debug editpartinstalltransform</color> - for development purposes.. Creates new part and attaches said part to its' install point, allows you then move/rotate part to get correct install position and rotation.\n" +
-            "<color=yellow>modapi debug editpartinstalltransform -r</color> - Get part by raycast.\n" +
-            "<color=yellow>modapi debug editpartinstalltransform -n [partName]</color> - Get part by name.\n" +
-            "<color=yellow>modapi debug editpartinstalltransform start</color> - Starts inspecting selected part.\n" +
-            "<color=yellow>modapi debug editpartinstalltransform stop</color> - Stops inspecting selected part.\n" +
-            "<color=yellow>modapi debug editpartinstalltransform print</color> - Prints inspecting part transform info.\n" +
+        const string helpListListParts = "<color=yellow>modapi help debug [lp]/[listparts]</color> - shows this list\n" +
+            "usage: <color=yellow>modapi debug listparts</color> - Lists all parts loaded in the game.\n";
+        /// <summary>
+        /// Represents the teleport part help list.
+        /// </summary>
+        const string helpListListBolts = "<color=yellow>modapi help debug [lb]/[listbolts]</color> - shows this list\n" +
+            "usage: <color=yellow>modapi debug listbolts</color> - Lists all bolts loaded in the game.\n";
+        /// <summary>
+        /// Represents the edit part install transform help list.
+        /// </summary>
+        const string helpListEditPart = "<color=yellow>modapi help dev [ep]/[editpart]</color> - for development and design purposes..\n" +
+            "Finds part to inspect. allows dev to move selected part and print part values." +
+            "<color=yellow>modapi dev editpart -r</color> - Get part by raycast.\n" +
+            "<color=yellow>modapi dev editpart -n [partName]</color> - Get part by name.\n" +
+            "<color=yellow>modapi dev editpart -s</color> - Toggles inspection of selected part.\n" +
+            "<color=yellow>modapi dev editpart start</color> - Starts inspecting selected part.\n" +
+            "<color=yellow>modapi dev editpart stop</color> - Stops inspecting selected part.\n" +
+            "<color=yellow>modapi dev editpart print</color> - Prints inspecting part transform info.\n";
+        /// <summary>
+        /// Represents the edit bolt transform help list.
+        /// </summary>
+        const string helpListEditBolt = "<color=yellow>modapi help dev [eb]/[editbolt]</color> - for development and design purposes.. \n" +
+            "Finds bolt to inspect. allows developer to move selected bolt and print bolt values." +
+            "<color=yellow>modapi dev editbolt -r</color> - Get bolt by raycast.\n" +
+            "<color=yellow>modapi dev editbolt -n [boltName]</color> - Get bolt by name.\n" +
+            "<color=yellow>modapi dev editbolt -s</color> - Toggles inspection of selected bolt.\n" +
+            "<color=yellow>modapi dev editbolt start</color> - Starts inspecting selected bolt.\n" +
+            "<color=yellow>modapi dev editbolt stop</color> - Stops inspecting selected bolt.\n" +
+            "<color=yellow>modapi dev editbolt print</color> - Prints inspecting bolt transform info.\n" +
             "<color=yellow></color> - \n";
 
-        private Part _inspectingPart = null;
         private bool _startedInspectingPart = false;
+        private bool _startedInspectingBolt = false;
+
         #endregion
 
         #region mscloader override methods
@@ -71,7 +102,7 @@ namespace TommoJProductions.ModApi
             // Written, 10.09.2021
 
             if (args.Length == 0)
-                ModClient.print(Help);
+                print(Help);
             else if (args.Length > 0)
             {
                 switch (args[0])
@@ -89,36 +120,60 @@ namespace TommoJProductions.ModApi
                                     {
                                         switch (args[2])
                                         {
+                                            case "lp":
+                                            case "listparts":
+                                                print(helpListListParts);
+                                                break;
+                                            case "lb":
+                                            case "listbolts":
+                                                print(helpListListBolts);
+                                                break;
                                             case "tpp":
                                             case "tppart":
                                             case "teleportpart":
-                                                ModClient.print(helpListTeleportPart);
-                                                break;
-                                            case "epit":
-                                            case "editpart":
-                                            case "editpartinstalltransform":
-                                                ModClient.print(helpListEditInstallTransformPart);
+                                                print(helpListTeleportPart);
                                                 break;
                                         }
                                     }
                                     else
-                                        ModClient.print(helpListDebug);
+                                        print(helpListDebug);
+                                    break;
+                                case "dv":
+                                case "dev":
+                                case "developer":
+                                    if (args.Length > 2) 
+                                    {
+                                        switch (args[2])
+                                        {
+                                            case "eb":
+                                            case "editbolt":
+                                                print(helpListEditBolt);
+                                                break;
+                                            case "ep":
+                                            case "editpart":
+                                                print(helpListEditPart);
+                                                break;
+
+                                        }
+                                    }
+                                    else
+                                        print(helpListDev);
                                     break;
                                 default:
-                                    ModClient.print("unknown command");
-                                    ModClient.print(helpListGeneral);
+                                    print("unknown command");
+                                    print(helpListGeneral);
                                     break;
                             }
                         }
                         else
                         {
-                            ModClient.print(helpListGeneral);
+                            print(helpListGeneral);
                         }
                         break;
                     case "version":
                     case "ver":
                     case "v":
-                        ModClient.print("version:{0}\nplatform:{1}\nconfiguration:{2}", ModClient.version, ModClient.IS_X64 ? "x64" : "x86", ModClient.IS_DEBUG_CONFIG ? "debug" : "release");
+                        print("version:{0}\nplatform:{1}\nconfiguration:{2}\nLatest Release: {3}", version, VersionInfo.IS_64_BIT ? "x64" : "x86", VersionInfo.IS_DEBUG_CONFIG ? "debug" : "release", VersionInfo.lastestRelease);
                         break;
                     case "debug":
                     case "db":
@@ -129,15 +184,64 @@ namespace TommoJProductions.ModApi
                                 case "lp":
                                 case "lparts":
                                 case "listparts":
-                                    if (ModClient.parts.Count > 0)
-                                        foreach (var item in ModClient.parts)
-                                            ModClient.print("{0}", item.gameObject.name);
-                                    else
-                                        ModClient.print("No parts found :(");
+                                    print("Count {0}", parts.Count);
+                                    foreach (var item in parts)
+                                        print("{0} | {1}", item.gameObject.name, item.ID);
                                     break;
-                                case "epit":
+                                case "lb":
+                                case "lbolts":
+                                case "listbolts":
+                                    print("Count {0}", bolts.Count);
+                                    foreach (var item in bolts)
+                                        print("{0} | {1}", item.boltCallback.gameObject.name, item.ID);
+                                    break;
+                                case "tpp":
+                                case "teleportpart":
+                                    if (args.Length >= 2)
+                                    {
+                                        Part part = findPartByName(args[2]);
+                                        if (part)
+                                        {
+                                            if (args.Length == 2)
+                                            {
+                                                if (part.installed)
+                                                {
+                                                    print("cannot teleport part while it's installed... use \"-f\" to force an uninstall and teleport.");
+                                                    return;
+                                                }
+                                                part.teleport(false, Camera.main.transform.position);
+                                            }
+                                            else if (args.Length == 3 && args[3] == "-f")
+                                            {
+                                                part.teleport(true, Camera.main.transform.position);
+                                            }
+                                            else
+                                                print("args were incorrect. error.");
+                                        }
+                                        else
+                                            print("Use \"modapi debug listparts\" to see all vaild parameters.");
+                                    }
+                                    else
+                                        print("command, \"modapi debug teleportpart\" expects atleast 1 argument, the parts name or ID. Use \"modapi debug listparts\" to see all vaild parameters.");
+                                    break;
+                                default:
+                                    print("unknown command");
+                                    print(helpListDebug);
+                                    break;
+                            }
+                        }
+                        else
+                            print("command, \"modapi debug\" expects atleast 1 argument, a sub command. Use \"modapi help debug\" to see all vaild parameters.");
+                        break;
+                    case "dv":
+                    case "dev":
+                    case "developer":
+                        if (args.Length > 1)
+                        {
+                            switch (args[1])
+                            {
+                                case "ep":
                                 case "editpart":
-                                case "editpartinstalltransform":
                                     if (args.Length > 2)
                                     {
                                         switch (args[2])
@@ -147,139 +251,226 @@ namespace TommoJProductions.ModApi
                                                 {
                                                     if (args.Length == 3)
                                                     {
-                                                        ModClient.print("Edit part install transform by raycast (-r)");
-                                                        RaycastHit hitInfo;
-                                                        bool hasHit = Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo);
-                                                        if (hasHit)
+                                                        print("Edit part install transform by raycast (-r)");
+                                                        Part _part = raycastForBehaviour<Part>(true);
+                                                        if (_part)
                                                         {
-                                                            Part _part = hitInfo.collider.GetComponent<Part>();
-                                                            if (_part)
-                                                            {
-                                                                ModClient.print("found {0} by raycast!", _part.name);
-                                                                _inspectingPart = _part;
-                                                            }
-                                                            else
-                                                                ModClient.print("Could not find a part by raycast :( reason: raycast hit returned true but no part behaviour was found.");
+                                                            print("found {0} by raycast!", _part.name);
+                                                            _inspectingPart = _part;
                                                         }
                                                         else
-                                                            ModClient.print("Could not find a part by raycast :( reason: raycast hit returned false.");
+                                                            print("Could not find a part by raycast :( reason: raycast hit returned true but no part behaviour was found.");
                                                     }
                                                     else
-                                                        ModClient.print("command, \"modapi debug editpartinstalltransform -r\" expects 0 arguments.");
+                                                        print("command, \"modapi dev editpart -r\" expects 0 arguments.");
                                                 }
                                                 else
-                                                    ModClient.print("Stop inspecting part prior to looking for another part.");
+                                                    print("Stop inspecting part prior to looking for another part.");
                                                 break;
                                             case "-n":
                                                 if (!_startedInspectingPart)
                                                 {
                                                     if (args.Length == 4)
                                                     {
-                                                        ModClient.print("Edit part install transform by name (-n)");
-                                                        Part _part = findPartByName(args[3]);
+                                                        print("Edit part install transform by name (-n)");
+                                                        Part _part = findPartByName(args[4]);
                                                         if (_part)
                                                         {
-                                                            ModClient.print("found {0} by name!", _part.name);
+                                                            print("found {0} by name!", _part.name);
                                                             _inspectingPart = _part;
                                                         }
                                                         else
-                                                            ModClient.print("Use \"modapi listparts\" to see all vaild parameters.");
+                                                            print("Use \"modapi debug listparts\" to see all vaild parameters.");
                                                     }
                                                     else
-                                                        ModClient.print("command, \"modapi debug editpartinstalltransform -n\" expects 1 argument, the parts name. Use \"modapi listparts\" to see all vaild parameters.");
+                                                        print("command, \"modapi dev editpart -n\" expects 1 argument, the parts name. Use \"modapi debug listparts\" to see all vaild parameters.");
                                                 }
                                                 else
-                                                    ModClient.print("Stop inspecting part prior to looking for another part.");
+                                                    print("Stop inspecting part prior to looking for another part.");
+                                                break;
+                                            case "-s":
+                                                if (!_startedInspectingPart)
+                                                    Run(new string[] { "developer", "editpart", "start" });
+                                                else
+                                                    Run(new string[] { "developer", "editpart", "stop" });
                                                 break;
                                             case "start":
                                                 if (!_inspectingPart)
                                                 {
-                                                    ModClient.print("Find part prior to starting.");
+                                                    print("Find part prior to starting.");
                                                     return;
                                                 }
                                                 if (_startedInspectingPart)
                                                 {
-                                                    ModClient.print("Already inspecting part.");
+                                                    print("Already inspecting part.");
+                                                    return;
+                                                }
+                                                if (_startedInspectingBolt)
+                                                {
+                                                    print("Cannot inspect a part when you are already inspecting a bolt.");
                                                     return;
                                                 }
                                                 _startedInspectingPart = true;
-                                                _inspectingPart.StartCoroutine(movePartCoroutine());
-                                                ModClient.print("Started inspecting {0}..", _inspectingPart.name);
+                                                _inspectingPart.inspectingPart = true;
+                                                print("Started inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "stop":
                                                 if (!_inspectingPart)
                                                 {
-                                                    ModClient.print("Find part prior to stopping.");
+                                                    print("Find part prior to stopping.");
                                                     return;
                                                 }
                                                 if (!_startedInspectingPart)
                                                 {
-                                                    ModClient.print("You need to start inspecting a part prior to stopping..");
+                                                    print("You need to start inspecting a part prior to stopping..");
                                                     return;
                                                 }
                                                 _startedInspectingPart = false;
-                                                ModClient.print("Stopped inspecting {0}..", _inspectingPart.name);
+                                                _inspectingPart.inspectingPart= false;
+                                                print("Stopped inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "print":
                                                 if (!_inspectingPart)
                                                 {
-                                                    ModClient.print("Find part prior to printing transform info.");
+                                                    print("Find part prior to printing transform info.");
                                                     return;
                                                 }
-                                                ModClient.print("{0} Transform info:\nposition: {1}\nrotation: {2}", _inspectingPart.name, _inspectingPart.transform.localPosition, _inspectingPart.transform.localEulerAngles);
+                                                print("{0} Transform info:\nposition: {1}\nrotation: {2}", _inspectingPart.name, _inspectingPart.transform.localPosition, _inspectingPart.transform.localEulerAngles);
                                                 break;
                                             default:
-                                                ModClient.print("unknown command");
-                                                ModClient.print(helpListEditInstallTransformPart);
+                                                print("unknown command");
+                                                print(helpListEditPart);
                                                 break;
                                         }
                                     }
                                     else
-                                        ModClient.print("command, \"modapi debug editpartinstalltransform\" expects atleast 1 argument, a sub command. Use \"modapi help debug editpartinstalltransform\" to see all vaild parameters.");
+                                        print("command, \"modapi dev editpart\" expects atleast 1 argument, a sub command. Use \"modapi help dev editpart\" to see all vaild parameters.");
                                     break;
-                                case "tpp":
-                                case "tppart":
-                                case "teleportpart":
-                                    if (args.Length >= 3)
+                                case "eb":
+                                case "editbolt":
+                                    if (args.Length > 2)
                                     {
-                                        Part part = findPartByName(args[2]);
-                                        if (part)
+                                        switch (args[2])
                                         {
-                                            if (part.installed && args.Length == 3 && args[3] != "-f")
-                                                ModClient.print("cannot teleport part while it's installed... use \"-f\" to force an uninstall and teleport.");
-                                            else
-                                            {
-                                                if (part.installed && args.Length == 3 && args[3] == "-f")
-                                                    part.disassemble();
-                                                Rigidbody rb = part.GetComponent<Rigidbody>();
-                                                if (rb)
-                                                    if (!rb.isKinematic)
-                                                        rb = null;
+                                            case "-r":
+                                                if (!_startedInspectingBolt)
+                                                {
+                                                    if (args.Length == 3)
+                                                    {
+                                                        print("Edit bolt transform by raycast (-r)");
+                                                            BoltCallback _bolt = raycastForBehaviour<BoltCallback>(true);
+                                                            if (_bolt)
+                                                            {
+                                                                print("found {0} by raycast!", _bolt.name);
+                                                                _inspectingBolt = _bolt;
+                                                            }
+                                                            else
+                                                                print("Could not find a bolt by raycast :( reason: raycast hit returned true but no bolt behaviour was found.");
+                                                    }
                                                     else
-                                                        rb.isKinematic = true;
-                                                part.transform.position = Camera.main.transform.position;
-                                                if (rb)
-                                                    rb.isKinematic = false;
-                                            }
+                                                        print("command, \"modapi dev editbolt -r\" expects 0 arguments.");
+                                                }
+                                                else
+                                                    print("Stop inspecting bolt prior to looking for another bolt.");
+                                                break;
+                                            case "-n":
+                                                if (!_startedInspectingBolt)
+                                                {
+                                                    if (args.Length == 4)
+                                                    {
+                                                        print("Edit bolt transform by id (-n)");
+                                                        BoltCallback _bolt = findBoltByName(args[4]);
+                                                        if (_bolt)
+                                                        {
+                                                            print("found {0} by name!", _bolt.name);
+                                                            _inspectingBolt = _bolt;
+                                                        }
+                                                        else
+                                                            print("Use \"modapi debug listbolts\" to see all vaild parameters.");
+                                                    }
+                                                    else
+                                                        print("command, \"modapi developer editbolt -n\" expects 1 argument, the bolts id. Use \"modapi debug listbolts {PartName}\" to see all vaild parameters.");
+                                                }
+                                                else
+                                                    print("Stop inspecting bolt prior to looking for another bolt.");
+                                                break;
+                                            case "-s":
+                                                if (!_startedInspectingBolt)
+                                                    Run(new string[] { "developer", "editbolt", "start" });
+                                                else
+                                                    Run(new string[] { "developer", "editbolt", "stop" });
+                                                break;
+                                            case "start":
+                                                if (!_inspectingBolt)
+                                                {
+                                                    print("Find bolt prior to starting.");
+                                                    return;
+                                                }
+                                                if (_startedInspectingBolt)
+                                                {
+                                                    print("Already inspecting bolt.");
+                                                    return;
+                                                }
+                                                if (_startedInspectingPart)
+                                                {
+                                                    print("Cannot inspect a bolt when you are already inspecting a part.");
+                                                    return;
+                                                }
+                                                _startedInspectingBolt = true;
+                                                _inspectingBolt.inspectingBolt = true;
+                                                print("Started inspecting {0}..", _inspectingBolt.name);
+                                                break;
+                                            case "stop":
+                                                if (!_inspectingBolt)
+                                                {
+                                                    print("Find bolt prior to stopping.");
+                                                    return;
+                                                }
+                                                if (!_startedInspectingBolt)
+                                                {
+                                                    print("You need to start inspecting a bolt prior to stopping..");
+                                                    return;
+                                                }
+                                                _startedInspectingBolt = false;
+                                                _inspectingBolt.inspectingBolt = false;
+                                                print("Stopped inspecting {0}..", _inspectingBolt.name);
+                                                break;
+                                            case "print":
+                                                if (!_inspectingBolt)
+                                                {
+                                                    print("Find bolt prior to printing transform info.");
+                                                    return;
+                                                }
+                                                print("{0} Transform info:\nposition: {1}\nrotation: {2}", _inspectingBolt.name, _inspectingBolt.transform.localPosition, _inspectingBolt.transform.localEulerAngles);
+                                                break;
+                                            default:
+                                                print("unknown command");
+                                                print(helpListEditBolt);
+                                                break;
                                         }
-                                        else
-                                            ModClient.print("Use \"modapi listparts\" to see all vaild parameters.");
                                     }
                                     else
-                                        ModClient.print("command, \"modapi debug teleportpart\" expects atleast 1 argument, the parts name. Use \"modapi listparts\" to see all vaild parameters.");
+                                        print("command, \"modapi debug editbolt\" expects atleast 1 argument, a sub command. Use \"modapi help dev editbolt\" to see all vaild parameters.");
+                                    break;
+                                case "-t":
+                                case "toggle":
+                                    devMode = !devMode;
+                                    if (devMode)
+                                        ModApiLoader.raycaster.StartCoroutine(devModeFunc());
+                                    print($"Developer mode: {(devMode ? "ON" : "OFF")}");
                                     break;
                                 default:
-                                    ModClient.print("unknown command");
-                                    ModClient.print(helpListDebug);
+                                    print("unknown command");
+                                    print(helpListDev);
                                     break;
                             }
                         }
                         else
-                            ModClient.print("command, \"modapi debug\" expects atleast 1 argument, a sub command. Use \"modapi help debug\" to see all vaild parameters.");
+                            print("command, \"modapi developer\" expects atleast 1 argument, a sub command. Use \"modapi help developer\" to see all vaild parameters.");
                         break;
                     default:
-                        ModClient.print("unknown command");
-                        ModClient.print(helpListGeneral);
+                        print("unknown command");
+                        print(helpListGeneral);
                         break;
                 }
             }
@@ -289,34 +480,41 @@ namespace TommoJProductions.ModApi
 
         #region Methods
 
-        /// <summary>
-        /// Finds the part by name.
+        /// <summary> 
+        /// Finds the part by name or ID. first attempts to find an exact match, if no match was found then attempts to find the part by seeing if the part name contains the phrase, (<paramref name="inPartName"/>)
         /// </summary>
         /// <param name="inPartName">The parts name to find</param>
         private Part findPartByName(string inPartName)
         {
             // Written, 10.09.2021
 
-            Part part = ModClient.parts.Find(_part => _part.name == inPartName);
+            Part part = parts.Find(_part => _part.name == inPartName || _part.ID == inPartName);
             if (!part)
-            {
-                ModClient.print("Could not find the part by name.");
-            }
+                part = parts.Find(_part => _part.name.Contains(inPartName));
+            if (part)
+                print("Found part: {0}", part.name);
             else
-            {
-                ModClient.print("Found part: {0}", part.name);
-            }
+                print("Could not find the part by name: {0}", inPartName);
             return part;
         }
-
-        private IEnumerator movePartCoroutine()
+        /// <summary> 
+        /// Finds the bolt by name or ID. first attempts to find an exact match, if no match was found then attempts to find the bolt by seeing if the bolt name contains the phrase, (<paramref name="inBoltName"/>)
+        /// </summary>
+        /// <param name="inBoltName">The bolts name to find</param>
+        private BoltCallback findBoltByName(string inBoltName)
         {
-            while (_startedInspectingPart)
-            {
-                yield return new WaitForEndOfFrame();
-            }
-            yield return null;
+            // Written, 10.09.2021
+
+            BoltCallback bolt = bolts.Find(_b => _b.boltCallback.name == inBoltName || _b.ID == inBoltName).boltCallback;
+            if (!bolt)
+                bolt = bolts.Find(_b => _b.boltCallback.name.Contains(inBoltName)).boltCallback;
+            if (bolt)
+                print("Found bolt: {0}", bolt.name);
+            else
+                print("Could not find the bolt by name: {0}", inBoltName);
+            return bolt;
         }
+
         #endregion
     }
 }

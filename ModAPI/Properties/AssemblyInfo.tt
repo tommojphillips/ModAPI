@@ -1,0 +1,74 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ output extension=".cs" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="System.Reflection" #>
+<#
+    string output = File.ReadAllText(this.Host.ResolvePath("AssemblyInfo.cs"));
+    Regex pattern = new Regex("AssemblyVersion\\(\"(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<revision>\\d+)\\.(?<build>\\d+)\"\\)");
+    MatchCollection matches = pattern.Matches(output);
+    if( matches.Count == 1 )
+    {
+        major = Convert.ToInt32(matches[0].Groups["major"].Value);
+        minor = Convert.ToInt32(matches[0].Groups["minor"].Value);
+
+        int r = Convert.ToInt32(matches[0].Groups["revision"].Value);
+        revision = (int)(DateTime.UtcNow - new DateTime(2022,1,1)).TotalDays;
+        build = Convert.ToInt32(matches[0].Groups["build"].Value);
+        if (r != revision)
+        {
+            build = 0;
+        }
+        build++;
+    }   
+#>
+using System.Reflection;
+using System.Resources;
+
+// General Information
+[assembly: AssemblyTitle("<#= this.assemblyTitle #>")]
+[assembly: AssemblyDescription("Mod API is an application programming interface designed for the My Summer Car Modding Community.")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("Tommo J. Productions")]
+[assembly: AssemblyProduct("<#= this.assemblyTitle #>")]
+[assembly: AssemblyCopyright("Tommo J. Productions Copyright © <#= DateTime.Now.ToString("yyyy") #>")]
+[assembly: AssemblyTrademark("Azine")]
+[assembly: NeutralResourcesLanguage("en-AU")]
+
+// Version information
+[assembly: AssemblyVersion("<#= this.major #>.<#= this.minor #>.<#= this.revision #>.<#= this.build #>")]
+[assembly: AssemblyFileVersion("<#= this.major #>.<#= this.minor #>.<#= this.revision #>.<#= this.build #>")]
+
+namespace TommoJProductions.<#= this.assemblyTitle.Replace(" ", "") #>
+{
+
+    public class VersionInfo
+    {
+	    public const string lastestRelease = "<#= DateTime.Now.ToString("dd.MM.yyyy hh:mm tt") #>";
+	    public const string version = "<#= $"{major}.{minor}.{revision}.{build}" #>";
+
+        /// <summary>
+        /// Represents if the mod has been complied for x64
+        /// </summary>
+        #if x64
+            internal const bool IS_64_BIT = true;
+        #else
+            internal const bool IS_64_BIT = false;
+        #endif
+        /// <summary>
+        /// Represents if the mod has been complied in Debug mode
+        /// </summary>
+        #if DEBUG
+            internal const bool IS_DEBUG_CONFIG = true;
+        #else
+            internal const bool IS_DEBUG_CONFIG = false;
+        #endif
+    }
+}
+<#+
+    int major = 1;
+    int minor = 0;
+    int revision = 0;
+    int build = 0;
+    string assemblyTitle = "Mod Api";
+#>

@@ -46,24 +46,48 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
     </Reference>
+    <Reference Include="System" />
     <Reference Include="UnityEngine">
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityScript.Lang" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attachable\Bolt.cs" />
+    <Compile Include="Attachable\CallBacks\BoltCallback.cs" />
     <Compile Include="Attachable\Part.cs" />
     <Compile Include="ConsoleCommands.cs" />
-    <Compile Include="FsmStateActionCallback.cs" />
+    <Compile Include="ModApiLoader.cs" />
+    <Compile Include="PlaymakerExtentions\Callbacks\FsmStateActionCallback.cs" />
     <Compile Include="GuiInteractSymbolEnum.cs" />
     <Compile Include="LayerMasksEnum.cs" />
     <Compile Include="ModClient.cs" />
     <Compile Include="PlayerModeEnum.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Attachable\Trigger.cs" />
     <Compile Include="Attachable\CallBacks\TriggerCallBack.cs" />
+    <Compile Include="PlaymakerExtentions\Callbacks\OnEnterCallback.cs" />
+    <Compile Include="PlaymakerExtentions\Callbacks\OnFixedUpdateCallback.cs" />
+    <Compile Include="PlaymakerExtentions\Callbacks\OnGuiCallback.cs" />
+    <Compile Include="PlaymakerExtentions\Callbacks\OnUpdateCallback.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>AssemblyInfo.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Properties\AssemblyInfo.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>AssemblyInfo.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>if "$(ConfigurationName)" == "Debug" (
@@ -74,9 +98,15 @@ call "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\debug.bat"
 copy "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).dll.mdb" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
 copy "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).dll" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
 copy "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).pdb" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
+copy "$(TargetDir)$(TargetName).xml" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
 del "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).dll" /q
-) ELSE (
+) 
+ELSE (
 copy "$(TargetPath)" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
+copy "$(TargetDir)$(TargetName).xml" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
 )</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>"$(DevEnvDir)TextTransform.exe" -a !!BuildConfiguration!$(Configuration) "$(ProjectDir)Properties\AssemblyInfo.tt"</PreBuildEvent>
   </PropertyGroup>
 </Project>
