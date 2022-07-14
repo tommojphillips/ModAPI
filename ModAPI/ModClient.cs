@@ -11,93 +11,269 @@ using System.Linq;
 using System.ComponentModel;
 using static UnityEngine.GUILayout;
 using TommoJProductions.ModApi.Attachable.CallBacks;
+using System.IO;
 
 namespace TommoJProductions.ModApi
 {
+
+    #region enums
+
+    /// <summary>
+    /// Represents inject types for <see cref="injectAction"/>
+    /// </summary>
+    public enum InjectEnum
+    {
+        /// <summary>
+        /// Rpresents inject type, append. appends an action a fsmState.
+        /// </summary>
+        append,
+        /// <summary>
+        /// Rpresents inject type, prepend. prepends an action a fsmState
+        /// </summary>
+        prepend,
+        /// <summary>
+        /// Rpresents inject type, insert. insert an action in a fsmState at an index
+        /// </summary>
+        insert,
+        /// <summary>
+        /// Rpresents inject type, replace. replace an action in a fsmState at an index.
+        /// </summary>
+        replace
+    }
+    /// <summary>
+    /// Represents callback types for playmaker action injection any of the action extention methods: append, prepend, replace, insert. see <see cref="InjectEnum"/>.
+    /// </summary>
+    public enum CallbackTypeEnum
+    {
+        /// <summary>
+        /// Represents the on enter callback.
+        /// </summary>
+        onEnter,
+        /// <summary>
+        /// Represents the on  fixed update callback. 
+        /// </summary>
+        onFixedUpdate,
+        /// <summary>
+        /// Represents the on update callback. 
+        /// </summary>
+        onUpdate,
+        /// <summary>
+        /// Represents the on gui callback.
+        /// </summary>
+        onGui
+    }
+    /// <summary>
+    /// Represents all databases in game.
+    /// </summary>
+    [Description("Database")]
+    public enum Databases
+    {
+        // Written, 04.07.2022
+
+        /// <summary>
+        /// Represents the motor database.
+        /// </summary>
+        [Description("DatabaseMotor")]
+        motor,
+        /// <summary>
+        /// Represents the mechanics database.
+        /// </summary>
+        [Description("DatabaseMechanics")]
+        mechanics,
+        /// <summary>
+        /// Represents the orders database.
+        /// </summary>
+        [Description("DatabaseOrders")]
+        orders,
+        /// <summary>
+        /// Represents the body database.
+        /// </summary>
+        [Description("DatabaseBody")]
+        body
+    }
+    /// <summary>
+    /// Represents gui interact symbols.
+    /// </summary>
+    public enum GuiInteractSymbolEnum
+    {
+        // Written, 16.03.2019
+
+        /// <summary>
+        /// Represents no symbol.
+        /// </summary>
+        None,
+        /// <summary>
+        /// Represents the hand symbol.
+        /// </summary>
+        Hand,
+        /// <summary>
+        /// Represents the disassemble symbol.
+        /// </summary>
+        Disassemble,
+        /// <summary>
+        /// Represents the assemble symbol.
+        /// </summary>
+        Assemble,
+    }
+    /// <summary>
+    /// Represents a player mode.
+    /// </summary>
+    public enum PlayerModeEnum
+    {
+        // Written, 09.08.2018
+
+        /// <summary>
+        /// Represents that the player is on foot.
+        /// </summary>
+        OnFoot,
+        /// <summary>
+        /// Represents that the player is driving the satsuma.
+        /// </summary>
+        InSatsuma,
+        /// <summary>
+        /// Represents the the player is driving other.
+        /// </summary>
+        InOther,
+    }
+    /// <summary>
+    /// Represents all layers of my summer car.
+    /// </summary>
+    public enum LayerMasksEnum
+    {
+        /// <summary>
+        /// Represents the default layer.
+        /// </summary>
+        Default,
+        /// <summary>
+        /// Represents the transparent fx layer.
+        /// </summary>
+        TransparentFX,
+        /// <summary>
+        /// Represents the ignore raycast layer.
+        /// </summary>
+        IgnoreRaycast,
+        /// <summary>
+        /// Represents an empty layer.
+        /// </summary>
+        Layer3,
+        /// <summary>
+        /// Represents the water layer.
+        /// </summary>
+        Water,
+        /// <summary>
+        /// Represents the user interaction layer.
+        /// </summary>
+        UI,
+        /// <summary>
+        /// Represents an empty layer.
+        /// </summary>
+        Layer6,
+        /// <summary>
+        /// Represents an empty layer.
+        /// </summary>
+        Layer7,
+        /// <summary>
+        /// Represents the road layer.
+        /// </summary>
+        Road,
+        /// <summary>
+        /// Represents the hinged objects layer.
+        /// </summary>
+        HingedObjects,
+        /// <summary>
+        /// Represents the terrian layer.
+        /// </summary>
+        Terrain,
+        /// <summary>
+        /// Represents the dont collide layer.
+        /// </summary>
+        DontCollide,
+        /// <summary>
+        /// Represents the bolts layer.
+        /// </summary>
+        Bolts,
+        /// <summary>
+        /// Represents the dashboard layer.
+        /// </summary>
+        Dashboard,
+        /// <summary>
+        /// Represents the graphical user interface layer.
+        /// </summary>
+        GUI,
+        /// <summary>
+        /// Represents the tool layer.
+        /// </summary>
+        Tools,
+        /// <summary>
+        /// Represents the wheel layer. (All UnityCar.Wheels use this. eg FL wheel on satsuma will be on this layer.
+        /// </summary>
+        Wheel,
+        /// <summary>
+        /// Represents the collider layer.
+        /// </summary>
+        Collider,
+        /// <summary>
+        /// Represents the datsun layer. (all cars use this layer)
+        /// </summary>
+        Datsun,
+        /// <summary>
+        /// Represents the parts layer.
+        /// </summary>
+        Parts,
+        /// <summary>
+        /// Represents the player layer.
+        /// </summary>
+        Player,
+        /// <summary>
+        /// Represents the lifter layer.
+        /// </summary>
+        Lifter,
+        /// <summary>
+        /// Represents the collider2 layer.
+        /// </summary>
+        Collider2,
+        /// <summary>
+        /// Represents the player only collider layer.
+        /// </summary>
+        PlayerOnlyColl,
+        /// <summary>
+        /// Represents the cloud layer.
+        /// </summary>
+        Cloud,
+        /// <summary>
+        /// Represents the grass layer.
+        /// </summary>
+        Glass,
+        /// <summary>
+        /// Represents the forest layer.
+        /// </summary>
+        Forest,
+        /// <summary>
+        /// Represents the no rain layer.
+        /// </summary>
+        NoRain,
+        /// <summary>
+        /// Represents the trigger-only layer.
+        /// </summary>
+        TriggerOnly,
+        /// <summary>
+        /// Represents an empty layer.
+        /// </summary>
+        Layer29,
+        /// <summary>
+        /// Represents an empty layer.
+        /// </summary>
+        Layer30,
+    }
+
+    #endregion
+
     /// <summary>
     /// Represents useful properties for interacting with My Summer Car and PlayMaker.
     /// </summary>
     public static class ModClient
     {
         // Written, 10.08.2018 | Modified 25.09.2021
-
-        #region enums
-
-        /// <summary>
-        /// Represents inject types for <see cref="injectAction"/>
-        /// </summary>
-        public enum InjectEnum
-        {
-            /// <summary>
-            /// Rpresents inject type, append. appends an action a fsmState
-            /// </summary>
-            append,
-            /// <summary>
-            /// Rpresents inject type, prepend. prepends an action a fsmState
-            /// </summary>
-            prepend,
-            /// <summary>
-            /// Rpresents inject type, insert. insert an action in a fsmState at an index.
-            /// </summary>
-            insert,
-            /// <summary>
-            /// Rpresents inject type, replace. replace an action in a fsmState at an index.
-            /// </summary>
-            replace
-        }
-        /// <summary>
-        /// Represents callback types
-        /// </summary>
-        public enum CallbackTypeEnum
-        {
-            /// <summary>
-            /// Represents the on enter callback.
-            /// </summary>
-            onEnter,
-            /// <summary>
-            /// Represents the on  fixed update callback. 
-            /// </summary>
-            onFixedUpdate,
-            /// <summary>
-            /// Represents the on update callback. 
-            /// </summary>
-            onUpdate,
-            /// <summary>
-            /// Represents the on gui callback.
-            /// </summary>
-            onGui
-        }
-        /// <summary>
-        /// Represents all databases in game.
-        /// </summary>
-        [Description("Database")]
-        public enum Databases
-        {
-            // Written, 04.07.2022
-
-            /// <summary>
-            /// Represents the motor database.
-            /// </summary>
-            [Description("DatabaseMotor")]
-            motor,
-            /// <summary>
-            /// Represents the mechanics database.
-            /// </summary>
-            [Description("DatabaseMechanics")]
-            mechanics,
-            /// <summary>
-            /// Represents the orders database.
-            /// </summary>
-            [Description("DatabaseOrders")]
-            orders,
-            /// <summary>
-            /// Represents the body database.
-            /// </summary>
-            [Description("DatabaseBody")]
-            body
-        }
-
-        #endregion
 
         #region fields
 
@@ -731,11 +907,7 @@ namespace TommoJProductions.ModApi
             {
                 if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.P))
                 {
-                    if (_inspectingPart)
-                        _inspectingPart.inspectingPart = false;
-                    _inspectingPart = raycastForBehaviour<Part>();
-                    if (_inspectingPart)
-                        _inspectingPart.inspectingPart = true;
+                    Part.inspectionPart = raycastForBehaviour<Part>();
                 }
                 if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.B))
                 {
@@ -753,6 +925,45 @@ namespace TommoJProductions.ModApi
 
         #region ExMethods
 
+
+        /// <summary>
+        /// saves data.
+        /// </summary>
+        /// <param name="data">the data to save.</param>
+        /// <param name="mod">The mod to save data on</param>
+        /// <param name="saveFileName">The save file name with or without file extention. </param>
+        /// <returns>Returns <see langword="true"/> if save file exists.</returns>
+        public static void saveData<T>(this Mod mod, T data, string saveFileName) where T : class, new()
+        {
+            // Written, 12.06.2022
+
+            SaveLoad.SerializeSaveFile(mod, data, saveFileName);
+            ModConsole.Print($"{mod.ID}: saved data.");
+        }
+        /// <summary>
+        /// Loads or creates data.
+        /// </summary>
+        /// <param name="data">The ref to load data to</param>
+        /// <param name="mod">The mod to save data on</param>
+        /// <param name="saveFileName">The save file name with or without file extention. </param>
+        /// <returns>Returns <see langword="true"/> if save file exists.</returns>
+        public static bool loadOrCreateData<T>(this Mod mod , ref T data, string saveFileName) where T : class, new()
+        {
+            // Written, 12.06.2022
+
+            if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
+            {
+                data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
+                ModConsole.Print($"{mod.ID}: loaded save data (Exists).");
+                return true;
+            }
+            else
+            {
+                ModConsole.Print($"{mod.ID}: save file didn't exist.. creating a save file.");
+                data = new T();
+                return false;
+            }
+        }
         /// <summary>
         /// Creates a new vector3 from an old one.
         /// </summary>

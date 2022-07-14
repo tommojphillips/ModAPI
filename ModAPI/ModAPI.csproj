@@ -58,15 +58,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attachable\Bolt.cs" />
+    <Compile Include="Attachable\BoltManager.cs" />
     <Compile Include="Attachable\CallBacks\BoltCallback.cs" />
+    <Compile Include="Attachable\IHasBolts.cs" />
+    <Compile Include="Attachable\IHasPartAccess.cs" />
     <Compile Include="Attachable\Part.cs" />
     <Compile Include="ConsoleCommands.cs" />
     <Compile Include="ModApiLoader.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\FsmStateActionCallback.cs" />
-    <Compile Include="GuiInteractSymbolEnum.cs" />
-    <Compile Include="LayerMasksEnum.cs" />
     <Compile Include="ModClient.cs" />
-    <Compile Include="PlayerModeEnum.cs" />
     <Compile Include="Attachable\Trigger.cs" />
     <Compile Include="Attachable\CallBacks\TriggerCallBack.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\OnEnterCallback.cs" />

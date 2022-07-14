@@ -6,14 +6,13 @@ using UnityEngine;
 using TommoJProductions.ModApi.Attachable.CallBacks;
 using static MSCLoader.ModConsole;
 using static UnityEngine.GUILayout;
-using g = UnityEngine.GUI;
 using static TommoJProductions.ModApi.ModClient;
 using static TommoJProductions.ModApi.ModApiLoader;
 
 namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
-    /// Represents a pickable and installable part for the satsuma (or anything).
+    /// Represents an installable part.
     /// </summary>
     public class Part : MonoBehaviour
     {
@@ -136,7 +135,7 @@ namespace TommoJProductions.ModApi.Attachable
             /// </summary>
             public Collider assembleCollider = null;
             /// <summary>
-            /// Represents whether this part can be installed by: 1.) (false) holding this part in one of its triggers. OR 2.) (true) #1 is true and if the trigger is a child of another part. you can hold the root part to install aswell.
+            /// Represents whether this part can be installed by: 1.) (false) holding this part in one of its triggers. OR 2.) (true) if the trigger is a child of another part. you can hold the root part to install aswell.
             /// </summary>
             public bool installEitherDirection = false;
             /// <summary>
@@ -333,7 +332,7 @@ namespace TommoJProductions.ModApi.Attachable
         #region Events
 
         /// <summary>
-        /// Represents the on assemble event.
+        /// Represents the on assemble event.invoked after assembly logic executes
         /// </summary>
         public event Action onAssemble;
         /// <summary>
@@ -370,15 +369,19 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the on part picked up event. occurs when this part has been picked up.
         /// </summary>
-        public event Action onPartPickedUp;
+        public event Action onPartPickUp;
         /// <summary>
         /// Represents the on part thrown event. occurs when this part has been thrown.
         /// </summary>
-        public event Action onPartThrown;
+        public event Action onPartThrow;
         /// <summary>
         /// Represents the on part dropped event. occurs when this part has been dropped.
         /// </summary>
-        public event Action onPartDropped;
+        public event Action onPartDrop;
+        /// <summary>
+        /// Represents the on joint break event. occurs when this parts Joint breaks. invoked after disassembly logic executes.
+        /// </summary>
+        public event Action onJointBreak;
 
         #endregion
 
@@ -491,21 +494,21 @@ namespace TommoJProductions.ModApi.Attachable
         private PartSaveInfo _defaultSaveInfo;
         private bool _holdingCheck;
 
-        internal bool inspectingPart = false;
-        private bool inspectionPartSet = false;
-        private Vector3[] inspectionPartPosition;
-        private Vector3[] inspectionPartEuler;
-        private bool inspectingBolt = false;
-        private bool inspectionBoltSet = false;
-        private Bolt inspectionBolt = null;
+        internal static Part inspectionPart = null;
+        private static bool inspectionPartSet = false;
+        private static Vector3[] inspectionPartPosition;
+        private static Vector3[] inspectionPartEuler;
+        private static bool inspectingBolt = false;
+        private static bool inspectionBoltSet = false;
+        private static Bolt inspectionBolt = null;
 
-        int top = 75;
-        int margin = 20;
-        int height => Screen.height - top;
-        int width = 500;
-        int left => Screen.width - width - margin;
-        Vector2 scroll;
-        ScrollViewScope scrollViewScope;
+        private static int top = 75;
+        private static int margin = 20;
+        private static int height => Screen.height - top;
+        private static int width = 500;
+        private static int left => Screen.width - width - margin;
+        private static Vector2 scroll;
+        private static ScrollViewScope scrollViewScope;
 
         #endregion
 
@@ -516,17 +519,20 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         void OnJointBreak(float breakForce)
         {
-           disassemble();
+            disassemble();
+            onJointBreak?.Invoke();
         }
 
         void OnGUI() 
         {
             // Written, 03.07.2022
 
-            if (inspectingPart)
+            if (inspectionPart == this)
             {
                 Transform t;
-                int tl = triggers.Length;
+                int tl;
+                
+                tl = triggers.Length;
 
                 if (!inspectionPartSet)
                 {
@@ -705,20 +711,21 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region IEnumerators
 
-
         /// <summary>
         /// Represents the part in a trigger logic.
         /// </summary>
-        /// <param name="other">The collider reference that triggered this call.</param>
-        public virtual IEnumerator partInTrigger(Collider other)
+        /// <param name="callback_ref">The trigger callback that invoked this call.</param>
+        public virtual IEnumerator partInTrigger(TriggerCallback callback_ref)
         {
-            while (inTrigger && holdingCheck(other.gameObject))
+            // Written, undocumented | Modified, 02.07.2022
+
+            while (inTrigger && holdingCheck(callback_ref))
             {                
                 yield return null;
                 guiAssemble = true;
                 if (Input.GetMouseButtonDown(0))
                 {
-                    assemble(other);
+                    assemble(callback_ref.callbackCollider);
                     break;
                 }
             }
@@ -825,11 +832,17 @@ namespace TommoJProductions.ModApi.Attachable
 
         #endregion
 
-        public bool holdingCheck(GameObject go) 
+        /// <summary>
+        /// Represents the holding check for a <see cref="Part"/>. Used for starting and checking trigger routine. <see cref="partInTrigger(TriggerCallback)"/>
+        /// </summary>
+        /// <param name="callback_ref">The trigger callback</param>
+        public bool holdingCheck(TriggerCallback callback_ref) 
         {
+            // Written, 02.07.2022
+
             _holdingCheck = gameObject.isPlayerHoldingByPickup();
             if (partSettings.installEitherDirection)
-                _holdingCheck |= go.getBehaviourInParent<Part>(part => part && !part.installed)?.gameObject.isPlayerHolding() ?? false;
+                _holdingCheck |= callback_ref.callbackCollider.gameObject.getBehaviourInParent<Part>(part => part && !part.installed)?.gameObject.isPlayerHolding() ?? false;
             return _holdingCheck;
         }
 
@@ -839,12 +852,12 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 04.10.2018 | Modified, 02.07.2022
 
-            if (holdingCheck(callback_ref.callbackCollider.gameObject) && colliderCheck(callback_ref) && p == this)
+            if (holdingCheck(callback_ref) && colliderCheck(callback_ref) && p == this)
             {
                 if (triggerRoutine == null)
                 {
                     inTrigger = true;
-                    triggerRoutine = StartCoroutine(partInTrigger(callback_ref.callbackCollider));
+                    triggerRoutine = StartCoroutine(partInTrigger(callback_ref));
                 }
             }
         }
@@ -1262,19 +1275,19 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 11.07.2022
 
-            onPartPickedUp?.Invoke();
+            onPartPickUp?.Invoke();
         }
         internal void invokeThrownEvent()
         {
             // Written, 11.07.2022
 
-            onPartThrown?.Invoke();
+            onPartThrow?.Invoke();
         }
         internal void invokeDroppedEvent()
         {
             // Written, 11.07.2022
 
-            onPartDropped?.Invoke();
+            onPartDrop?.Invoke();
         }
 
         #endregion

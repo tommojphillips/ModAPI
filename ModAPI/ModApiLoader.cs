@@ -66,7 +66,6 @@ namespace TommoJProductions.ModApi
             // Written, 11.07.2022
 
             modapiGo = new GameObject("Mod API Loader");
-            UnityEngine.Object.DontDestroyOnLoad(modapiGo);
             Print("modapi: Setup");
         }
         internal static void loadModApi()
