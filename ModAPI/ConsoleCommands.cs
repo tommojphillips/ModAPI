@@ -186,14 +186,14 @@ namespace TommoJProductions.ModApi
                                 case "listparts":
                                     print("Count {0}", parts.Count);
                                     foreach (var item in parts)
-                                        print("{0} | {1}", item.gameObject.name, item.ID);
+                                        print("{0} | {1}", item.gameObject.name, item.PartID);
                                     break;
                                 case "lb":
                                 case "lbolts":
                                 case "listbolts":
                                     print("Count {0}", bolts.Count);
                                     foreach (var item in bolts)
-                                        print("{0} | {1}", item.boltCallback.gameObject.name, item.ID);
+                                        print("{0} | {1}", item.boltCallback.gameObject.name, item.boltID);
                                     break;
                                 case "tpp":
                                 case "teleportpart":
@@ -311,7 +311,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingPart = true;
-                                                _inspectingPart.inspectingPart = true;
+                                                Part.inspectionPart = _inspectingPart;
                                                 print("Started inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "stop":
@@ -326,7 +326,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingPart = false;
-                                                _inspectingPart.inspectingPart= false;
+                                                Part.inspectionPart = null;
                                                 print("Stopped inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "print":
@@ -417,7 +417,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingBolt = true;
-                                                _inspectingBolt.inspectingBolt = true;
+                                                BoltCallback.inspectionBolt = _inspectingBolt;
                                                 print("Started inspecting {0}..", _inspectingBolt.name);
                                                 break;
                                             case "stop":
@@ -432,7 +432,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingBolt = false;
-                                                _inspectingBolt.inspectingBolt = false;
+                                                BoltCallback.inspectionBolt = null;
                                                 print("Stopped inspecting {0}..", _inspectingBolt.name);
                                                 break;
                                             case "print":
@@ -488,7 +488,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 10.09.2021
 
-            Part part = parts.Find(_part => _part.name == inPartName || _part.ID == inPartName);
+            Part part = parts.Find(_part => _part.name == inPartName || _part.PartID == inPartName);
             if (!part)
                 part = parts.Find(_part => _part.name.Contains(inPartName));
             if (part)
@@ -505,7 +505,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 10.09.2021
 
-            BoltCallback bolt = bolts.Find(_b => _b.boltCallback.name == inBoltName || _b.ID == inBoltName).boltCallback;
+            BoltCallback bolt = bolts.Find(_b => _b.boltCallback.name == inBoltName || _b.boltID == inBoltName).boltCallback;
             if (!bolt)
                 bolt = bolts.Find(_b => _b.boltCallback.name.Contains(inBoltName)).boltCallback;
             if (bolt)

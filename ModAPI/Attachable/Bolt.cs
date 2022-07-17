@@ -24,17 +24,17 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public class BoltSettings
         {
-            internal string name = null;
+            /// <summary>
+            /// for initializing a new instance of bolt with custom name.
+            /// </summary>
+            public string name = null;
+
             /// <summary>
             /// Represents the bolts type.
             /// </summary>
             public BoltType boltType = BoltType.shortBolt;
             /// <summary>
-            /// Represents the custom bolt prefab to use. NOTE: Set <see cref="boltType"/> to <see cref="BoltType.custom"/>.
-            /// </summary>
-            public GameObject customBoltPrefab = null;
-            /// <summary>
-            /// Represents the spanner size 
+            /// Represents the tool size required to un/tighten this bolt
             /// </summary>
             public BoltSize boltSize = BoltSize._7mm;
             /// <summary>
@@ -61,7 +61,85 @@ namespace TommoJProductions.ModApi.Attachable
             /// Represents the rotational direction of bolt.
             /// </summary>
             public Vector3 rotDirection = Vector3.forward;
+            /// <summary>
+            /// Represents the custom bolt prefab to use. NOTE: Set <see cref="boltType"/> to <see cref="BoltType.custom"/>.
+            /// </summary>
+            public GameObject customBoltPrefab = null;
+            /// <summary>
+            /// if true, <see cref="boltFunction"/> does not check if tightness has changed (tightness is either completely tight or loose). therefore invokes bolt event/s anyway. eg => if bolt is already tight and user tries to tighten more. it will call <see cref="onTight"/> anyway.
+            /// </summary>
+            public bool ignoreTightnessChangedCheck = false;
+            /// <summary>
+            /// if true adds a nut to the other side of the bolt. note both bolt and nut will need to be tightened.
+            /// </summary>
+            public bool addNut = false;
+            /// <summary>
+            /// Settings for <see cref="addNut"/> setting. 
+            /// </summary>
+            public AddNutSettings addNutSettings = default(AddNutSettings);
+            /// <summary>
+            /// Initializes new instance of b settings with default values.
+            /// </summary>
+            public BoltSettings() { }
+            /// <summary>
+            /// inits new instance of bolt settings and copies instance values.
+            /// </summary>
+            /// <param name="s">the instance of bolt settings to copy.</param>
+            public BoltSettings(BoltSettings s)
+            {
+                if (s != null)
+                {
+                    boltType = s.boltType;
+                    customBoltPrefab = s.customBoltPrefab;
+                    boltSize = s.boltSize;
+                    posStep = s.posStep;
+                    rotStep = s.rotStep;
+                    tightnessStep = s.tightnessStep;
+                    maxTightness = s.maxTightness;
+                    posDirection = s.posDirection;
+                    rotDirection = s.rotDirection;
+                    ignoreTightnessChangedCheck = s.ignoreTightnessChangedCheck;
+                    addNut = s.addNut;
+                    addNutSettings = s.addNutSettings;
+                }
+            }
         }
+        /// <summary>
+        /// settings for addNut
+        /// </summary>
+        public class AddNutSettings
+        {
+            /// <summary>
+            /// Represents the tool size required to un/tighten this bolt. if null uses the parent bolts size.
+            /// </summary>
+            public BoltSize? nutSize = null;
+            /// <summary>
+            /// Represents the custom nut prefab to use. if null uses modapi nut prefab.
+            /// </summary>
+            public GameObject customNutPrefab = null;
+            /// <summary>
+            /// Represents the add nut offset. an offset applied to the model. on <see cref="BoltSettings.posDirection"/>
+            /// </summary>
+            public float nutOffset = 0;
+            /// <summary>
+            /// init with default settings
+            /// </summary>
+            public AddNutSettings() { }
+            /// <summary>
+            /// inits this and copies s to instance.
+            /// </summary>
+            /// <param name="s">the instance to copy.</param>
+            public AddNutSettings(AddNutSettings s)
+            {
+                if (s != null)
+                {
+                    nutSize = s.nutSize;
+                    customNutPrefab = s.customNutPrefab;
+                    nutOffset = s.nutOffset;
+                }
+            }
+        }
+
         /// <summary>
         /// Represents all bolt sizes in game.
         /// </summary>
@@ -77,7 +155,7 @@ namespace TommoJProductions.ModApi.Attachable
             /// Represents flat head screwdriver
             /// </summary>
             [Description("Screwdriver")]
-            flathead = 65,
+            flathead = 64,
             /// <summary>
             /// Represents 5mm
             /// </summary>
@@ -87,27 +165,27 @@ namespace TommoJProductions.ModApi.Attachable
             /// Represents 6mm
             /// </summary>
             [Description("6 MM")]
-            _6_mm = 60,
+            _6mm = 60,
             /// <summary>
             /// Represents 7mm
             /// </summary>
             [Description("7 MM")]
-            _7mm = 70,
+            _7mm = 69,
             /// <summary>
             /// Represents 8mm
             /// </summary>
             [Description("8 MM")]
-            _8_mm = 80,
+            _8mm = 80,
             /// <summary>
             /// Represents 9mm
             /// </summary>
             [Description("9 MM")]
-            _9mm = 90,
+            _9mm = 89,
             /// <summary>
             /// Represents 10mm
             /// </summary>
             [Description("10 MM")]
-            _10_mm = 100,
+            _10mm = 100,
             /// <summary>
             /// Represents 11mm
             /// </summary>
@@ -117,22 +195,22 @@ namespace TommoJProductions.ModApi.Attachable
             /// Represents 12mm
             /// </summary>
             [Description("12 MM")]
-            _12_mm = 120,
+            _12mm = 120,
             /// <summary>
             /// Represents 13mm
             /// </summary>
             [Description("13 MM")]
-            _13mm = 130,
+            _13mm = 129,
             /// <summary>
             /// Represents 14mm
             /// </summary>
             [Description("14 MM")]
-            _14mm = 140,
+            _14mm = 139,
             /// <summary>
             /// Represents 15mm
             /// </summary>
             [Description("15 MM")]
-            _15_mm = 150,
+            _15mm = 150,
         }
         /// <summary>
         /// Represents different types of bolts.
@@ -167,12 +245,19 @@ namespace TommoJProductions.ModApi.Attachable
             custom,
         }
 
+        /// <summary>
+        /// Represents the bolt save info class object.
+        /// </summary>
         public class BoltSaveInfo
         {
-        /// <summary>
-        /// Represents the tightness of this bolt. range: 0 - <see cref="BoltSettings.maxTightness"/>.
-        /// </summary>
-            public float tightness { get; set; } = 0;
+            /// <summary>
+            /// Represents the tightness of this bolt. range: 0 - <see cref="BoltSettings.maxTightness"/>.
+            /// </summary>
+            public float boltTightness { get; set; } = 0;
+            /// <summary>
+            /// Represents the tightness of the nut if addnut setting is true.. range: 0 - <see cref="BoltSettings.maxTightness"/>.
+            /// </summary>
+            public float addNutTightness { get; set; } = 0;
         }
 
         #endregion
@@ -207,7 +292,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represennts the runtime ID for this bolt. Note Rutime.. could change next game load.
         /// </summary>
-        public string ID;      
+        public string boltID;      
         /// <summary>
         /// Represents settings for this bolt.
         /// </summary>
@@ -215,11 +300,11 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the bolt gameobject.
         /// </summary>
-        public GameObject model;
+        public GameObject boltModel;
         /// <summary>
-        /// Represents the wait time between bolt screw. in seconds
+        /// The add nut model. relevant only when <see cref="Bolt.boltSettings"/>.<see cref="BoltSettings.addNut"/> is <see langword="true"/>.
         /// </summary>
-        public static float wait = 0.33f;
+        GameObject addNutModel;
 
         internal Vector3 startPosition;
         internal Vector3 startEulerAngles;
@@ -230,7 +315,16 @@ namespace TommoJProductions.ModApi.Attachable
         internal static GameObject longBoltPrefab;
         internal static GameObject screwPrefab;
         internal static GameObject nutPrefab;
-        
+
+        /// <summary>
+        /// Represents the bolt callback.
+        /// </summary>
+        public BoltCallback boltCallback;
+        /// <summary>
+        /// Represents the add nut bolt callback.
+        /// </summary>
+        public BoltCallback addNutCallback;
+
         #endregion
 
         #region Properties
@@ -246,15 +340,11 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Returns true if this bolt is tight (<see cref="tightness"/> == <see cref="BoltSettings.maxTightness"/>)
         /// </summary>
-        public bool isTight => loadedSaveInfo.tightness >= boltSettings.maxTightness;
+        public bool isTight => loadedSaveInfo.boltTightness >= boltSettings.maxTightness;
         /// <summary>
         /// Returns true if this bolt is loose (<see cref="tightness"/> == 0)
         /// </summary>
-        public bool isLoose => loadedSaveInfo.tightness <= 0;
-        /// <summary>
-        /// Represents the bolt callback.
-        /// </summary>
-        public BoltCallback boltCallback;
+        public bool isLoose => loadedSaveInfo.boltTightness <= 0;
         /// <summary>
         /// Represents the position delta.
         /// </summary>
@@ -263,10 +353,6 @@ namespace TommoJProductions.ModApi.Attachable
         /// Represents the rotation delta.
         /// </summary>
         public Vector3 rotationDelta => boltSettings.rotDirection * boltSettings.rotStep;
-        /// <summary>
-        /// Represents the bolt check. checks if in tool mode and that the player is holding the correct tool for the fastener.
-        /// </summary>
-        public bool boltCheck => !ModClient.isInHandMode && ModClient.getTool == boltSettings.boltSize;
         /// <summary>
         /// Represents the part that this bolt is linked to.
         /// </summary>
@@ -277,161 +363,213 @@ namespace TommoJProductions.ModApi.Attachable
         #region Constructors
 
         /// <summary>
-        /// Initialies this bolt with save info
+        /// Initialies this bolt. save info will be gathered from the part.
+        /// </summary>
+        /// <param name="settings">the settings for the bolt.</param>
+        /// <param name="position">the position of the bolt</param>
+        /// <param name="eulerAngles">the rotation of the bolt.</param>
+        public Bolt(BoltSettings settings = default(BoltSettings), Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3), float? addNutOffsetOverride = null)
+        {
+            init(null, settings, position, eulerAngles, addNutOffsetOverride);
+        }
+        /// <summary>
+        /// Initialies this bolt with save info.
         /// </summary>
         /// <param name="saveInfo">The save info for the bolt.</param>
         /// <param name="settings">the settings for the bolt.</param>
         /// <param name="position">the position of the bolt</param>
         /// <param name="eulerAngles">the rotation of the bolt.</param>
-        public Bolt(BoltSaveInfo saveInfo = null, BoltSettings settings = default(BoltSettings), Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3))
+        public Bolt(BoltSaveInfo saveInfo = null, BoltSettings settings = default(BoltSettings), Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3), float? addNutOffsetOverride = null)
         {
-            initOption1(saveInfo, settings, position, eulerAngles);
+            init(saveInfo, settings, position, eulerAngles, addNutOffsetOverride);
         }
-        /// <summary>
-        /// Initialies this bolt with a custom name and save info
-        /// </summary>
-        /// <param name="name">the name of the bolt</param>
-        /// <param name="saveInfo">The save info for the bolt.</param>
-        /// <param name="settings">the settings for the bolt.</param>
-        /// <param name="position">the position of the bolt</param>
-        /// <param name="eulerAngles">the rotation of the bolt.</param>
-        public Bolt(string name, BoltSaveInfo saveInfo = null, BoltSettings settings = default(BoltSettings), Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3))
+
+        ~Bolt() 
         {
-            initOption1(saveInfo, settings, position, eulerAngles);
-            initOption2(name);
-        }
-        /// <summary>
-        /// Initialies this bolt
-        /// </summary>
-        /// <param name="settings">the settings for the bolt.</param>
-        /// <param name="position">the position of the bolt</param>
-        /// <param name="eulerAngles">the rotation of the bolt.</param>
-        public Bolt(BoltSettings settings = default(BoltSettings), Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3))
-        {
-            initOption1(null, settings, position, eulerAngles);
-        }
-        /// <summary>
-        /// Initialies this bolt with a custom name
-        /// </summary>
-        /// <param name="name">the name of the bolt</param>
-        /// <param name="settings">the settings for the bolt.</param>
-        /// <param name="position">the position of the bolt</param>
-        /// <param name="eulerAngles">the rotation of the bolt.</param>
-        public Bolt(string name, BoltSettings settings = default(BoltSettings), Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3))
-        {
-            initOption1(null, settings, position, eulerAngles);
-            initOption2(name);
+            ModClient.bolts.Remove(this);
         }
 
         #endregion
 
         #region IEnumerators
 
-        internal IEnumerator boltFunction()
+        internal IEnumerator boltFunction(BoltCallback bcb, PointerEventData data)
         {
             // Written, 03.07.2022
-#if DEBUG
-            Print("bolt function: started");
-#endif
-            while (boltCheck)
-            {
-                float scrollInput = Input.mouseScrollDelta.y;
 
-                if (Mathf.Abs(scrollInput) > 0)
+            int boltTightnessTemp;
+            int nutTightnessTemp;
+            int tempTightness;
+            bool isNut = false;
+            bool foundBolt = false;
+            bool tightnessChanged = false;
+            while (bcb.boltCheck)
+            {
+                float scrollInput = data.scrollDelta.y;
+
+                if (data.IsScrolling())
                 {
-                    int tempTightness = (int)Mathf.Clamp(loadedSaveInfo.tightness + (scrollInput * boltSettings.tightnessStep), 0, boltSettings.maxTightness);
-                    if (tempTightness != loadedSaveInfo.tightness)
+                    boltTightnessTemp = (int)Mathf.Clamp(loadedSaveInfo.boltTightness + (scrollInput * boltSettings.tightnessStep), 0, boltSettings.maxTightness);
+                    nutTightnessTemp = (int)Mathf.Clamp(loadedSaveInfo.addNutTightness + (scrollInput * boltSettings.tightnessStep), 0, boltSettings.maxTightness);
+                    tempTightness = 0;
+                    if (bcb == boltCallback && data.pointerEnter == boltModel && (boltSettings.addNut ? loadedSaveInfo.addNutTightness == 0 : true))
+                    {
+                        tempTightness = boltTightnessTemp;
+                        isNut = false;
+                        foundBolt = true;
+                        tightnessChanged = boltTightnessTemp != loadedSaveInfo.boltTightness;
+                    }
+                    else if (boltSettings.addNut && bcb == addNutCallback && data.pointerEnter == addNutModel && loadedSaveInfo.boltTightness == boltSettings.maxTightness)
+                    {
+                        tempTightness = nutTightnessTemp;
+                        isNut = true;
+                        foundBolt = true;
+                        tightnessChanged = nutTightnessTemp != loadedSaveInfo.addNutTightness;
+                    }
+                    if (foundBolt && (boltSettings.ignoreTightnessChangedCheck || tightnessChanged))
                     {
                         if (isTight)
                             outTight?.Invoke();
                         else if (isLoose)
                             outLoose?.Invoke();
-                        loadedSaveInfo.tightness = tempTightness;
+                        
+                        if (isNut)
+                            loadedSaveInfo.addNutTightness = tempTightness;
+                        else
+                            loadedSaveInfo.boltTightness = tempTightness;
+
                         updateNutPosRot();
+
                         if (isTight)
                             onTight?.Invoke();
                         else if (isLoose)
                             onLoose?.Invoke();
+
                         onScrew?.Invoke();
-                        MasterAudio.PlaySound3DAndForget("CarBuilding", model.transform, variationName: "bolt_screw");
-                        yield return new WaitForSeconds(wait);
+
+                        if (tightnessChanged)
+                        {
+                            ModClient.playSoundAtInterupt(boltModel.transform, "CarBuilding", "bolt_screw");
+                            yield return new WaitForSeconds(ModClient.getBoltingSpeed);
+                            continue;
+                        }
                     }
                 }
                 yield return null;
             }
-#if DEBUG
-            Print("bolt function: ended");
-#endif
         }
 
         #endregion
 
         #region Methods
 
-        void initOption1(BoltSaveInfo saveInfo, BoltSettings settings, Vector3 position, Vector3 eulerAngles)
+        /// <summary>
+        /// sets up this bolt. -standard.
+        /// </summary>
+        /// <param name="saveInfo">the save info to set.</param>
+        /// <param name="settings">the bolt settings to set.</param>
+        /// <param name="position">the position of the bolt</param>
+        /// <param name="eulerAngles">the rot of the bolt.</param>
+        private void init(BoltSaveInfo saveInfo, BoltSettings settings, Vector3 position, Vector3 eulerAngles, float? addNutOffsetOverride = null)
         {
             loadedSaveInfo = saveInfo;
-            boltSettings = settings;
+            boltSettings = new BoltSettings(settings);
             startPosition = position;
             startEulerAngles = eulerAngles;
-        }
-        void initOption2(string name)
-        {
-            boltSettings.name = name;
-        }
 
+            if (addNutOffsetOverride != null)
+                boltSettings.addNutSettings.nutOffset = (float)addNutOffsetOverride;
+        }
         /// <summary>
-        /// Initialies this bolt.
+        /// sets up a nut on the opposite side of the bolt.
         /// </summary>
-        internal void initBolt(Part p, BoltSaveInfo saveInfo = default(BoltSaveInfo))
+        private void addNut() 
+        {
+            // Written, 15.07.2022
+
+            if (boltSettings.addNutSettings.customNutPrefab != null)
+            {
+                addNutModel = Instantiate(boltSettings.addNutSettings.customNutPrefab);
+            }
+            else
+            {
+                addNutModel = Instantiate(nutPrefab);
+            }
+            addNutModel.transform.parent = part.boltParent.transform;
+            addNutModel.name = boltModel.name + " nut";
+            addNutCallback = addNutModel.AddComponent<BoltCallback>();
+            addNutCallback.bolt = this;
+            addNutCallback.boltSize = boltSettings.addNutSettings.nutSize ?? boltSettings.boltSize;
+            addNutCallback.onMouseEnter += bcb_mouseEnter;
+            addNutCallback.onMouseExit += bcb_mouseExit;
+        }
+        /// <summary>
+        /// Initialies this bolt on <paramref name="p"/>.
+        /// </summary>
+        internal void initBoltOnPart(Part p, BoltSaveInfo saveInfo = default(BoltSaveInfo))
         {
             // Written, 02.07.2022
 
             if (!boltInitialized && boltAssetsLoaded)
             {
+                boltID = "bolt" + ModClient.bolts.Count.ToString("000");
+                part = p;
+
                 if (loadedSaveInfo == null)
                     loadedSaveInfo = saveInfo ?? new BoltSaveInfo();
                 switch (boltSettings.boltType)
                 {
                     case BoltType.custom:
-                        model = Instantiate(boltSettings.customBoltPrefab);
+                        boltModel = Instantiate(boltSettings.customBoltPrefab);
                         break;
                     case BoltType.nut:
-                        model = Instantiate(nutPrefab);
+                        boltModel = Instantiate(nutPrefab);
                         break;
                     case BoltType.screw:
-                        model = Instantiate(screwPrefab);
+                        boltModel = Instantiate(screwPrefab);
                         break;
                     case BoltType.longBolt:
-                        model = Instantiate(longBoltPrefab);
+                        boltModel = Instantiate(longBoltPrefab);
                         break;
                     default:
                     case BoltType.shortBolt:
-                        model = Instantiate(shortBoltPrefab);
+                        boltModel = Instantiate(shortBoltPrefab);
                         break;
                 }
-                boltCallback = model.AddComponent<BoltCallback>();
+                boltModel.transform.parent = part.boltParent.transform;
+                boltModel.name = boltSettings.name == null ? boltID : boltSettings.name;
+                boltCallback = boltModel.AddComponent<BoltCallback>();
                 boltCallback.bolt = this;
+                boltCallback.boltSize = boltSettings.boltSize;
                 boltCallback.onMouseEnter += bcb_mouseEnter;
                 boltCallback.onMouseExit += bcb_mouseExit;
+                if (boltSettings.addNut)
+                {
+                    addNut();
+                }
                 updateNutPosRot();
+
                 ModClient.bolts.Add(this);
-                ID = "bolt" + ModClient.bolts.Count.ToString("000");
-                part = p;
-                model.name = ID;
-                model.transform.SetParent(part.boltParent.transform);
                 boltInitialized = true;
             }
         }
         /// <summary>
-        /// Updates the models position and rotation based off <see cref="startPosition"/>, <see cref="startEulerAngles"/>, <see cref="BoltSaveInfo.tightness"/>
+        /// Updates the models position and rotation based off <see cref="startPosition"/>, <see cref="startEulerAngles"/>,
         /// </summary>
         internal void updateNutPosRot()
         {
-            if (model)
+            if (boltModel)
             {
-                model.transform.localPosition = startPosition + positionDelta * loadedSaveInfo.tightness;
-                model.transform.localEulerAngles = startEulerAngles + rotationDelta * loadedSaveInfo.tightness;
+                boltModel.transform.localPosition = startPosition + positionDelta * loadedSaveInfo.boltTightness;
+                boltModel.transform.localEulerAngles = startEulerAngles + rotationDelta * loadedSaveInfo.boltTightness;
+
+                if (boltSettings.addNut && addNutModel)
+                {
+                    Vector3 nutAbsolute = positionDelta * boltSettings.maxTightness;
+                    Vector3 nutPos = startPosition + (nutAbsolute * 2) + (boltSettings.addNutSettings.nutOffset * boltSettings.posDirection);
+                    addNutModel.transform.localPosition = nutPos - positionDelta * loadedSaveInfo.addNutTightness;
+                    addNutModel.transform.localEulerAngles = startEulerAngles - rotationDelta * loadedSaveInfo.addNutTightness;
+                }
             }
         }
         /// <summary>
@@ -454,7 +592,7 @@ namespace TommoJProductions.ModApi.Attachable
                     shortBoltPrefab = ab.LoadAsset("short bolt.prefab") as GameObject;
                     longBoltPrefab = ab.LoadAsset("long bolt.prefab") as GameObject;
                     ab.Unload(false);
-                    Print("[ModApi.Part] bolt assets loaded");
+                    Print("[ModApi.Bolt] bolt assets loaded");
                     boltAssetsLoaded = true;
                 }
                 else
@@ -463,7 +601,7 @@ namespace TommoJProductions.ModApi.Attachable
                 }
             }
             else
-                Print("[ModApi.Part] bolt assets already loaded. :)");
+                Print("[ModApi.Bolt] bolt assets already loaded. :)");
             return boltAssetsLoaded;
         }
         /// <summary>
@@ -475,7 +613,18 @@ namespace TommoJProductions.ModApi.Attachable
 
             return loadedSaveInfo;
         }
+        /// <summary>
+        /// Resets bolt tightness. if add nut is <see langword="true"/>. resets nut tightness too.
+        /// </summary>
+        public void resetTightness() 
+        {
+            // Written, 16.07.2022
 
+            loadedSaveInfo.boltTightness = 0;
+            if (boltSettings.addNut)
+                loadedSaveInfo.addNutTightness = 0;
+        }
+        
         #endregion
 
         #region Event Handlers
@@ -484,7 +633,7 @@ namespace TommoJProductions.ModApi.Attachable
         {
             if (boltRoutine == null)
             {
-                boltRoutine = boltCallback.StartCoroutine(boltFunction());
+                boltRoutine = boltCallback.StartCoroutine(boltFunction(bcb, data));
             }
         }
         internal void bcb_mouseExit(BoltCallback bcb, PointerEventData data)

@@ -28,8 +28,18 @@ namespace TommoJProductions.ModApi
 
         // part stuff
         private static bool partCheckSet = false;
+        /// <summary>
+        /// Reps all parts that were set in <see cref="partCheckFunction"/>. Reps all <see cref="Part"/> children in root <see cref="pickedPart"/>.
+        /// </summary>
         private static Part[] setParts;
+        /// <summary>
+        /// Reps the root picked part. the part that the player is currently holding.
+        /// </summary>
         private static Part pickedPart;
+        /// <summary>
+        /// Reps the picked object. the object that the player is currently holding.
+        /// </summary>
+        private static GameObject pickedObject;
 
         // bolt stuff
         internal static PhysicsRaycaster raycaster = null;
@@ -41,19 +51,24 @@ namespace TommoJProductions.ModApi
             // Written, 09.06.2022
 
             yield return null;
-            pickedPart = getPickedUpGameObject.Value?.GetComponent<Part>();
-            if (pickedPart)
+            pickedObject = getPickedUpGameObject.Value;
+            if (pickedObject)
             {
-                pickedPart.invokePickedUpEvent();
-                setParts = pickedPart.gameObject.getBehavioursInChildren<Part>();
-                if (setParts != null && setParts.Length > 0)
+                pickedPart = pickedObject.GetComponent<Part>();
+                if (pickedPart)
                 {
-                    partCheckSet = true;
-                    foreach (Part p in setParts)
+                    pickedPart.invokePickedUpEvent();
+                    setParts = pickedPart.gameObject.getBehavioursInChildren<Part>();
+                    if (setParts != null && setParts.Length > 0)
                     {
-                        p.gameObject.sendToLayer(LayerMasksEnum.Wheel);
+                        partCheckSet = true;
+                        foreach (Part p in setParts)
+                        {
+                            p.gameObject.sendToLayer(LayerMasksEnum.Wheel);
+                        }
                     }
                 }
+                invokePickUpEvent(pickedObject);
             }
         }
 
@@ -72,16 +87,22 @@ namespace TommoJProductions.ModApi
         {
             // Written, 11.07.2022
 
-            activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
-            actionCallback = activateGameState.appendNewAction(setUpModApi);
-            ConsoleCommand.Add(new ConsoleCommands());
-            parts.Clear();
-            bolts.Clear();
-            Print("modapi: Injected");
+            if (!Camera.main)
+            {
+                activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
+                actionCallback = activateGameState.appendNewAction(setUpModApi);
+                Print("modapi: Injected");
+            }
+            else
+                setUpModApi();
         }
         private static void setUpModApi()
         {
             // Written, 11.07.2022
+
+            ConsoleCommand.Add(new ConsoleCommands());
+            parts.Clear();
+            bolts.Clear();
 
             setUpPart();
             setUpBolt();
@@ -92,7 +113,10 @@ namespace TommoJProductions.ModApi
             Print("modapi: Loaded");
 
             int index = Array.IndexOf(activateGameState.Actions, actionCallback);
+            if (index == -1)
+                return;
             activateGameState.RemoveAction(index);
+            Print("modapi: Cleaned up");
         }
         private static void setUpPart() 
         {
@@ -120,6 +144,8 @@ namespace TommoJProductions.ModApi
                 pickedPart.invokeDroppedEvent();
                 partCheckReset();
             }
+            invokeDropEvent(pickedObject);
+            resetObject();
         }
         private static void partThrown()
         {
@@ -130,6 +156,8 @@ namespace TommoJProductions.ModApi
                 pickedPart.invokeThrownEvent();
                 partCheckReset();
             }
+            invokeThrowEvent(pickedObject);
+            resetObject();
         }
         private static void partCheckReset()
         {
@@ -142,6 +170,10 @@ namespace TommoJProductions.ModApi
             }
             setParts = null;
             pickedPart = null;
+        }
+        private static void resetObject() 
+        {
+            pickedObject = null;
         }
         private static void setUpBolt()
         {

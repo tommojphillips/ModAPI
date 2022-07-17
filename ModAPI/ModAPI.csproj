@@ -58,10 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attachable\Bolt.cs" />
-    <Compile Include="Attachable\BoltManager.cs" />
     <Compile Include="Attachable\CallBacks\BoltCallback.cs" />
-    <Compile Include="Attachable\IHasBolts.cs" />
-    <Compile Include="Attachable\IHasPartAccess.cs" />
     <Compile Include="Attachable\Part.cs" />
     <Compile Include="ConsoleCommands.cs" />
     <Compile Include="ModApiLoader.cs" />
@@ -78,6 +75,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>AssemblyInfo.tt</DependentUpon>
     </Compile>
+    <Compile Include="Vector3Info.cs" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

@@ -15,7 +15,6 @@ using System.IO;
 
 namespace TommoJProductions.ModApi
 {
-
     #region enums
 
     /// <summary>
@@ -268,6 +267,17 @@ namespace TommoJProductions.ModApi
 
     #endregion
 
+    #region Excections
+
+    public class saveDataNotFoundException : Exception 
+    {
+        // Written, 15.07.2022
+
+        public saveDataNotFoundException(string message) : base(message) { }
+    }
+
+    #endregion
+
     /// <summary>
     /// Represents useful properties for interacting with My Summer Car and PlayMaker.
     /// </summary>
@@ -282,11 +292,21 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public const string version = VersionInfo.version;
 
+#if DEBUG
+        public static bool devMode = true;
+#else
+        public static bool devMode = false;
+#endif
+
+        internal static Part _inspectingPart = null;
+        internal static BoltCallback _inspectingBolt = null;
+
         private static PlayMakerFSM _pickUp;
         private static FsmGameObject _pickedUpGameObject;
         private static FsmGameObject _raycastHitGameObject;
         private static AudioSource _assembleAudio;
         private static AudioSource _disassembleAudio;
+        private static AudioSource _screwAudio;
         private static FsmBool _guiDisassemble;
         private static FsmBool _guiAssemble;
         private static FsmBool _guiUse;
@@ -296,17 +316,31 @@ namespace TommoJProductions.ModApi
         private static FsmString _guiInteraction;
         private static FsmString _playerCurrentVehicle;
         private static FieldInfo _modsFolderFieldInfo;
-        private static FsmFloat _toolsize;
-        private static string[] maskNames;
-        private static string propertyString = "";
-#if DEBUG
-        internal static bool devMode = true;
-#else
-        internal static bool devMode = false;
-#endif
+        private static FsmFloat _toolWrenchSize;
+        private static FsmFloat _boltingSpeed;
+        private static string[] _maskNames;
+        private static string _propertyString = "";
+        private static Material _activeBoltMaterial;
+        private static GameObject _masterAudioGameObject;
+        private static Dictionary<string, AudioSource> masterAudioDictionary = new Dictionary<string, AudioSource>();
 
-        internal static Part _inspectingPart = null;
-        internal static BoltCallback _inspectingBolt = null;
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Occurs when the player picks up a gameobject.
+        /// </summary>
+        ///
+        public static event Action<GameObject> onGameObjectPickUp;
+        /// <summary>
+        /// Occurs when the player drops a gameobject.
+        /// </summary>
+        public static event Action<GameObject> onGameObjectDrop;
+        /// <summary>
+        /// Occurs when the player throws a gameobject.
+        /// </summary>
+        public static event Action<GameObject> onGameObjectThrow;
 
         #endregion
 
@@ -334,6 +368,18 @@ namespace TommoJProductions.ModApi
                 if (_disassembleAudio == null)
                     _disassembleAudio = GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
                 return _disassembleAudio;
+            }
+        }
+        /// <summary>
+        /// Represents the bolt screw audio source.
+        /// </summary>
+        public static AudioSource screwAudio
+        {
+            get
+            {
+                if (_screwAudio == null)
+                    _screwAudio = GameObject.Find("MasterAudio/CarBuilding/bolt_screw").GetComponent<AudioSource>();
+                return _screwAudio;
             }
         }
         /// <summary>
@@ -567,86 +613,181 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public static string getModsFolder => (string)getModsFolderFi.GetValue(null);
         /// <summary>
-        /// Gets the currently used tool.
+        /// gets the currently used wrench size casted to a <see cref="Bolt.BoltSize"/>
         /// </summary>
-        public static Bolt.BoltSize getTool
+        public static Bolt.BoltSize getToolWrenchSize_boltSize
         {
             get
             {
-                if (_toolsize == null)
-                    _toolsize = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera/SelectItem").GetPlayMaker("Selection").FsmVariables.FindFsmFloat("OldWrench");
-                return (Bolt.BoltSize)(_toolsize.Value * 100);
+                return (Bolt.BoltSize)(getToolWrenchSize_float * 100f);
+            }
+        }
+        /// <summary>
+        /// gets the currently used wrench size
+        /// </summary>
+        public static float getToolWrenchSize_float
+        {
+            get
+            {
+                if (_toolWrenchSize == null)
+                    _toolWrenchSize = PlayMakerGlobals.Instance.Variables.FindFsmFloat("ToolWrenchSize");
+                return _toolWrenchSize.Value;
             }
         }
         /// <summary>
         /// Represents if mod api is set up.
         /// </summary>
         public static bool modApiSetUp => ModApiLoader.modapiGo;
+        /// <summary>
+        /// Gets the bolting speed wait.
+        /// </summary>
+        public static float getBoltingSpeed
+        {
+            get
+            {
+                if (_boltingSpeed == null)
+                    _boltingSpeed = PlayMakerGlobals.Instance.Variables.FindFsmFloat("BoltingSpeed");
+                return _boltingSpeed.Value;
+            }
+        }
+        /// <summary>
+        /// Gets the active bolt material. (green bolt texture)
+        /// </summary>
+        public static Material getActiveBoltMaterial
+        {
+            get
+            {
+                if (_activeBoltMaterial == null)
+                {
+                    Material[] gameMaterials = Resources.FindObjectsOfTypeAll<Material>();
+                    _activeBoltMaterial = gameMaterials.First(m => m.name == "activebolt");
+                }
+                return _activeBoltMaterial;
+            }
+        }
+
+        public static GameObject getMasterAudioGameObject 
+        {
+            get 
+            {
+                if (!_masterAudioGameObject)
+                    _masterAudioGameObject = GameObject.Find("MasterAudio");
+                return _masterAudioGameObject;
+            }
+        }
+
+        #endregion
+
+        #region IEnumerator
+
+        /// <summary>
+        /// Runs a coroutine synchronously. Waits for the coroutine to finish.
+        /// </summary>
+        /// <param name="func">The corountine to run synchronously.</param>
+        public static void waitCoroutine(IEnumerator func)
+        {
+            while (func.MoveNext())
+            {
+                if (func.Current != null)
+                {
+                    IEnumerator num;
+                    try
+                    {
+                        num = (IEnumerator)func.Current;
+                    }
+                    catch (InvalidCastException)
+                    {
+                        if (func.Current.GetType() == typeof(WaitForSeconds))
+                            Debug.LogWarning("[wait for coroutine] Skipped call to WaitForSeconds.");
+                        return;
+                    }
+                    waitCoroutine(num);
+                }
+            }
+        }
+        /// <summary>
+        /// if <see cref="devMode"/> is true, this enumerator will poll for either, (CTRL+P) for raycating for parts or (CTRL+B) for bolts. allows raycast for parts or bolts. and assigns inspection VAR with out behaviour or null.
+        /// </summary>
+        public static IEnumerator devModeFunc()
+        {
+            while (devMode)
+            {
+                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.P))
+                {
+                    Part.inspectionPart = raycastForBehaviour<Part>();
+                }
+                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.B))
+                {
+                    BoltCallback.inspectionBolt = raycastForBehaviour<BoltCallback>();
+                }
+                yield return null;
+            }
+        }
 
         #endregion
 
         #region Methods
 
+        // [Sound]
         /// <summary>
-        /// Teleports a part to a world position.
+        /// Plays a sound at <paramref name="transform"/> world position. if sound is already playing, does nothing.
         /// </summary>
-        /// <param name="part">The part to teleport.</param>
-        /// <param name="force">force a uninstall if required?</param>
-        /// <param name="position">The position to teleport the part to.</param>
-        public static void teleport(this Part part, bool force, Vector3 position)
+        /// <param name="transform">the world position to play sound at.</param>
+        /// <param name="soundType">The sound type group. eg => CarBuilding</param>
+        /// <param name="variantName">The sound variant in the soundType group. eg => Assemble</param>
+        public static void playSoundAt(Transform transform, string soundType, string variantName)
         {
-            // Written, 09.07.2022
+            // Written, 16.07.2022
 
-            if (part.installed && force)
-                part.disassemble();
-            part.transform.teleport(position);
-        }
-        /// <summary>
-        /// Teleports a gameobject to a world position.
-        /// </summary>
-        /// <param name="gameobject">The gameobject to teleport</param>
-        /// <param name="position">The position to teleport the go to.</param>
-        public static void teleport(this GameObject gameobject, Vector3 position)
-        {
-            // Written, 09.07.2022
-
-            gameobject.transform.teleport(position);
-        }
-        /// <summary>
-        /// Teleports a gameobject to a world position.
-        /// </summary>
-        /// <param name="transform">The transform to teleport</param>
-        /// <param name="position">The position to teleport the go to.</param>
-        public static void teleport(this Transform transform, Vector3 position)
-        {
-            // Written, 09.07.2022
-
-            Rigidbody rb = transform.GetComponent<Rigidbody>();
-            if (rb)
-                if (!rb.isKinematic)
-                    rb = null;
-                else
-                    rb.isKinematic = true;
-            transform.root.position = position;
-            if (rb)
-                rb.isKinematic = false;
-        }
-        /// <summary>
-        /// Gets <see cref="DescriptionAttribute.Description"/> on provided object type. if attribute doesn't exist, returns <see cref="MemberInfo.Name"/>
-        /// </summary>
-        /// <param name="mi">the member info to get info from.</param>
-        public static string getDescription(this MemberInfo mi)
-        {
-            // Written, 07.07.2022
-
-            object o = mi.GetCustomAttributes(typeof(DescriptionAttribute), false);
-            DescriptionAttribute[] d = o as DescriptionAttribute[];
-            if (d != null && d.Length > 0)
+            AudioSource source = getSourceFromMasterAudio(soundType, variantName);
+            if (source)
             {
-                return d[0].Description;
+                source.transform.position = transform.position;
+                source.Play();
             }
-            return mi.Name;
         }
+        /// <summary>
+        /// Plays a sound at <paramref name="transform"/> world position. if sound is already playing, stops and restarts.
+        /// </summary>
+        /// <param name="transform">the world position to play sound at.</param>
+        /// <param name="soundType">The sound type group. eg => CarBuilding</param>
+        /// <param name="variantName">The sound variant in the soundType group. eg => Assemble</param>
+        public static void playSoundAtInterupt(Transform transform, string soundType, string variantName)
+        {
+            // Written, 16.07.2022
+
+            AudioSource source = getSourceFromMasterAudio(soundType, variantName);
+            if (source)
+            {
+                source.transform.position = transform.position;
+                if (source.isPlaying)
+                    source.Stop();
+                source.Play();
+            }
+        }
+        /// <summary>
+        /// Gets the audio source from the master audio gameobject (MasterAudio). path => <paramref name="soundType"/>/<paramref name="variantName"/> | eg => CarBuilding/assemble. adds it to a dictionary for for a less performat hit next time. asking for the same path.
+        /// </summary>
+        /// <param name="soundType">The sound type group. eg => CarBuilding</param>
+        /// <param name="variantName">The sound variant in the soundType group. eg => assemble</param>
+        public static AudioSource getSourceFromMasterAudio(string soundType, string variantName)
+        {
+            // Written, 16.07.2022
+
+            string search = $"{soundType}/{variantName}";
+            AudioSource source;
+            if (!masterAudioDictionary.TryGetValue(search, out source))
+            {
+                source = getMasterAudioGameObject.transform.Find(search)?.gameObject.GetComponent<AudioSource>();
+                if (source)
+                    masterAudioDictionary.Add(search, source);
+                else
+                    print($"Error: Could not find audio path: {search}.");
+            }
+            return source;
+        }
+
+        // [GUI]
         /// <summary>
         /// [GUI] draws a vector3 that can be edited.
         /// </summary>
@@ -680,7 +821,7 @@ namespace TommoJProductions.ModApi
             return vector3;
         }
         /// <summary>
-        /// [GUI] draws an enum that can be edited
+        /// [GUI] draws an enum that can be edited as a list of toggles.
         /// </summary>
         /// <typeparam name="T">The type of enum</typeparam>
         /// <param name="e">Reference enum (selected)</param>
@@ -706,7 +847,7 @@ namespace TommoJProductions.ModApi
             }
         }
         /// <summary>
-        /// [GUI] draws an enum that can be edited
+        /// [GUI] draws an enum that can be edited as a list of toggles.
         /// </summary>
         /// <typeparam name="T">The type of enum</typeparam>
         /// <param name="e">Reference enum (selected)</param>
@@ -728,9 +869,9 @@ namespace TommoJProductions.ModApi
             using (new HorizontalScope())
             {
                 drawProperty(propertyName);
-                propertyString = TextField(property.ToString(), maxLength);
+                _propertyString = TextField(property.ToString(), maxLength);
             }
-            float.TryParse(propertyString, out property);
+            float.TryParse(_propertyString, out property);
         }
         /// <summary>
         /// [GUI] draws a property that can be edited
@@ -769,49 +910,20 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// [GUI] draws a property.
         /// </summary>
-        /// <param name="propertyName">The property object name</param>
         /// <param name="property">the reference of the property to draw.</param>
-        public static void drawProperty(string propertyName, object property = null)
+        public static void drawProperty(object property)
         {
-            if (property != null)
-                Label($"{propertyName}: {property}");
-            else
-                Label($"{propertyName}");
+            Label($"{property}");
         }
         /// <summary>
-        /// [GUI] draws a property. eg => <see cref="Part.partSettings"/>.drawProperty("assembleType") would draw a property as such: "assembleType: joint". if member has <see cref="DescriptionAttribute"/> will use the description as the property title. Works with fields, properties and enums
+        /// [GUI] draws a property.
         /// </summary>
-        /// <param name="t">The class instance get value from.</param>
-        /// <param name="memberName">The class member name to get a field/property instance from.</param>
-        public static void drawProperty<T>(this T t, string memberName) where T : class
+        /// <param name="propertyName">The property object name</param>
+        /// <param name="property">the reference of the property to draw.</param>
+        public static void drawProperty(object propertyName, object property)
         {
-            // Written, 08.07.2022
-
-            Type _t = t.GetType();
-            FieldInfo fi = _t.GetField(memberName);
-            PropertyInfo pi = null;
-            if (fi == null)
-                pi = _t.GetProperty(memberName);
-            string title = "null";
-            object value = "null";
-            if (_t.IsEnum)
-            {
-                title = _t.getDescription();
-                value = _t.GetField(memberName).getDescription();
-            }
-            else if (fi != null)
-            {
-                title = fi.getDescription();
-                value = fi.GetValue(t);
-            }
-            else if (pi != null)
-            {
-                title = pi.getDescription();
-                value = pi.GetValue(t, null);
-            }
-            Label($"{title}: {value}");
+            Label($"{propertyName}: {property}");
         }
-
         /// <summary>
         /// Displays an interaction text and optional hand symbol. If no parameters are passed into the method (default parameters), turns off the interaction.
         /// </summary>
@@ -869,6 +981,8 @@ namespace TommoJProductions.ModApi
 
             ModConsole.Log(string.Format("<color=grey>[ModAPI] " + format + "</color>", args));
         }
+
+        // [Raycast]
         /// <summary>
         /// Gets the layermask. Used to make raycast masks.
         /// </summary>
@@ -877,12 +991,12 @@ namespace TommoJProductions.ModApi
         {
             // Written, 03.07.2022
 
-            maskNames = new string[masks.Length];
+            _maskNames = new string[masks.Length];
             for (int i = 0; i < masks.Length; i++)
             {
-                maskNames[i] = masks[i].ToString();
+                _maskNames[i] = masks[i].ToString();
             }
-            return LayerMask.GetMask(maskNames);
+            return LayerMask.GetMask(_maskNames);
         }
         /// <summary>
         /// Raycasts for a type of behaviour
@@ -901,36 +1015,206 @@ namespace TommoJProductions.ModApi
             }
             return t;
         }
-        public static IEnumerator devModeFunc()
+
+        
+        internal static void invokePickUpEvent(GameObject gameObject)
         {
-            while (devMode)
-            {
-                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.P))
-                {
-                    Part.inspectionPart = raycastForBehaviour<Part>();
-                }
-                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.B))
-                {
-                    if (_inspectingBolt)
-                        _inspectingBolt.inspectingBolt = false;
-                    _inspectingBolt = raycastForBehaviour<BoltCallback>();
-                    if (_inspectingBolt)
-                        _inspectingBolt.inspectingBolt = true;
-                }
-                yield return null;
-            }
+            onGameObjectPickUp?.Invoke(gameObject);
+        }
+        internal static void invokeDropEvent(GameObject gameObject)
+        {
+            onGameObjectDrop?.Invoke(gameObject);
+        }
+        internal static void invokeThrowEvent(GameObject gameObject)
+        {
+            onGameObjectThrow?.Invoke(gameObject);
         }
 
         #endregion
 
         #region ExMethods
 
-
         /// <summary>
-        /// saves data.
+        /// Teleports a part to a world position.
         /// </summary>
-        /// <param name="data">the data to save.</param>
+        /// <param name="part">The part to teleport.</param>
+        /// <param name="force">force a uninstall if required?</param>
+        /// <param name="position">The position to teleport the part to.</param>
+        public static void teleport(this Part part, bool force, Vector3 position)
+        {
+            // Written, 09.07.2022
+
+            if (part.installed && force)
+                part.disassemble(true);
+            part.transform.teleport(position);
+        }
+        /// <summary>
+        /// Teleports a gameobject to a world position.
+        /// </summary>
+        /// <param name="gameobject">The gameobject to teleport</param>
+        /// <param name="position">The position to teleport the go to.</param>
+        public static void teleport(this GameObject gameobject, Vector3 position)
+        {
+            // Written, 09.07.2022
+
+            gameobject.transform.teleport(position);
+        }
+        /// <summary>
+        /// Teleports a transform to a world position.
+        /// </summary>
+        /// <param name="transform">The transform to teleport</param>
+        /// <param name="position">The position to teleport the go to.</param>
+        public static void teleport(this Transform transform, Vector3 position)
+        {
+            // Written, 09.07.2022
+
+            Rigidbody rb = transform.GetComponent<Rigidbody>();
+            if (rb)
+                if (!rb.isKinematic)
+                    rb = null;
+                else
+                    rb.isKinematic = true;
+            transform.root.position = position;
+            if (rb)
+                rb.isKinematic = false;
+        }
+        /// <summary>
+        /// Gets <see cref="DescriptionAttribute.Description"/> on provided object type. if attribute doesn't exist, returns <see cref="MemberInfo.Name"/>
+        /// </summary>
+        /// <param name="mi">the member info to get info from.</param>
+        public static string getDescription(this MemberInfo mi)
+        {
+            // Written, 07.07.2022
+
+            object o = mi.GetCustomAttributes(typeof(DescriptionAttribute), false);
+            DescriptionAttribute[] d = o as DescriptionAttribute[];
+            if (d != null && d.Length > 0)
+            {
+                return d[0].Description;
+            }
+            return mi.Name;
+        }
+        /// <summary>
+        /// [GUI] draws a property. eg => <see cref="Part.partSettings"/>.drawProperty("assembleType") would draw a property as such: "assembleType: joint". if member has <see cref="DescriptionAttribute"/> will use the description as the property title. Works with fields, properties and enums
+        /// </summary>
+        /// <param name="t">The class instance get value from.</param>
+        /// <param name="memberName">The class member name to get a field/property instance from.</param>
+        public static void drawProperty<T>(this T t, string memberName) where T : class
+        {
+            // Written, 08.07.2022
+
+            Type _t = t.GetType();
+            FieldInfo fi = _t.GetField(memberName);
+            PropertyInfo pi = null;
+            if (fi == null)
+                pi = _t.GetProperty(memberName);
+            string title = "null";
+            object value = "null";
+            if (_t.IsEnum)
+            {
+                title = _t.getDescription();
+                value = _t.GetField(memberName).getDescription();
+            }
+            else if (fi != null)
+            {
+                title = fi.getDescription();
+                value = fi.GetValue(t);
+            }
+            else if (pi != null)
+            {
+                title = pi.getDescription();
+                value = pi.GetValue(t, null);
+            }
+            Label($"{title}: {value}");
+        }
+        /// <summary>
+        /// [GUI] draws an enum as a property.
+        /// </summary>
+        /// <param name="t">The enum instance get value from.</param>
+        public static void drawProperty<T>(this T t) where T : Enum
+        {
+            // Written, 08.07.2022
+
+            Type _t = t.GetType();
+            string title = _t.getDescription();
+            string valueName = t.ToString();
+            string value = _t.GetField(valueName)?.getDescription();
+            Label($"{title}: {value ?? valueName}");
+        }
+        /// <summary>
+        /// Converts a <see cref="Vector3Info"/> to a <see cref="Vector3"/>.
+        /// </summary>
+        /// <param name="i">the vector3 info to convert</param>
+        /// <returns>the vector3 info as a vector3.</returns>
+        public static Vector3 toVector3(this Vector3Info i)
+        {
+            return new Vector3(i.x, i.y, i.z);
+        }
+        /// <summary>
+        /// converts a vector3.
+        /// </summary>
+        /// <param name="v">the vector3 to convert.</param>
+        /// <returns>new instance Vector3Info</returns>
+        public static Vector3Info getInfo(this Vector3 v)
+        {
+            return new Vector3Info(v);
+        }
+        /// <summary>
+        /// gets the actual size of the mesh. 
+        /// </summary>
+        /// <param name="filter">the mesh filter to get mesh and scale.</param>
+        /// <returns>filter.mesh size * transform scale.</returns>
+        public static Vector3 getMeshSize(this MeshFilter filter)
+        {
+            // Written, 15.07.2022
+
+            Vector3 size = filter.mesh.bounds.size;
+            Vector3 scale = filter.transform.localScale;
+            return new Vector3(size.x * scale.x, size.y * scale.y, size.z * scale.z);
+        }
+        /// <summary>
+        /// gets the actual size of the mesh. 
+        /// </summary>
+        /// <param name="transform">the transform that this mesh is on.</param>
+        /// <param name="mesh">the mesh to get size of</param>
+        /// <returns>mesh size * transform scale.</returns>
+        public static Vector3 getMeshSize(this Transform transform, Mesh mesh)
+        {
+            // Written, 15.07.2022
+
+            Vector3 size = mesh.bounds.size;
+            Vector3 scale = transform.localScale;
+            return new Vector3(size.x * scale.x, size.y * scale.y, size.z * scale.z);
+        }
+        /// <summary>
+        /// loads data from a file or throws an error on if save data doesn't exist.
+        /// </summary>
+        /// <typeparam name="T">The type of Object to load</typeparam>
+        /// <param name="data">The ref to load data to</param>
         /// <param name="mod">The mod to save data on</param>
+        /// <param name="saveFileName">The save file name with or without file extention. </param>
+        /// <exception cref="saveDataNotFoundException"/>
+        public static void loadDataOrThrow<T>(this Mod mod, out T data, string saveFileName) where T : class, new()
+        {
+            // Written, 15.07.2022
+
+            if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
+            {
+                data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
+                ModConsole.Print($"{mod.ID}: loaded save data (Exists).");
+            }
+            else
+            {
+                ModConsole.Print($"{mod.ID}: save file didn't exist.. throwing saveDataNotFoundException.");
+                throw new saveDataNotFoundException("");
+            }
+        }
+        /// <summary>
+        /// saves data to a file.
+        /// </summary>
+        /// <typeparam name="T">The type of Object to save</typeparam>
+        /// <param name="data">the data to save.</param>
+        /// <param name="mod">The mods config folder to save data in</param>
         /// <param name="saveFileName">The save file name with or without file extention. </param>
         /// <returns>Returns <see langword="true"/> if save file exists.</returns>
         public static void saveData<T>(this Mod mod, T data, string saveFileName) where T : class, new()
@@ -941,13 +1225,14 @@ namespace TommoJProductions.ModApi
             ModConsole.Print($"{mod.ID}: saved data.");
         }
         /// <summary>
-        /// Loads or creates data.
+        /// Loads data from a file. if data doesn't exist, creates new data.
         /// </summary>
+        /// <typeparam name="T">The type of Object to load</typeparam>
         /// <param name="data">The ref to load data to</param>
         /// <param name="mod">The mod to save data on</param>
         /// <param name="saveFileName">The save file name with or without file extention. </param>
         /// <returns>Returns <see langword="true"/> if save file exists.</returns>
-        public static bool loadOrCreateData<T>(this Mod mod , ref T data, string saveFileName) where T : class, new()
+        public static bool loadOrCreateData<T>(this Mod mod , out T data, string saveFileName) where T : class, new()
         {
             // Written, 12.06.2022
 
@@ -989,7 +1274,7 @@ namespace TommoJProductions.ModApi
             }
         }
         /// <summary>
-        /// Gets the first found behaviour in the parent.
+        /// Gets the first found behaviour in the parent. where <paramref name="func"/> action returns true.
         /// </summary>
         /// <typeparam name="T">The type of behaviour to get</typeparam>
         /// <param name="gameObject">The gameobject to get the behaviour on.</param>
@@ -1024,7 +1309,7 @@ namespace TommoJProductions.ModApi
             return getBehaviourInParent<T>(gameObject, func => true);
         }
         /// <summary>
-        /// Gets all behaviours found in all parents.
+        /// Gets all behaviours found in all parents. where <paramref name="func"/> action returns true.
         /// </summary>
         /// <typeparam name="T">The type of behaviour to get</typeparam>
         /// <param name="gameObject">The gameobject to get the behaviour on.</param>
@@ -1064,7 +1349,7 @@ namespace TommoJProductions.ModApi
             return getBehavioursInParent<T>(gameObject, func => true);
         }
         /// <summary>
-        /// Gets the first found behaviour in the children.
+        /// Gets the first found behaviour in the children. where <paramref name="func"/> action returns true.
         /// </summary>
         /// <typeparam name="T">The type of behaviour to get</typeparam>
         /// <param name="gameObject">The gameobject to get the behaviour on.</param>
@@ -1101,7 +1386,7 @@ namespace TommoJProductions.ModApi
             return getBehaviourInChildren<T>(gameObject, func => true);
         }
         /// <summary>
-        /// Gets all behaviours found in all children.
+        /// Gets all behaviours found in all children. where <paramref name="func"/> action returns true.
         /// </summary>
         /// <typeparam name="T">The type of behaviour to get</typeparam>
         /// <param name="gameObject">The gameobject to get the behaviour on.</param>

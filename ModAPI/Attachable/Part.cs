@@ -44,11 +44,11 @@ namespace TommoJProductions.ModApi.Attachable
             /// <summary>
             /// Represents the parts world position.
             /// </summary>
-            public Vector3 position { get; set; } = Vector3.zero;
+            public Vector3Info position { get; set; } = Vector3.zero;
             /// <summary>
             /// Represents the parts world rotation (euler angles)
             /// </summary>
-            public Vector3 rotation { get; set; } = Vector3.zero;
+            public Vector3Info rotation { get; set; } = Vector3.zero;
             /// <summary>
             /// Represents all bolt save infos. <see langword="null"/> if part has no bolts.
             /// </summary>
@@ -398,7 +398,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the runtime id of this part.
         /// </summary>
-        public string ID { get; private set; }
+        public string PartID { get; private set; }
         /// <summary>
         /// Represents if the part is installed or not.
         /// </summary>
@@ -495,11 +495,11 @@ namespace TommoJProductions.ModApi.Attachable
         private bool _holdingCheck;
 
         internal static Part inspectionPart = null;
-        private static bool inspectionPartSet = false;
+        private bool inspectionPartSet = false;
         private static Vector3[] inspectionPartPosition;
         private static Vector3[] inspectionPartEuler;
         private static bool inspectingBolt = false;
-        private static bool inspectionBoltSet = false;
+        private bool inspectionBoltSet = false;
         private static Bolt inspectionBolt = null;
 
         private static int top = 75;
@@ -544,8 +544,11 @@ namespace TommoJProductions.ModApi.Attachable
                         inspectionPartPosition[i] = t.localPosition;
                         inspectionPartEuler[i] = t.localEulerAngles;
                     }
+                    inspectionPartSet = true;
                 }
-                inspectionPartSet = true;
+                getToolWrenchSize_boltSize.drawProperty();
+                drawProperty("tool size", getToolWrenchSize_float);
+                drawProperty("bolting speed", getBoltingSpeed);
                 using (AreaScope area = new AreaScope(new Rect(left, top, width, height - top)))
                 {
                     using (new VerticalScope("box"))
@@ -642,7 +645,7 @@ namespace TommoJProductions.ModApi.Attachable
                                         drawProperty(t.name);
                                         if (Button("Teleport to trigger"))
                                         {
-                                            Camera.main.gameObject.teleport(triggers[i].triggerGameObject.transform.position);
+                                            Camera.main.gameObject.teleport(t.position);
                                         }
                                     }
                                     drawPropertyVector3("position", ref inspectionPartPosition[i]);
@@ -669,10 +672,12 @@ namespace TommoJProductions.ModApi.Attachable
                         {
                             if (inspectionBolt == null)
                                 inspectionBolt = bolts[0];
-                            inspectionBolt.boltCallback.inspectionPosition = inspectionBolt.startPosition;
-                            inspectionBolt.boltCallback.inspectionEuler = inspectionBolt.startEulerAngles;
+                            BoltCallback.inspectionPosition = inspectionBolt.startPosition;
+                            BoltCallback.inspectionEuler = inspectionBolt.startEulerAngles;
+                            if (inspectionBolt.boltSettings.addNut)
+                                BoltCallback.inspectionOffset = inspectionBolt.boltSettings.addNutSettings.nutOffset;
+                            inspectionBoltSet = true;
                         }
-                        inspectionBoltSet = true;
                         using (AreaScope area = new AreaScope(new Rect(left - width - margin, top, width, height)))
                         {
                             using (new HorizontalScope("box"))
@@ -680,7 +685,6 @@ namespace TommoJProductions.ModApi.Attachable
                                 Color c1 = new Color32(0, 178, 230, 176);
                                 Color c2 = new Color32(0, 62, 230, 153);
                                 GUIStyle style = new GUIStyle();
-                                style.hover.textColor = c2;
                                 style.border = new RectOffset(0, 0, 0, 0);
                                 style.alignment = TextAnchor.MiddleCenter;
                                 style.fontSize = 14;
@@ -689,7 +693,7 @@ namespace TommoJProductions.ModApi.Attachable
                                     bool menuCheck = bolts[i] == inspectionBolt;
                                     style.normal.textColor = menuCheck ? c1 : Color.white;
 
-                                    if (Button(bolts[i].model.name, style))
+                                    if (Button(bolts[i].boltModel.name, style))
                                     {
                                         inspectionBolt = bolts[i];
                                         inspectionBoltSet = false;
@@ -751,7 +755,7 @@ namespace TommoJProductions.ModApi.Attachable
             transform.parent = triggers[installPointIndex].partPivot.transform;
             transform.localPosition = Vector3.zero;
             transform.localEulerAngles = Vector3.zero;
-            //yield return transform.fixTransform(Vector3.zero, Vector3.zero);
+            setActiveAttachedToTrigger(false, false);
             if (hasBolts)
             {
                 boltParent.SetActive(true);
@@ -760,25 +764,32 @@ namespace TommoJProductions.ModApi.Attachable
             switch (partSettings.assembleType)
             {
                 case AssembleType.static_rigidbodyDelete:
-                    cachedMass = cachedRigidBody.mass;
-                    Destroy(cachedRigidBody);
-                    yield return null;
+                    if (cachedRigidBody)
+                    {
+                        cachedMass = cachedRigidBody.mass;
+                        Destroy(cachedRigidBody);
+                        yield return null;
+                    }
                     break;
                 case AssembleType.static_rigidibodySetKinematic:
                     cachedRigidBody.isKinematic = true;
                     break;
                 case AssembleType.joint:
+                    if (joint)
+                    {
+                        Destroy(joint);
+                        yield return null;
+                    }
                     joint = gameObject.AddComponent<FixedJoint>();
                     joint.connectedBody = (partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length > 0 ? partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex] : installPointColliders[installPointIndex].transform.GetComponentInParent<Rigidbody>()) ?? throw new Exception($"[Assemble.{name}] (Joint) Error assigning connected body. could not find a rigidbody in parent. assign a rigidbody manually at 'partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex]'");
                     updateJointBreakForce();
-                    yield return null;
                     break;
             }
             makePartPickable(false);
 
             if (playSound)
             {
-                MasterAudio.PlaySound3DAndForget("CarBuilding", transform, variationName: "assemble");
+                playSoundAt(transform, "CarBuilding", "assemble");
             }
             triggers[installPointIndex].invokeAssembledEvent();
             onAssemble?.Invoke();
@@ -786,8 +797,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Disassemble this part from the installed point
         /// </summary>
-        /// <param name="playSound">Play disassemble sound?</param>
-        public virtual IEnumerator disassembleFunction(bool playSound = true)
+        public virtual IEnumerator disassembleFunction()
         {
             // Written, 10.08.2018 | Modified, 25.09.2021 | 09.06.2022
 
@@ -797,15 +807,17 @@ namespace TommoJProductions.ModApi.Attachable
             installed = false;
             if (mouseOver)
                 mouseOverGuiDisassembleEnable(false);
-            setActiveAttachedToTrigger(true);
+            setActiveAttachedToTrigger(true, true);
             transform.SetParent(null);
 
             switch (partSettings.assembleType)
             {
                 case AssembleType.static_rigidbodyDelete:
-                    cachedRigidBody = gameObject.AddComponent<Rigidbody>();
+                    if (!cachedRigidBody)
+                    {
+                        cachedRigidBody = gameObject.AddComponent<Rigidbody>();
+                    }
                     cachedRigidBody.mass = cachedMass;
-                    yield return null;
                     break;
                 case AssembleType.static_rigidibodySetKinematic:
                     cachedRigidBody.isKinematic = false;
@@ -817,13 +829,15 @@ namespace TommoJProductions.ModApi.Attachable
             }
             makePartPickable(true);
 
-            if (playSound)
-            {
-                MasterAudio.PlaySound3DAndForget("CarBuilding", transform, variationName: "disassemble");
-            }
+            playSoundAt(transform, "CarBuilding", "disassemble");
+
             if (hasBolts)
             {
-                bolts.forEach(bolt => bolt.loadedSaveInfo.tightness = 0);
+                bolts.forEach(delegate(Bolt b) 
+                {
+                    b.resetTightness();
+                    b.updateNutPosRot();
+                });
                 boltParent.SetActive(false);
             }
             triggers[installPointIndex].invokeDisassembledEvent();
@@ -832,19 +846,14 @@ namespace TommoJProductions.ModApi.Attachable
 
         #endregion
 
-        /// <summary>
-        /// Represents the holding check for a <see cref="Part"/>. Used for starting and checking trigger routine. <see cref="partInTrigger(TriggerCallback)"/>
-        /// </summary>
-        /// <param name="callback_ref">The trigger callback</param>
-        public bool holdingCheck(TriggerCallback callback_ref) 
-        {
-            // Written, 02.07.2022
+        #region Constructors
 
-            _holdingCheck = gameObject.isPlayerHoldingByPickup();
-            if (partSettings.installEitherDirection)
-                _holdingCheck |= callback_ref.callbackCollider.gameObject.getBehaviourInParent<Part>(part => part && !part.installed)?.gameObject.isPlayerHolding() ?? false;
-            return _holdingCheck;
+        ~Part()
+        {
+            parts.Remove(this);
         }
+
+        #endregion
 
         #region Event Handlers
 
@@ -912,8 +921,10 @@ namespace TommoJProductions.ModApi.Attachable
 
             if (!initialized)
             {
+                PartID = "part" + parts.Count.ToString("000");
                 partSettings = new PartSettings(partSettingsRef);
                 triggers = triggerRefs;
+                addInstanceToTriggers();
                 cachedRigidBody = GetComponent<Rigidbody>();
                 cachedMass = cachedRigidBody?.mass ?? 1;
                 loadedSaveInfo = new PartSaveInfo(saveInfo ?? defaultSaveInfo);
@@ -933,7 +944,7 @@ namespace TommoJProductions.ModApi.Attachable
                     }
                     if (installed)
                     {
-                        assemble(installPointColliders[installPointIndex], false);
+                        assemble(installPointColliders[installPointIndex], false, true);
                     }
                 }
                 if (!installed && partSettings.setPositionRotationOnInitialisePart)
@@ -959,10 +970,8 @@ namespace TommoJProductions.ModApi.Attachable
                         collider.material = partSettings.collisionSettings.physicMaterial;
                     }
                 }
-                initialized = true;
                 parts.Add(this);
-                addInstanceToTriggers();
-                ID = "part" + parts.Count.ToString("000");
+                initialized = true;
                 onPostInitPart?.Invoke();
             }
             else
@@ -990,27 +999,35 @@ namespace TommoJProductions.ModApi.Attachable
             {
                 boltTightnessCheck();
             }
-        }  
-        /// <summary>
-        /// Starts the assemble coroutine. (<see cref="assembleFunction(Collider, bool)"/>).
-        /// </summary>
-        /// <param name="installPoint">the install point that this part is assemble-ing to. Note: <paramref name="installPoint"/> must be in <see cref="installPointColliders"/></param>
-        /// <param name="playSound">Play disassemble sound?</param>
-        public virtual void assemble(Collider installPoint, bool playSound = true)
-        {
-            // Written, 11.07.2022
-
-            StartCoroutine(assembleFunction(installPoint, playSound));
         }
         /// <summary>
-        /// Starts the disassemble coroutine. (<see cref="disassembleFunction(bool)"/>).
+        /// Starts the assemble coroutine. (<see cref="assembleFunction(Collider, bool)"/>). async or sync
         /// </summary>
+        /// <param name="runSynchronously">Runs the assemble function synchronously.</param>
+        /// <param name="installPoint">the install point that this part is assemble-ing to. Note: <paramref name="installPoint"/> must be in <see cref="installPointColliders"/></param>
         /// <param name="playSound">Play disassemble sound?</param>
-        public virtual void disassemble(bool playSound = true)
+        public virtual void assemble(Collider installPoint, bool playSound = true, bool runSynchronously = false)
         {
             // Written, 11.07.2022
 
-            StartCoroutine(disassembleFunction(playSound));
+            if (runSynchronously)
+                waitCoroutine(assembleFunction(installPoint, playSound));
+            else
+                StartCoroutine(assembleFunction(installPoint, playSound));
+        }
+        /// <summary>
+        /// Starts the disassemble coroutine. (<see cref="disassembleFunction(bool)"/>). async or sync
+        /// </summary>
+        /// <param name="runSynchronously">Runs the disassemble function synchronously.</param>
+        /// <param name="playSound">Play disassemble sound?</param>
+        public virtual void disassemble(bool runSynchronously = false)
+        {
+            // Written, 11.07.2022
+
+            if (runSynchronously)
+                waitCoroutine(disassembleFunction());
+            else
+                StartCoroutine(disassembleFunction());
         }
         /// <summary>
         /// Gets save info for this part and its bolts. (pos, rot, installed, install index, tightness)
@@ -1130,9 +1147,9 @@ namespace TommoJProductions.ModApi.Attachable
                     {
                         bolts[i].onScrew += boltOnScrew;
                         if (infos != null)
-                            bolts[i].initBolt(this, infos[i]);
+                            bolts[i].initBoltOnPart(this, infos[i]);
                         else
-                            bolts[i].initBolt(this);
+                            bolts[i].initBoltOnPart(this);
                     }
                 }
                 else
@@ -1187,7 +1204,12 @@ namespace TommoJProductions.ModApi.Attachable
             foreach (Bolt b in bolts)
             {
                 maxTightnessTotal += b.boltSettings.maxTightness;
-                tightnessTotal += b.loadedSaveInfo.tightness;
+                tightnessTotal += b.loadedSaveInfo.boltTightness;
+                if (b.boltSettings.addNut)
+                {
+                    maxTightnessTotal += b.boltSettings.maxTightness;
+                    tightnessTotal += b.loadedSaveInfo.addNutTightness;
+                }
             }
         }
         /// <summary>
@@ -1246,6 +1268,12 @@ namespace TommoJProductions.ModApi.Attachable
             }
             return true;
         }
+        /// <summary>
+        /// checks all bolts for their <see cref="Bolt.boltSettings"/>.<see cref="Bolt.BoltSaveInfo.boltTightness"/>.
+        /// invokes, <see cref="setActiveAttachedToTrigger(bool, bool)"/>, 
+        /// sets <see cref="bolted"/> state. and
+        /// invokes <see cref="onPartBolted"/>, <see cref="onPartUnBolted"/> events.
+        /// </summary>
         private void boltTightnessCheck() 
         {
             // Written, 08.07.2022
@@ -1269,6 +1297,19 @@ namespace TommoJProductions.ModApi.Attachable
                 setActiveAttachedToTrigger(true, true);
                 onPartUnBolted?.Invoke();
             }
+        }
+        /// <summary>
+        /// Represents the holding check for a <see cref="Part"/>. Used for starting and checking trigger routine. <see cref="partInTrigger(TriggerCallback)"/>
+        /// </summary>
+        /// <param name="callback_ref">The trigger callback</param>
+        public bool holdingCheck(TriggerCallback callback_ref) 
+        {
+            // Written, 02.07.2022
+
+            _holdingCheck = gameObject.isPlayerHolding();
+            if (partSettings.installEitherDirection)
+                _holdingCheck |= callback_ref.callbackCollider.gameObject.getBehaviourInParent<Part>(part => part && !part.installed)?.gameObject.isPlayerHolding() ?? false;
+            return _holdingCheck;
         }
 
         internal void invokePickedUpEvent()
