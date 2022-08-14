@@ -290,7 +290,7 @@ namespace TommoJProductions.ModApi.Attachable
         #region Fields
         
         /// <summary>
-        /// Represennts the runtime ID for this bolt. Note Rutime.. could change next game load.
+        /// Represennts the runtime ID for this bolt. Note Runtime.. could change next game load.
         /// </summary>
         public string boltID;      
         /// <summary>
@@ -338,11 +338,11 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public BoltSaveInfo loadedSaveInfo { get; internal set; }
         /// <summary>
-        /// Returns true if this bolt is tight (<see cref="tightness"/> == <see cref="BoltSettings.maxTightness"/>)
+        /// Returns true if this bolt is tight (<see cref="BoltSaveInfo.boltTightness"/> == <see cref="BoltSettings.maxTightness"/>)
         /// </summary>
         public bool isTight => loadedSaveInfo.boltTightness >= boltSettings.maxTightness;
         /// <summary>
-        /// Returns true if this bolt is loose (<see cref="tightness"/> == 0)
+        /// Returns true if this bolt is loose (<see cref="BoltSaveInfo.boltTightness"/> == 0)
         /// </summary>
         public bool isLoose => loadedSaveInfo.boltTightness <= 0;
         /// <summary>
@@ -383,10 +383,12 @@ namespace TommoJProductions.ModApi.Attachable
         {
             init(saveInfo, settings, position, eulerAngles, addNutOffsetOverride);
         }
-
+        /// <summary>
+        /// deconstructs this bolt. removes this boat from the loaded bolts list. <see cref="ModClient.loadedBolts"/>
+        /// </summary>
         ~Bolt() 
         {
-            ModClient.bolts.Remove(this);
+            ModClient.loadedBolts.Remove(this);
         }
 
         #endregion
@@ -496,7 +498,7 @@ namespace TommoJProductions.ModApi.Attachable
                 addNutModel = Instantiate(nutPrefab);
             }
             addNutModel.transform.parent = part.boltParent.transform;
-            addNutModel.name = boltModel.name + " nut";
+            addNutModel.name = boltModel.name + "_nut";
             addNutCallback = addNutModel.AddComponent<BoltCallback>();
             addNutCallback.bolt = this;
             addNutCallback.boltSize = boltSettings.addNutSettings.nutSize ?? boltSettings.boltSize;
@@ -510,48 +512,55 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 02.07.2022
 
-            if (!boltInitialized && boltAssetsLoaded)
+            if (boltAssetsLoaded)
             {
-                boltID = "bolt" + ModClient.bolts.Count.ToString("000");
-                part = p;
-
-                if (loadedSaveInfo == null)
-                    loadedSaveInfo = saveInfo ?? new BoltSaveInfo();
-                switch (boltSettings.boltType)
+                if (!boltInitialized)
                 {
-                    case BoltType.custom:
-                        boltModel = Instantiate(boltSettings.customBoltPrefab);
-                        break;
-                    case BoltType.nut:
-                        boltModel = Instantiate(nutPrefab);
-                        break;
-                    case BoltType.screw:
-                        boltModel = Instantiate(screwPrefab);
-                        break;
-                    case BoltType.longBolt:
-                        boltModel = Instantiate(longBoltPrefab);
-                        break;
-                    default:
-                    case BoltType.shortBolt:
-                        boltModel = Instantiate(shortBoltPrefab);
-                        break;
-                }
-                boltModel.transform.parent = part.boltParent.transform;
-                boltModel.name = boltSettings.name == null ? boltID : boltSettings.name;
-                boltCallback = boltModel.AddComponent<BoltCallback>();
-                boltCallback.bolt = this;
-                boltCallback.boltSize = boltSettings.boltSize;
-                boltCallback.onMouseEnter += bcb_mouseEnter;
-                boltCallback.onMouseExit += bcb_mouseExit;
-                if (boltSettings.addNut)
-                {
-                    addNut();
-                }
-                updateNutPosRot();
+                    boltID = "bolt" + ModClient.loadedBolts.Count.ToString("000");
+                    part = p;
 
-                ModClient.bolts.Add(this);
-                boltInitialized = true;
+                    if (loadedSaveInfo == null)
+                        loadedSaveInfo = saveInfo ?? new BoltSaveInfo();
+                    switch (boltSettings.boltType)
+                    {
+                        case BoltType.custom:
+                            boltModel = Instantiate(boltSettings.customBoltPrefab);
+                            break;
+                        case BoltType.nut:
+                            boltModel = Instantiate(nutPrefab);
+                            break;
+                        case BoltType.screw:
+                            boltModel = Instantiate(screwPrefab);
+                            break;
+                        case BoltType.longBolt:
+                            boltModel = Instantiate(longBoltPrefab);
+                            break;
+                        default:
+                        case BoltType.shortBolt:
+                            boltModel = Instantiate(shortBoltPrefab);
+                            break;
+                    }
+                    boltModel.transform.parent = part.boltParent.transform;
+                    boltModel.name = boltSettings.name == null ? boltID : boltSettings.name;
+                    boltCallback = boltModel.AddComponent<BoltCallback>();
+                    boltCallback.bolt = this;
+                    boltCallback.boltSize = boltSettings.boltSize;
+                    boltCallback.onMouseEnter += bcb_mouseEnter;
+                    boltCallback.onMouseExit += bcb_mouseExit;
+                    if (boltSettings.addNut)
+                    {
+                        addNut();
+                    }
+                    updateNutPosRot();
+
+                    ModClient.loadedBolts.Add(this);
+                    boltInitialized = true;
+                }
+                else
+                    Print($"Error initialializing Bolt on part, {p.name}. bolt already initialized.");
             }
+            else
+                Print($"Error initialializing Bolt on part, {p.name}. bolt assets arent loaded.");
         }
         /// <summary>
         /// Updates the models position and rotation based off <see cref="startPosition"/>, <see cref="startEulerAngles"/>,

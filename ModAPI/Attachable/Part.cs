@@ -410,7 +410,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents if the part is completely bolted or not.
         /// </summary>
-        public bool bolted 
+        public bool bolted
         {
             get => loadedSaveInfo.bolted;
             private set => loadedSaveInfo.bolted = value;
@@ -435,6 +435,10 @@ namespace TommoJProductions.ModApi.Attachable
         /// Represents the cached mass of the parts rigidbody.mass property.
         /// </summary>
         public float cachedMass { get; private set; }
+        /// <summary>
+        /// Represents the  tightness step. calculated in <see cref="setupBoltTightnessVariables"/>
+        /// </summary>
+        public float tightnessStep { get; private set; }
         /// <summary>
         /// Represents the bolt parent. all bolts will be a child of this game object. NOTE null if no bolts are on this part.
         /// </summary>
@@ -468,47 +472,40 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public float maxTightnessTotal { get; private set; } = 0;
         /// <summary>
-        /// Represents tightness of all bolts (<see cref="Bolt.tightness"/> * <see cref="bolts"/>.Length). if any present on part. (<see cref="hasBolts"/>)
+        /// Represents tightness of all bolts (<see cref="Bolt.BoltSaveInfo.boltTightness"/> * <see cref="bolts"/>.Length). if any present on part. (<see cref="hasBolts"/>)
         /// </summary>
         public float tightnessTotal { get; private set; } = 0;
         /// <summary>
         /// Represents if the part is in a trigger.
         /// </summary>
-        public bool inTrigger { get; private set; } = false;        
-        
+        public bool inTrigger { get; private set; } = false;
+
+        /// <summary>
+        /// Represents the trigger routine.
+        /// </summary>
+        internal Coroutine triggerRoutine;
+        /// <summary>
+        /// Represents the install point colliers (just a list of <see cref="Trigger.triggerCollider"/> in order).
+        /// </summary>
+        internal Collider[] installPointColliders;
+
         /// <summary>
         /// Represents if part has been initialized (<see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/> invoked
         /// </summary>
         private bool initialized = false;
         /// <summary>
-        /// Represents the trigger routine.
-        /// </summary>
-        private Coroutine triggerRoutine;
-        /// <summary>
-        /// Represents the install point colliers (just a list of <see cref="Trigger.triggerCollider"/> in order).
-        /// </summary>
-        private Collider[] installPointColliders;
-        /// <summary>
         /// Represents default save info.
         /// </summary>
         private PartSaveInfo _defaultSaveInfo;
         private bool _holdingCheck;
-
-        internal static Part inspectionPart = null;
-        private bool inspectionPartSet = false;
-        private static Vector3[] inspectionPartPosition;
-        private static Vector3[] inspectionPartEuler;
-        private static bool inspectingBolt = false;
-        private bool inspectionBoltSet = false;
-        private static Bolt inspectionBolt = null;
-
-        private static int top = 75;
-        private static int margin = 20;
-        private static int height => Screen.height - top;
-        private static int width = 500;
-        private static int left => Screen.width - width - margin;
-        private static Vector2 scroll;
-        private static ScrollViewScope scrollViewScope;
+        /// <summary>
+        /// Represents if this part is inherently picked up. (is a child of a part that is currently picked up)
+        /// </summary>
+        public bool inherentlyPickedUp { get; internal set; }
+        /// <summary>
+        /// Represents if this part is currently picked up.
+        /// </summary>
+        public bool pickedUp { get; internal set; }
 
         #endregion
 
@@ -521,194 +518,6 @@ namespace TommoJProductions.ModApi.Attachable
         {
             disassemble();
             onJointBreak?.Invoke();
-        }
-
-        void OnGUI() 
-        {
-            // Written, 03.07.2022
-
-            if (inspectionPart == this)
-            {
-                Transform t;
-                int tl;
-                
-                tl = triggers.Length;
-
-                if (!inspectionPartSet)
-                {
-                    inspectionPartPosition = new Vector3[tl];
-                    inspectionPartEuler = new Vector3[tl];
-                    for (int i = 0; i < tl; i++)
-                    {
-                        t = triggers[i].triggerGameObject.transform;
-                        inspectionPartPosition[i] = t.localPosition;
-                        inspectionPartEuler[i] = t.localEulerAngles;
-                    }
-                    inspectionPartSet = true;
-                }
-                getToolWrenchSize_boltSize.drawProperty();
-                drawProperty("tool size", getToolWrenchSize_float);
-                drawProperty("bolting speed", getBoltingSpeed);
-                using (AreaScope area = new AreaScope(new Rect(left, top, width, height - top)))
-                {
-                    using (new VerticalScope("box"))
-                    {
-                        using (new HorizontalScope())
-                        {
-                            using (new VerticalScope("box"))
-                            {
-                                drawProperty("Part Inspection", name);
-                                Space(1);
-                                drawProperty("Trigger routine", triggerRoutine == null ? "null" : "active");
-                                drawProperty("Position", transform.position);
-                                drawProperty("Euler", transform.eulerAngles);
-                                drawProperty("Installed", installed);
-                                drawProperty("InTrigger", inTrigger);
-                                drawProperty("Install point index", installPointIndex);
-                                partSettings.drawProperty("assembleType");
-                            }
-                            using (new VerticalScope())
-                            {
-                                if (partSettings.assembleType == AssembleType.joint)
-                                {
-                                    using (new VerticalScope("box"))
-                                    {
-                                        drawProperty("Joint settings");
-                                        if (hasBolts)
-                                        {
-                                            drawPropertyBool("bolt tightness effects breakforce", ref partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce);
-                                            if (partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
-                                            {
-                                                drawPropertyEdit("breakforce min", ref partSettings.assemblyTypeJointSettings.breakForceMin);
-                                            }
-                                            drawPropertyEdit("tightness threshold", ref partSettings.tightnessThreshold);
-                                        }
-                                        drawPropertyEdit("breakforce", ref partSettings.assemblyTypeJointSettings.breakForce);
-                                    }
-                                }
-                                if (joint)
-                                {
-                                    using (new VerticalScope("box"))
-                                    {
-                                        drawProperty("breakforce", joint.breakForce);
-                                        if (hasBolts)
-                                        {
-                                            float bf = partSettings.assemblyTypeJointSettings.breakForce;
-                                            float thresholdObsolute = bf * partSettings.tightnessThreshold;
-                                            drawProperty($"\t- Threshold: {thresholdObsolute}Nm ({thresholdObsolute / bf * 100})");
-                                            drawProperty("");
-                                        }
-                                    }
-                                }
-                                if (hasBolts)
-                                {
-                                    using (new VerticalScope("box"))
-                                    {
-                                        drawProperty($"{(bolted ? "" : "Not ")}Bolted");
-                                        drawProperty($"Tightness: {tightnessTotal} / {maxTightnessTotal} ({tightnessTotal / maxTightnessTotal * 100})");
-                                        drawProperty("Tightness total", tightnessTotal);
-                                        drawPropertyBool("Inspect Bolts", ref inspectingBolt);
-                                    }
-                                }
-                            }
-                        }
-                        Space(1);
-                        using (new HorizontalScope("box"))
-                        {
-                            if (hasBolts && Button((boltParent.activeInHierarchy ? "Deactivate" : "Activate") + " bolts"))
-                            {
-                                boltParent.SetActive(!boltParent.activeInHierarchy);
-                            }
-                            if (Button("Teleport to player"))
-                            {
-                                this.teleport(true, Camera.main.transform.position);
-                            }
-                            if (Button("Teleport to part"))
-                            {
-                                Camera.main.transform.root.gameObject.teleport(gameObject.transform.position);
-                            }
-                        }
-                        Space(1);
-                        drawProperty("Triggers");
-                        using (scrollViewScope = new ScrollViewScope(scroll, false, false))
-                        {
-                            scroll = scrollViewScope.scrollPosition;
-                            scrollViewScope.handleScrollWheel = true;
-
-                            for (int i = 0; i < tl; i++)
-                            {
-                                using (new VerticalScope("box"))
-                                {
-                                    t = triggers[i].triggerGameObject.transform;
-                                    using (new HorizontalScope())
-                                    {
-                                        drawProperty(t.name);
-                                        if (Button("Teleport to trigger"))
-                                        {
-                                            Camera.main.gameObject.teleport(t.position);
-                                        }
-                                    }
-                                    drawPropertyVector3("position", ref inspectionPartPosition[i]);
-                                    drawPropertyVector3("euler", ref inspectionPartEuler[i]);
-
-                                    if (Button("apply"))
-                                    {
-                                        triggers[i].partPivot.transform.localPosition = inspectionPartPosition[i];
-                                        triggers[i].partPivot.transform.localEulerAngles = inspectionPartEuler[i];
-                                        if (installed && partSettings.assembleType == AssembleType.joint)
-                                            assemble(installPointColliders[i], false);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                
-                }
-                if (hasBolts)
-                {
-                    if (inspectingBolt)
-                    {
-                        if (!inspectionBoltSet)
-                        {
-                            if (inspectionBolt == null)
-                                inspectionBolt = bolts[0];
-                            BoltCallback.inspectionPosition = inspectionBolt.startPosition;
-                            BoltCallback.inspectionEuler = inspectionBolt.startEulerAngles;
-                            if (inspectionBolt.boltSettings.addNut)
-                                BoltCallback.inspectionOffset = inspectionBolt.boltSettings.addNutSettings.nutOffset;
-                            inspectionBoltSet = true;
-                        }
-                        using (AreaScope area = new AreaScope(new Rect(left - width - margin, top, width, height)))
-                        {
-                            using (new HorizontalScope("box"))
-                            { 
-                                Color c1 = new Color32(0, 178, 230, 176);
-                                Color c2 = new Color32(0, 62, 230, 153);
-                                GUIStyle style = new GUIStyle();
-                                style.border = new RectOffset(0, 0, 0, 0);
-                                style.alignment = TextAnchor.MiddleCenter;
-                                style.fontSize = 14;
-                                for (int i = 0; i < bolts.Length; i++)
-                                {
-                                    bool menuCheck = bolts[i] == inspectionBolt;
-                                    style.normal.textColor = menuCheck ? c1 : Color.white;
-
-                                    if (Button(bolts[i].boltModel.name, style))
-                                    {
-                                        inspectionBolt = bolts[i];
-                                        inspectionBoltSet = false;
-                                    }
-                                }
-                            }
-                            inspectionBolt.boltCallback.drawBoltGui();
-                        }
-                    }
-                }
-            }
-            else if (inspectionPartSet)
-            {
-                inspectionPartSet = false;
-            }
         }
 
         #endregion
@@ -759,7 +568,7 @@ namespace TommoJProductions.ModApi.Attachable
             if (hasBolts)
             {
                 boltParent.SetActive(true);
-                updateBoltTightnessVariables();
+                updateTotalBoltTightness();
             }
             switch (partSettings.assembleType)
             {
@@ -850,7 +659,7 @@ namespace TommoJProductions.ModApi.Attachable
 
         ~Part()
         {
-            parts.Remove(this);
+            loadedParts.Remove(this);
         }
 
         #endregion
@@ -889,7 +698,7 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 08.07.2022
 
-            updateBoltTightnessVariables();
+            updateTotalBoltTightness();
             if (installed && partSettings.assembleType == AssembleType.joint && !float.IsPositiveInfinity(partSettings.assemblyTypeJointSettings.breakForce))
             {
                 updateJointBreakForce();
@@ -902,6 +711,18 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region Methods
 
+        private void modApiSetupCheck() 
+        {
+            // Written, 03.07.2022
+
+            if (!modApiSetUp)
+            {
+                if (!modapiGo)
+                    setUpLoader();
+                loadModApi();
+            }
+        }
+
         /// <summary>
         /// Initializes this part.
         /// </summary>
@@ -911,36 +732,28 @@ namespace TommoJProductions.ModApi.Attachable
         public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettingsRef = default(PartSettings), params Trigger[] triggerRefs)
         {
             // Written, 08.09.2021
-
-            if (!modApiSetUp)
-            {
-                if (!modapiGo)
-                    setUpLoader();
-                loadModApi();
-            }
-
             if (!initialized)
             {
-                PartID = "part" + parts.Count.ToString("000");
+                modApiSetupCheck();
+                PartID = "part" + loadedParts.Count.ToString("000");
                 partSettings = new PartSettings(partSettingsRef);
                 triggers = triggerRefs;
                 addInstanceToTriggers();
                 cachedRigidBody = GetComponent<Rigidbody>();
                 cachedMass = cachedRigidBody?.mass ?? 1;
                 loadedSaveInfo = new PartSaveInfo(saveInfo ?? defaultSaveInfo);
-                installPointColliders = new Collider[triggerRefs.Length];
                 makePartPickable(!installed);
                 onPreInitPart?.Invoke();
                 vaildiatePart();
-                if (triggerRefs.Length > 0)
+                if (triggerRefs != null && triggerRefs.Length > 0)
                 {
-                    Trigger t;
+                    installPointColliders = new Collider[triggerRefs.Length];
+                
                     for (int i = 0; i < triggers.Length; i++)
                     {
-                        t = triggers[i];
-                        installPointColliders[i] = t.triggerCollider;
-                        t.triggerCallback.onTriggerExit += callback_onTriggerExit;
-                        t.triggerCallback.onTriggerEnter += callback_onTriggerEnter;
+                        installPointColliders[i] = triggers[i].triggerCollider;
+                        triggers[i].triggerCallback.onTriggerExit += callback_onTriggerExit;
+                        triggers[i].triggerCallback.onTriggerEnter += callback_onTriggerEnter;
                     }
                     if (installed)
                     {
@@ -970,7 +783,7 @@ namespace TommoJProductions.ModApi.Attachable
                         collider.material = partSettings.collisionSettings.physicMaterial;
                     }
                 }
-                parts.Add(this);
+                loadedParts.Add(this);
                 initialized = true;
                 onPostInitPart?.Invoke();
             }
@@ -988,16 +801,20 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 03.07.2022
 
-            initBolts(boltRefs, saveInfo?.boltSaveInfos);
-            initPart(saveInfo, partSettingsRef, triggerRefs);
-            if (!installed)
+            if (!initialized)
             {
-                boltParent.SetActive(false);
-                updateBoltTightnessVariables();
-            }
-            else
-            {
-                boltTightnessCheck();
+                modApiSetupCheck();
+                initBolts(boltRefs, saveInfo?.boltSaveInfos);
+                initPart(saveInfo, partSettingsRef, triggerRefs);
+                if (!installed)
+                {
+                    boltParent.SetActive(false);
+                    setupBoltTightnessVariables();
+                }
+                else
+                {
+                    boltTightnessCheck();
+                }
             }
         }
         /// <summary>
@@ -1182,8 +999,7 @@ namespace TommoJProductions.ModApi.Attachable
 
             if (hasBolts && partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
             {
-                float step = (partSettings.assemblyTypeJointSettings.breakForce - partSettings.assemblyTypeJointSettings.breakForceMin) / maxTightnessTotal;
-                joint.breakForce = (step * tightnessTotal) + partSettings.assemblyTypeJointSettings.breakForceMin;
+                joint.breakForce = (tightnessStep * tightnessTotal) + partSettings.assemblyTypeJointSettings.breakForceMin;
                 joint.breakTorque = joint.breakForce / 2;
             }
             else
@@ -1193,21 +1009,41 @@ namespace TommoJProductions.ModApi.Attachable
             }
         }
         /// <summary>
-        /// Updates tightness and max tightness values of bolts.
+        /// sets up <see cref="maxTightnessTotal"/> and <see cref="tightnessStep"/>
         /// </summary>
-        private void updateBoltTightnessVariables() 
+        private void setupBoltTightnessVariables() 
         {
-            // Written, 10.07.2022
+            // Written, 22.07.2022
 
             maxTightnessTotal = 0;
-            tightnessTotal = 0;
+            tightnessStep = 0;
             foreach (Bolt b in bolts)
             {
                 maxTightnessTotal += b.boltSettings.maxTightness;
-                tightnessTotal += b.loadedSaveInfo.boltTightness;
                 if (b.boltSettings.addNut)
                 {
                     maxTightnessTotal += b.boltSettings.maxTightness;
+                }
+            }
+            if (partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
+            {
+                tightnessStep = (partSettings.assemblyTypeJointSettings.breakForce - partSettings.assemblyTypeJointSettings.breakForceMin) / maxTightnessTotal;
+            }
+            updateTotalBoltTightness();
+        }
+        /// <summary>
+        /// Updates <see cref="tightnessTotal"/> from current state of <see cref="bolts"/>. see: <see cref="Bolt.BoltSaveInfo.boltTightness"/> and <see cref="Bolt.BoltSaveInfo.addNutTightness"/>
+        /// </summary>
+        private void updateTotalBoltTightness() 
+        {
+            // Written, 10.07.2022
+
+            tightnessTotal = 0;
+            foreach (Bolt b in bolts)
+            {
+                tightnessTotal += b.loadedSaveInfo.boltTightness;
+                if (b.boltSettings.addNut)
+                {
                     tightnessTotal += b.loadedSaveInfo.addNutTightness;
                 }
             }

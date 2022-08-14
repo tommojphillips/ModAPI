@@ -2,6 +2,8 @@
 using MSCLoader;
 using System;
 using System.Collections;
+using System.Linq;
+
 using TommoJProductions.ModApi.Attachable;
 using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
 using UnityEngine;
@@ -27,11 +29,13 @@ namespace TommoJProductions.ModApi
         private static FsmStateActionCallback actionCallback;
 
         // part stuff
-        private static bool partCheckSet = false;
+        private static bool pickedPartSet = false;
+        private static bool inherentyPickedPartsSet = false;
+        private static Action partLeaveAction;
         /// <summary>
         /// Reps all parts that were set in <see cref="partCheckFunction"/>. Reps all <see cref="Part"/> children in root <see cref="pickedPart"/>.
         /// </summary>
-        private static Part[] setParts;
+        private static Part[] inherentlyPickedParts;
         /// <summary>
         /// Reps the root picked part. the part that the player is currently holding.
         /// </summary>
@@ -57,15 +61,20 @@ namespace TommoJProductions.ModApi
                 pickedPart = pickedObject.GetComponent<Part>();
                 if (pickedPart)
                 {
-                    pickedPart.invokePickedUpEvent();
-                    setParts = pickedPart.gameObject.getBehavioursInChildren<Part>();
-                    if (setParts != null && setParts.Length > 0)
+                    pickedPartSet = true;
+                    pickedPart.pickedUp = true;
+                    pickedPart.invokePickedUpEvent();                    
+                }
+                
+                inherentlyPickedParts = pickedObject.getBehavioursInChildren<Part>();
+
+                if (inherentlyPickedParts != null && inherentlyPickedParts.Length > 0)
+                {
+                    inherentyPickedPartsSet = true;
+                    foreach (Part p in inherentlyPickedParts)
                     {
-                        partCheckSet = true;
-                        foreach (Part p in setParts)
-                        {
-                            p.gameObject.sendToLayer(LayerMasksEnum.Wheel);
-                        }
+                        p.gameObject.sendToLayer(LayerMasksEnum.Wheel);
+                        p.inherentlyPickedUp = true;
                     }
                 }
                 invokePickUpEvent(pickedObject);
@@ -87,7 +96,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 11.07.2022
 
-            if (!Camera.main)
+            if (!Camera.main) // game not set up yet.
             {
                 activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
                 actionCallback = activateGameState.appendNewAction(setUpModApi);
@@ -101,22 +110,25 @@ namespace TommoJProductions.ModApi
             // Written, 11.07.2022
 
             ConsoleCommand.Add(new ConsoleCommands());
-            parts.Clear();
-            bolts.Clear();
+            loadedParts.Clear();
+            loadedBolts.Clear();
 
             setUpPart();
             setUpBolt();
             if (devMode)
             {
-                raycaster.StartCoroutine(devModeFunc());
+                devModeBehaviour = modapiGo.AddComponent<DevMode>();
             }
-            Print("modapi: Loaded");
+            Print($"modapi v{VersionInfo.version}: Loaded");
 
-            int index = Array.IndexOf(activateGameState.Actions, actionCallback);
-            if (index == -1)
-                return;
-            activateGameState.RemoveAction(index);
-            Print("modapi: Cleaned up");
+            if (actionCallback != null)
+            {
+                int index = Array.IndexOf(activateGameState.Actions, actionCallback);
+                if (index == -1)
+                    return;
+                activateGameState.RemoveAction(index);
+                Print("modapi: Cleaned up");
+            }
         }
         private static void setUpPart() 
         {
@@ -139,37 +151,58 @@ namespace TommoJProductions.ModApi
         {
             // Written, 11.06.2022
 
-            if (partCheckSet)
-            {
-                pickedPart.invokeDroppedEvent();
-                partCheckReset();
-            }
-            invokeDropEvent(pickedObject);
-            resetObject();
+
+            if (pickedPart)
+                partLeaveAction = pickedPart.invokeDroppedEvent;
+            else
+                partLeaveAction = null;
+            objectLeaveHand(partLeaveAction, invokeDropEvent);
         }
         private static void partThrown()
         {
             // Written, 11.06.2022
 
-            if (partCheckSet)
+            if (pickedPart)
+                partLeaveAction = pickedPart.invokeThrownEvent;
+            else
+                partLeaveAction = null;
+            objectLeaveHand(partLeaveAction, invokeThrowEvent);
+        }
+        private static void objectLeaveHand(Action partLeaveEvent, Action<GameObject> objectLeaveEvent) 
+        {
+            // Written, 14.06.2022
+
+            if (pickedPartSet)
             {
-                pickedPart.invokeThrownEvent();
-                partCheckReset();
+                partLeaveEvent?.Invoke();
+                pickedPartReset();
             }
-            invokeThrowEvent(pickedObject);
+            if (inherentyPickedPartsSet)
+            {
+                inherentlyPickedPartReset();
+            }
+            objectLeaveEvent(pickedObject);
             resetObject();
         }
-        private static void partCheckReset()
+        private static void inherentlyPickedPartReset()
         {
             // Written, 09.06.2022
 
-            partCheckSet = false;
-            foreach (Part p in setParts)
+            foreach (Part p in inherentlyPickedParts)
             {
+                p.inherentlyPickedUp = false;
                 p.makePartPickable(!p.installed);
             }
-            setParts = null;
+            inherentlyPickedParts = null;
+            inherentyPickedPartsSet = false;
+        }
+        private static void pickedPartReset()
+        {
+            // Written, 09.06.2022
+
+            pickedPart.pickedUp = false;
             pickedPart = null;
+            pickedPartSet = false;
         }
         private static void resetObject() 
         {
@@ -181,11 +214,11 @@ namespace TommoJProductions.ModApi
 
             Bolt.tryLoadBoltAssets();
 
-            if (Camera.main)
+            if (ModClient.getPlayerCamera)
             {
                 if (!raycaster)
                 {
-                    raycaster = Camera.main.gameObject.AddComponent<PhysicsRaycaster>();
+                    raycaster = ModClient.getPOV.gameObject.AddComponent<PhysicsRaycaster>();
                     raycaster.eventMask = getMask(LayerMasksEnum.Bolts);                    
                     Print("[ModApi.Loader] physics raycaster set up on main camera");
                 }

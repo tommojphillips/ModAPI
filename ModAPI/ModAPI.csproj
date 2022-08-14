@@ -2,8 +2,10 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">Any CPU</Platform>
+    <Configuration Condition=" '$(Configuration)' == 'Release'">
+    </Configuration>
+    <Platform Condition=" '$(Platform)' == 'x64'">
+    </Platform>
     <ProjectGuid>{2CEAE666-CBA5-4FA6-AEE3-D6C5CFB2DE20}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -34,23 +36,20 @@
     <RegisterForComInterop>false</RegisterForComInterop>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Assembly-CSharp">
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="MSCLoader, Version=1.1.16.219, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="MSCLoader">
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
     </Reference>
-    <Reference Include="PlayMaker, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="PlayMaker">
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEngine">
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
-    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="UnityEngine.UI">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
@@ -61,6 +60,13 @@
     <Compile Include="Attachable\CallBacks\BoltCallback.cs" />
     <Compile Include="Attachable\Part.cs" />
     <Compile Include="ConsoleCommands.cs" />
+    <Compile Include="Database\Database.cs" />
+    <Compile Include="Database\DatabaseMechanics.cs" />
+    <Compile Include="Database\DatabaseMotor.cs" />
+    <Compile Include="Database\DatabaseOrders.cs" />
+    <Compile Include="Database\GamePart.cs" />
+    <Compile Include="Database\PartsStatus.cs" />
+    <Compile Include="DevMode.cs" />
     <Compile Include="ModApiLoader.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\FsmStateActionCallback.cs" />
     <Compile Include="ModClient.cs" />

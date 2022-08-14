@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TommoJProductions.ModApi.Attachable;
+using TommoJProductions.ModApi.Database;
 using UnityEngine;
 using MSCLoader;
 using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
@@ -12,6 +13,7 @@ using System.ComponentModel;
 using static UnityEngine.GUILayout;
 using TommoJProductions.ModApi.Attachable.CallBacks;
 using System.IO;
+using TommoJProductions.ModApi.Database.GameParts;
 
 namespace TommoJProductions.ModApi
 {
@@ -64,7 +66,6 @@ namespace TommoJProductions.ModApi
     /// <summary>
     /// Represents all databases in game.
     /// </summary>
-    [Description("Database")]
     public enum Databases
     {
         // Written, 04.07.2022
@@ -277,6 +278,7 @@ namespace TommoJProductions.ModApi
     }
 
     #endregion
+      
 
     /// <summary>
     /// Represents useful properties for interacting with My Summer Car and PlayMaker.
@@ -291,11 +293,12 @@ namespace TommoJProductions.ModApi
         /// Represents the complied runtime version of the api.
         /// </summary>
         public const string version = VersionInfo.version;
-
+        
+        public static DevMode devModeBehaviour { get; internal set; }
 #if DEBUG
-        public static bool devMode = true;
+        internal static bool devMode = true;
 #else
-        public static bool devMode = false;
+        internal static bool devMode = false;
 #endif
 
         internal static Part _inspectingPart = null;
@@ -323,6 +326,8 @@ namespace TommoJProductions.ModApi
         private static Material _activeBoltMaterial;
         private static GameObject _masterAudioGameObject;
         private static Dictionary<string, AudioSource> masterAudioDictionary = new Dictionary<string, AudioSource>();
+        private static Camera _playerCamera;
+        private static FsmGameObject _POV;
 
         #endregion
 
@@ -535,11 +540,11 @@ namespace TommoJProductions.ModApi
         /// Represents all parts in the current instance of my summer car. (msc mods that use MODAPI.Attachable.Part
         /// will be listed here)
         /// </summary>
-        public static List<Part> parts { get; } = new List<Part>();
+        public static List<Part> loadedParts { get; } = new List<Part>();
         /// <summary>
         /// Represents all bolts in the current instance of my summer car. (Parts that use bolts will be listed here)
         /// </summary>
-        public static List<Bolt> bolts { get; } = new List<Bolt>();
+        public static List<Bolt> loadedBolts { get; } = new List<Bolt>();
 
 
         /// <summary>
@@ -599,7 +604,7 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public static FieldInfo getModsFolderFi
         {
-            // W, 02.07.2022
+            // Written, 02.07.2022
 
             get
             {
@@ -666,13 +671,42 @@ namespace TommoJProductions.ModApi
             }
         }
 
-        public static GameObject getMasterAudioGameObject 
+        public static GameObject getMasterAudioGameObject
         {
-            get 
+            get
             {
                 if (!_masterAudioGameObject)
                     _masterAudioGameObject = GameObject.Find("MasterAudio");
                 return _masterAudioGameObject;
+            }
+        }
+        
+        /// <summary>
+        /// cache. gets and stores a reference to the player camera gameobject.
+        /// </summary>
+        public static GameObject getPOV 
+        {
+            get 
+            {
+                if (_POV == null)
+                {
+                    _POV = PlayMakerGlobals.Instance.Variables.FindFsmGameObject("POV");
+                }
+                return _POV.Value;
+            }
+        }
+        /// <summary>
+        /// cache. gets and stores a reference to the player camera.
+        /// </summary>
+        public static Camera getPlayerCamera 
+        {
+            get 
+            {
+                if (_playerCamera == null)
+                {
+                    _playerCamera = getPOV.GetComponent<Camera>();
+                }
+                return _playerCamera;
             }
         }
 
@@ -705,28 +739,12 @@ namespace TommoJProductions.ModApi
                 }
             }
         }
-        /// <summary>
-        /// if <see cref="devMode"/> is true, this enumerator will poll for either, (CTRL+P) for raycating for parts or (CTRL+B) for bolts. allows raycast for parts or bolts. and assigns inspection VAR with out behaviour or null.
-        /// </summary>
-        public static IEnumerator devModeFunc()
-        {
-            while (devMode)
-            {
-                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.P))
-                {
-                    Part.inspectionPart = raycastForBehaviour<Part>();
-                }
-                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.B))
-                {
-                    BoltCallback.inspectionBolt = raycastForBehaviour<BoltCallback>();
-                }
-                yield return null;
-            }
-        }
+
 
         #endregion
 
         #region Methods
+
 
         // [Sound]
         /// <summary>
@@ -788,6 +806,65 @@ namespace TommoJProductions.ModApi
         }
 
         // [GUI]
+        /// <summary>
+        /// draws a gui of info about a game part. (use within an <see cref="AreaScope"/>).
+        /// </summary>
+        /// <param name="gp"></param>
+        public static void drawGamePartInfo(GamePart gp)
+        {
+            // Written, 19.07.2022
+
+            using (new VerticalScope())
+            {
+                drawProperty(gp.thisPart.Value.name);
+                drawPropertyVector3("Position", gp.thisPart.Value.transform.position);
+                drawProperty("Damaged", gp.damaged);
+                drawProperty("Bolted", gp.bolted);
+                drawProperty("Installed", gp.installed);
+                                
+                if (gp is GamePartTime)
+                    drawProperty("Time", (gp as GamePartTime).time);
+                if (gp is GamePartWear)
+                    drawProperty("Wear", (gp as GamePartWear).wear);
+                if (gp is Block)
+                    drawProperty("In hoist", (gp as Block).inHoist);
+                if (gp is OilPan)
+                {
+                    OilPan o = gp as OilPan;
+                    drawProperty("Oil level", o.oilLevel);
+                    drawProperty("Oil contamination", o.oilContamination);
+                    drawProperty("Oil grade", o.oilGrade);
+                }
+                if (gp is RockerShaft)
+                {
+                    RockerShaft r = gp as RockerShaft;
+                    drawProperty("Cyl 1 Exh", r.cyl1Ex);
+                    drawProperty("Cyl 1 In", r.cyl1In);
+
+                    drawProperty("Cyl 2 Exh", r.cyl2Ex);
+                    drawProperty("Cyl 2 In", r.cyl2In);
+
+                    drawProperty("Cyl 3 Exh", r.cyl3Ex);
+                    drawProperty("Cyl 3 In", r.cyl3In);
+
+                    drawProperty("Cyl 4 Exh", r.cyl4Ex);
+                    drawProperty("Cyl 4 In", r.cyl4In);
+
+                }
+                if (gp is Carburator)
+                {
+                    Carburator c = gp as Carburator;
+
+                    drawProperty("Dirt", c.dirt);
+                    drawProperty("idle adjust", c.idleAdjust);
+
+                }
+                if (gp is Distributor)
+                    drawProperty("Spark angle", (gp as Distributor).sparkAngle);
+                if (gp is CamshaftGear)
+                    drawProperty("Angle", (gp as CamshaftGear).angle);
+            }
+        }
         /// <summary>
         /// [GUI] draws a vector3 that can be edited.
         /// </summary>
@@ -913,7 +990,15 @@ namespace TommoJProductions.ModApi
         /// <param name="property">the reference of the property to draw.</param>
         public static void drawProperty(object property)
         {
-            Label($"{property}");
+            Label(property.ToString());
+        }
+        /// <summary>
+        /// [GUI] draws a property.
+        /// </summary>
+        /// <param name="property">the reference of the property to draw.</param>
+        public static void drawProperty(string property)
+        {
+            Label(property);
         }
         /// <summary>
         /// [GUI] draws a property.
@@ -1007,7 +1092,7 @@ namespace TommoJProductions.ModApi
         public static T raycastForBehaviour<T>(bool centerOfScreen = false) where T : MonoBehaviour
         {
             RaycastHit hitInfo;
-            bool hasHit = Physics.Raycast(centerOfScreen ? Camera.main.ViewportPointToRay(Vector3.one * 0.5f) : Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo);
+            bool hasHit = Physics.Raycast(centerOfScreen ? getPlayerCamera.ViewportPointToRay(Vector3.one * 0.5f) : getPlayerCamera.ScreenPointToRay(Input.mousePosition), out hitInfo);
             T t = null;
             if (hasHit)
             {
@@ -1016,7 +1101,7 @@ namespace TommoJProductions.ModApi
             return t;
         }
 
-        
+        // Expose event invoke.
         internal static void invokePickUpEvent(GameObject gameObject)
         {
             onGameObjectPickUp?.Invoke(gameObject);
@@ -1034,6 +1119,16 @@ namespace TommoJProductions.ModApi
 
         #region ExMethods
 
+        /// <summary>
+        /// finds child object of name <paramref name="childName"/> and gets playmaker called, "Data".
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="childName"></param>
+        /// <returns>"Data" playmakerFsm on child of <paramref name="go"/>.</returns>
+        internal static PlayMakerFSM getData(GameObject go, string childName)
+        {
+            return go.transform.FindChild(childName).GetPlayMaker("Data");
+        }
         /// <summary>
         /// Teleports a part to a world position.
         /// </summary>
@@ -1078,6 +1173,17 @@ namespace TommoJProductions.ModApi
             if (rb)
                 rb.isKinematic = false;
         }
+        
+        /// <summary>
+        /// Gets the description of the enum member.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="e"></param>
+        /// <returns></returns>
+        public static string getDescription<T>(this T e) where T : Enum 
+        {
+            return e.GetType().GetField(e.ToString()).getDescription();
+        }
         /// <summary>
         /// Gets <see cref="DescriptionAttribute.Description"/> on provided object type. if attribute doesn't exist, returns <see cref="MemberInfo.Name"/>
         /// </summary>
@@ -1094,6 +1200,7 @@ namespace TommoJProductions.ModApi
             }
             return mi.Name;
         }
+        
         /// <summary>
         /// [GUI] draws a property. eg => <see cref="Part.partSettings"/>.drawProperty("assembleType") would draw a property as such: "assembleType: joint". if member has <see cref="DescriptionAttribute"/> will use the description as the property title. Works with fields, properties and enums
         /// </summary>
@@ -1141,26 +1248,9 @@ namespace TommoJProductions.ModApi
             string value = _t.GetField(valueName)?.getDescription();
             Label($"{title}: {value ?? valueName}");
         }
+        
         /// <summary>
-        /// Converts a <see cref="Vector3Info"/> to a <see cref="Vector3"/>.
-        /// </summary>
-        /// <param name="i">the vector3 info to convert</param>
-        /// <returns>the vector3 info as a vector3.</returns>
-        public static Vector3 toVector3(this Vector3Info i)
-        {
-            return new Vector3(i.x, i.y, i.z);
-        }
-        /// <summary>
-        /// converts a vector3.
-        /// </summary>
-        /// <param name="v">the vector3 to convert.</param>
-        /// <returns>new instance Vector3Info</returns>
-        public static Vector3Info getInfo(this Vector3 v)
-        {
-            return new Vector3Info(v);
-        }
-        /// <summary>
-        /// gets the actual size of the mesh. 
+        /// gets the actual size of the mesh. based off mesh bounds and transform scale
         /// </summary>
         /// <param name="filter">the mesh filter to get mesh and scale.</param>
         /// <returns>filter.mesh size * transform scale.</returns>
@@ -1173,7 +1263,7 @@ namespace TommoJProductions.ModApi
             return new Vector3(size.x * scale.x, size.y * scale.y, size.z * scale.z);
         }
         /// <summary>
-        /// gets the actual size of the mesh. 
+        /// gets the actual size of the mesh. based off mesh bounds and transform scale
         /// </summary>
         /// <param name="transform">the transform that this mesh is on.</param>
         /// <param name="mesh">the mesh to get size of</param>
@@ -1186,6 +1276,7 @@ namespace TommoJProductions.ModApi
             Vector3 scale = transform.localScale;
             return new Vector3(size.x * scale.x, size.y * scale.y, size.z * scale.z);
         }
+        
         /// <summary>
         /// loads data from a file or throws an error on if save data doesn't exist.
         /// </summary>
@@ -1205,8 +1296,9 @@ namespace TommoJProductions.ModApi
             }
             else
             {
-                ModConsole.Print($"{mod.ID}: save file didn't exist.. throwing saveDataNotFoundException.");
-                throw new saveDataNotFoundException("");
+                string error = $"{mod.ID}: save file didn't exist.. throwing saveDataNotFoundException.";
+                ModConsole.Print(error);
+                throw new saveDataNotFoundException(error);
             }
         }
         /// <summary>
@@ -1249,15 +1341,8 @@ namespace TommoJProductions.ModApi
                 return false;
             }
         }
-        /// <summary>
-        /// Creates a new vector3 from an old one.
-        /// </summary>
-        /// <param name="v"></param>
-        /// <returns></returns>
-        public static Vector3 clone(this Vector3 v)
-        {
-            return new Vector3(v.x, v.y, v.z);
-        }
+        
+        
         /// <summary>
         /// executes an action on all objects of an array.
         /// </summary>
@@ -1273,6 +1358,7 @@ namespace TommoJProductions.ModApi
                 func.Invoke(objects[i]);
             }
         }
+        
         /// <summary>
         /// Gets the first found behaviour in the parent. where <paramref name="func"/> action returns true.
         /// </summary>
@@ -1428,6 +1514,7 @@ namespace TommoJProductions.ModApi
 
             return getBehavioursInChildren<T>(gameObject, func => true);
         }
+       
         /// <summary>
         /// returns whether the player is currently looking at an gameobject. By raycast.
         /// </summary>
@@ -1435,7 +1522,7 @@ namespace TommoJProductions.ModApi
         /// <param name="withinDistance">raycast within distance from main camera.</param>
         public static bool isPlayerLookingAt(this GameObject gameObject, float withinDistance = 1)
         {
-            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, withinDistance, 1 << gameObject.layer))
+            if (Physics.Raycast(getPlayerCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, withinDistance, 1 << gameObject.layer))
             {
                 if (hit.collider?.gameObject == gameObject)
                     return true;
@@ -1485,6 +1572,7 @@ namespace TommoJProductions.ModApi
                 return true;
             return false;
         }
+        
         /// <summary>
         /// Sends all children of game object to layer.
         /// </summary>
@@ -1621,6 +1709,7 @@ namespace TommoJProductions.ModApi
             }
             return layerName;
         }
+        
         /// <summary>
         /// Creates and returns a new rigidbody on the gameobject and assigns parameters listed.
         /// </summary>
@@ -1675,6 +1764,7 @@ namespace TommoJProductions.ModApi
                 yield return null;
             }
         }
+        
         private static FsmStateActionCallback determineAndCreateCallbackType(CallbackTypeEnum type, Action action, bool everyFrame = false)
         {
             // Written, 13.06.2022
@@ -1879,6 +1969,7 @@ namespace TommoJProductions.ModApi
             FsmState state = go.GetPlayMakerState(stateName);
             return state.determineAndCreateActionType(injectType, callback, callbackType, everyFrame, index);
         }
+       
         /// <summary>
         /// Rounds to <paramref name="decimalPlace"/>
         /// </summary>
@@ -1899,6 +1990,7 @@ namespace TommoJProductions.ModApi
 
             return (float)Math.Round(_float, decimalPlace);
         }
+        
         /// <summary>
         /// Maps a value and its range to another. eg. (v=1 min=0, max=2). could map to (v=2 min=1 max=3).
         /// </summary>
@@ -1910,6 +2002,33 @@ namespace TommoJProductions.ModApi
         public static float mapValue(this float mainValue, float inValueMin, float inValueMax, float outValueMin, float outValueMax)
         {
             return (mainValue - inValueMin) * (outValueMax - outValueMin) / (inValueMax - inValueMin) + outValueMin;
+        }
+        /// <summary>
+        /// Converts a <see cref="Vector3Info"/> to a <see cref="Vector3"/>.
+        /// </summary>
+        /// <param name="i">the vector3 info to convert</param>
+        /// <returns>the vector3 info as a vector3.</returns>
+        public static Vector3 toVector3(this Vector3Info i)
+        {
+            return new Vector3(i.x, i.y, i.z);
+        }
+        /// <summary>
+        /// converts a vector3.
+        /// </summary>
+        /// <param name="v">the vector3 to convert.</param>
+        /// <returns>new instance Vector3Info</returns>
+        public static Vector3Info toInfo(this Vector3 v)
+        {
+            return new Vector3Info(v);
+        }
+        /// <summary>
+        /// Creates a new vector3 from an old one.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <returns></returns>
+        public static Vector3 clone(this Vector3 v)
+        {
+            return new Vector3(v.x, v.y, v.z);
         }
 
         #endregion

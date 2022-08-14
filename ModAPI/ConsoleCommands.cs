@@ -45,7 +45,8 @@ namespace TommoJProductions.ModApi
         /// </summary>
         const string helpListDev = "<color=yellow>modapi help [dv]/[dev]/[developer]</color> - shows this list\n" +
             "<color=yellow>modapi dev [ep]/[editpart]</color> - use \"modapi help dev editpart\"\n" +
-            "<color=yellow>modapi dev [eb]/[editbolt]</color> - use \"modapi help dev editbolt\"";
+            "<color=yellow>modapi dev [eb]/[editbolt]</color> - use \"modapi help dev editbolt\"" +
+            "<color=yellow>modapi dev [-t]/[toggle]</color> - toggles modapi dev mode. dev mode allows mod api users / dev to raycast for parts / bolts. shows a dev GUI. (CTRL+P)/(CTRL+B) while looking at ";
         /// <summary>
         /// Represents the teleport part help list.
         /// </summary>
@@ -184,15 +185,15 @@ namespace TommoJProductions.ModApi
                                 case "lp":
                                 case "lparts":
                                 case "listparts":
-                                    print("Count {0}", parts.Count);
-                                    foreach (var item in parts)
+                                    print("Count {0}", loadedParts.Count);
+                                    foreach (var item in loadedParts)
                                         print("{0} | {1}", item.gameObject.name, item.PartID);
                                     break;
                                 case "lb":
                                 case "lbolts":
                                 case "listbolts":
-                                    print("Count {0}", bolts.Count);
-                                    foreach (var item in bolts)
+                                    print("Count {0}", loadedBolts.Count);
+                                    foreach (var item in loadedBolts)
                                         print("{0} | {1}", item.boltCallback.gameObject.name, item.boltID);
                                     break;
                                 case "tpp":
@@ -209,11 +210,11 @@ namespace TommoJProductions.ModApi
                                                     print("cannot teleport part while it's installed... use \"-f\" to force an uninstall and teleport.");
                                                     return;
                                                 }
-                                                part.teleport(false, Camera.main.transform.position);
+                                                part.teleport(false, ModClient.getPOV.transform.position);
                                             }
                                             else if (args.Length == 3 && args[3] == "-f")
                                             {
-                                                part.teleport(true, Camera.main.transform.position);
+                                                part.teleport(true, ModClient.getPOV.transform.position);
                                             }
                                             else
                                                 print("args were incorrect. error.");
@@ -311,7 +312,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingPart = true;
-                                                Part.inspectionPart = _inspectingPart;
+                                                DevMode.inspectionPart = _inspectingPart;
                                                 print("Started inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "stop":
@@ -326,7 +327,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingPart = false;
-                                                Part.inspectionPart = null;
+                                                DevMode.inspectionPart = null;
                                                 print("Stopped inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "print":
@@ -417,7 +418,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingBolt = true;
-                                                BoltCallback.inspectionBolt = _inspectingBolt;
+                                                DevMode.inspectionBolt = _inspectingBolt.bolt;
                                                 print("Started inspecting {0}..", _inspectingBolt.name);
                                                 break;
                                             case "stop":
@@ -432,7 +433,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingBolt = false;
-                                                BoltCallback.inspectionBolt = null;
+                                                DevMode.inspectionBolt = null;
                                                 print("Stopped inspecting {0}..", _inspectingBolt.name);
                                                 break;
                                             case "print":
@@ -454,9 +455,15 @@ namespace TommoJProductions.ModApi
                                     break;
                                 case "-t":
                                 case "toggle":
+                                    if (devModeBehaviour)
+                                    {
+                                        GameObject.Destroy(devModeBehaviour);
+                                    }
+                                    else
+                                    {
+                                        devModeBehaviour = ModApiLoader.modapiGo.AddComponent<DevMode>();
+                                    }
                                     devMode = !devMode;
-                                    if (devMode)
-                                        ModApiLoader.raycaster.StartCoroutine(devModeFunc());
                                     print($"Developer mode: {(devMode ? "ON" : "OFF")}");
                                     break;
                                 default:
@@ -488,9 +495,9 @@ namespace TommoJProductions.ModApi
         {
             // Written, 10.09.2021
 
-            Part part = parts.Find(_part => _part.name == inPartName || _part.PartID == inPartName);
+            Part part = loadedParts.Find(_part => _part.name == inPartName || _part.PartID == inPartName);
             if (!part)
-                part = parts.Find(_part => _part.name.Contains(inPartName));
+                part = loadedParts.Find(_part => _part.name.Contains(inPartName));
             if (part)
                 print("Found part: {0}", part.name);
             else
@@ -505,9 +512,9 @@ namespace TommoJProductions.ModApi
         {
             // Written, 10.09.2021
 
-            BoltCallback bolt = bolts.Find(_b => _b.boltCallback.name == inBoltName || _b.boltID == inBoltName).boltCallback;
+            BoltCallback bolt = loadedBolts.Find(_b => _b.boltCallback.name == inBoltName || _b.boltID == inBoltName).boltCallback;
             if (!bolt)
-                bolt = bolts.Find(_b => _b.boltCallback.name.Contains(inBoltName)).boltCallback;
+                bolt = loadedBolts.Find(_b => _b.boltCallback.name.Contains(inBoltName)).boltCallback;
             if (bolt)
                 print("Found bolt: {0}", bolt.name);
             else

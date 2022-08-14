@@ -41,7 +41,12 @@ namespace TommoJProductions.ModApi
         {
             return new Vector3Info(v);
         }
-
+        /// <summary>
+        /// times x by x, y by y, z by z.
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
         public static Vector3 operator *(Vector3Info v1, Vector3 v2)
         {
             Vector3 v = Vector3.zero;
