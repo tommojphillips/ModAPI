@@ -16,6 +16,9 @@ namespace TommoJProductions.ModApi
     {
         // Written, 10.09.2021
 
+        internal static Part _inspectingPart = null;
+        internal static BoltCallback _inspectingBolt = null;
+
         #region Properties
 
         /// <summary>
@@ -29,44 +32,43 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the general help list.
         /// </summary>
-        const string helpListGeneral = "<color=yellow>modapi help</color> - shows this list\n" +
+        const string HELP_LIST_GENERAL = "<color=yellow>modapi help</color> - shows this list\n" +
             "<color=yellow>modapi help [db]/[debug]</color> - shows debug help list\n " +
             "<color=yellow>modapi help [dv]/[developer]</color> - shows developer help list\n " +
             "<color=yellow>modapi [v]/[ver]/[version]</color> - reports modapi version\n";
         /// <summary>
         /// Represents the debug help list.
         /// </summary>
-        const string helpListDebug = "<color=yellow>modapi help [db]/[debug]</color> - shows this list\n" +
+        const string HELP_LIST_DEBUG = "<color=yellow>modapi help [db]/[debug]</color> - shows this list\n" +
             "<color=yellow>modapi debug [tpp]/[teleportpart]</color> - use \"modapi help debug teleportpart\"\n" +
             "<color=yellow>modapi debug [lp]/[listparts]</color> - Lists all parts loaded in game - use \"modapi help debug listparts\"\n" +
             "<color=yellow>modapi debug [lb]/[listbolts]</color> - Lists all bolts loaded in game - use \"modapi help debug listbolts\"\n";
         /// <summary>
         /// Represents the dev help list.
         /// </summary>
-        const string helpListDev = "<color=yellow>modapi help [dv]/[dev]/[developer]</color> - shows this list\n" +
+        const string HELP_LIST_DEV = "<color=yellow>modapi help [dv]/[dev]/[developer]</color> - shows this list\n" +
             "<color=yellow>modapi dev [ep]/[editpart]</color> - use \"modapi help dev editpart\"\n" +
             "<color=yellow>modapi dev [eb]/[editbolt]</color> - use \"modapi help dev editbolt\"" +
             "<color=yellow>modapi dev [-t]/[toggle]</color> - toggles modapi dev mode. dev mode allows mod api users / dev to raycast for parts / bolts. shows a dev GUI. (CTRL+P)/(CTRL+B) while looking at ";
         /// <summary>
         /// Represents the teleport part help list.
         /// </summary>
-        const string helpListTeleportPart = "<color=yellow>modapi help debug [tpp]/[tppart]/[teleportpart]</color> - shows this list\n" +
+        const string HELP_LIST_TELEPORT_PART = "<color=yellow>modapi help debug [tpp]/[tppart]/[teleportpart]</color> - shows this list\n" +
             "usage: <color=yellow>modapi debug teleportpart</color> [partName] - Teleports the part to the player.\n";
-        /// <summary>
         /// <summary>
         /// Represents the teleport part help list.
         /// </summary>
-        const string helpListListParts = "<color=yellow>modapi help debug [lp]/[listparts]</color> - shows this list\n" +
+        const string HELP_LIST_LIST_PARTS = "<color=yellow>modapi help debug [lp]/[listparts]</color> - shows this list\n" +
             "usage: <color=yellow>modapi debug listparts</color> - Lists all parts loaded in the game.\n";
         /// <summary>
         /// Represents the teleport part help list.
         /// </summary>
-        const string helpListListBolts = "<color=yellow>modapi help debug [lb]/[listbolts]</color> - shows this list\n" +
+        const string HELP_LIST_LIST_BOLTS = "<color=yellow>modapi help debug [lb]/[listbolts]</color> - shows this list\n" +
             "usage: <color=yellow>modapi debug listbolts</color> - Lists all bolts loaded in the game.\n";
         /// <summary>
         /// Represents the edit part install transform help list.
         /// </summary>
-        const string helpListEditPart = "<color=yellow>modapi help dev [ep]/[editpart]</color> - for development and design purposes..\n" +
+        const string HELP_LIST_EDIT_PART = "<color=yellow>modapi help dev [ep]/[editpart]</color> - for development and design purposes..\n" +
             "Finds part to inspect. allows dev to move selected part and print part values." +
             "<color=yellow>modapi dev editpart -r</color> - Get part by raycast.\n" +
             "<color=yellow>modapi dev editpart -n [partName]</color> - Get part by name.\n" +
@@ -77,7 +79,7 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the edit bolt transform help list.
         /// </summary>
-        const string helpListEditBolt = "<color=yellow>modapi help dev [eb]/[editbolt]</color> - for development and design purposes.. \n" +
+        const string HELP_LIST_EDIT_BOLT = "<color=yellow>modapi help dev [eb]/[editbolt]</color> - for development and design purposes.. \n" +
             "Finds bolt to inspect. allows developer to move selected bolt and print bolt values." +
             "<color=yellow>modapi dev editbolt -r</color> - Get bolt by raycast.\n" +
             "<color=yellow>modapi dev editbolt -n [boltName]</color> - Get bolt by name.\n" +
@@ -91,6 +93,11 @@ namespace TommoJProductions.ModApi
         private bool _startedInspectingBolt = false;
 
         #endregion
+
+        public void run(params string[] args)
+        {
+            Run(args);
+        }
 
         #region mscloader override methods
 
@@ -123,21 +130,21 @@ namespace TommoJProductions.ModApi
                                         {
                                             case "lp":
                                             case "listparts":
-                                                print(helpListListParts);
+                                                print(HELP_LIST_LIST_PARTS);
                                                 break;
                                             case "lb":
                                             case "listbolts":
-                                                print(helpListListBolts);
+                                                print(HELP_LIST_LIST_BOLTS);
                                                 break;
                                             case "tpp":
                                             case "tppart":
                                             case "teleportpart":
-                                                print(helpListTeleportPart);
+                                                print(HELP_LIST_TELEPORT_PART);
                                                 break;
                                         }
                                     }
                                     else
-                                        print(helpListDebug);
+                                        print(HELP_LIST_DEBUG);
                                     break;
                                 case "dv":
                                 case "dev":
@@ -148,33 +155,33 @@ namespace TommoJProductions.ModApi
                                         {
                                             case "eb":
                                             case "editbolt":
-                                                print(helpListEditBolt);
+                                                print(HELP_LIST_EDIT_BOLT);
                                                 break;
                                             case "ep":
                                             case "editpart":
-                                                print(helpListEditPart);
+                                                print(HELP_LIST_EDIT_PART);
                                                 break;
 
                                         }
                                     }
                                     else
-                                        print(helpListDev);
+                                        print(HELP_LIST_DEV);
                                     break;
                                 default:
                                     print("unknown command");
-                                    print(helpListGeneral);
+                                    print(HELP_LIST_GENERAL);
                                     break;
                             }
                         }
                         else
                         {
-                            print(helpListGeneral);
+                            print(HELP_LIST_GENERAL);
                         }
                         break;
                     case "version":
                     case "ver":
                     case "v":
-                        print("version:{0}\nplatform:{1}\nconfiguration:{2}\nLatest Release: {3}", version, VersionInfo.IS_64_BIT ? "x64" : "x86", VersionInfo.IS_DEBUG_CONFIG ? "debug" : "release", VersionInfo.lastestRelease);
+                        print("version:{0}\nplatform:{1}\nconfiguration:{2}\nLatest Release: {3}", VERSION, VersionInfo.IS_64_BIT ? "x64" : "x86", VersionInfo.IS_DEBUG_CONFIG ? "debug" : "release", VersionInfo.lastestRelease);
                         break;
                     case "debug":
                     case "db":
@@ -227,7 +234,7 @@ namespace TommoJProductions.ModApi
                                     break;
                                 default:
                                     print("unknown command");
-                                    print(helpListDebug);
+                                    print(HELP_LIST_DEBUG);
                                     break;
                             }
                         }
@@ -291,9 +298,9 @@ namespace TommoJProductions.ModApi
                                                 break;
                                             case "-s":
                                                 if (!_startedInspectingPart)
-                                                    Run(new string[] { "developer", "editpart", "start" });
+                                                    run("developer", "editpart", "start");
                                                 else
-                                                    Run(new string[] { "developer", "editpart", "stop" });
+                                                    run("developer", "editpart", "stop" );
                                                 break;
                                             case "start":
                                                 if (!_inspectingPart)
@@ -312,7 +319,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingPart = true;
-                                                DevMode.inspectionPart = _inspectingPart;
+                                                devModeBehaviour.setInspectionPart(_inspectingPart);
                                                 print("Started inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "stop":
@@ -327,7 +334,7 @@ namespace TommoJProductions.ModApi
                                                     return;
                                                 }
                                                 _startedInspectingPart = false;
-                                                DevMode.inspectionPart = null;
+                                                devModeBehaviour.setInspectionPart(null);
                                                 print("Stopped inspecting {0}..", _inspectingPart.name);
                                                 break;
                                             case "print":
@@ -340,7 +347,7 @@ namespace TommoJProductions.ModApi
                                                 break;
                                             default:
                                                 print("unknown command");
-                                                print(helpListEditPart);
+                                                print(HELP_LIST_EDIT_PART);
                                                 break;
                                         }
                                     }
@@ -397,9 +404,9 @@ namespace TommoJProductions.ModApi
                                                 break;
                                             case "-s":
                                                 if (!_startedInspectingBolt)
-                                                    Run(new string[] { "developer", "editbolt", "start" });
+                                                    run("developer", "editbolt", "start");
                                                 else
-                                                    Run(new string[] { "developer", "editbolt", "stop" });
+                                                    run("developer", "editbolt", "stop");
                                                 break;
                                             case "start":
                                                 if (!_inspectingBolt)
@@ -446,7 +453,7 @@ namespace TommoJProductions.ModApi
                                                 break;
                                             default:
                                                 print("unknown command");
-                                                print(helpListEditBolt);
+                                                print(HELP_LIST_EDIT_BOLT);
                                                 break;
                                         }
                                     }
@@ -461,14 +468,27 @@ namespace TommoJProductions.ModApi
                                     }
                                     else
                                     {
-                                        devModeBehaviour = ModApiLoader.modapiGo.AddComponent<DevMode>();
+                                        ModApiLoader.addDevMode();
                                     }
                                     devMode = !devMode;
                                     print($"Developer mode: {(devMode ? "ON" : "OFF")}");
                                     break;
+                                case "listgameparts":
+                                case "listgp":
+                                case "lgp":
+                                    DevMode.listGameParts = !DevMode.listGameParts;
+                                    DevMode.listModApiParts = false;
+                                    break;
+                                case "listmodapiparts":
+                                case "listmodparts":
+                                case "listmap":
+                                case "lmp":
+                                    DevMode.listModApiParts = !DevMode.listModApiParts;
+                                    DevMode.listGameParts = false;
+                                    break;
                                 default:
                                     print("unknown command");
-                                    print(helpListDev);
+                                    print(HELP_LIST_DEV);
                                     break;
                             }
                         }
@@ -477,7 +497,7 @@ namespace TommoJProductions.ModApi
                         break;
                     default:
                         print("unknown command");
-                        print(helpListGeneral);
+                        print(HELP_LIST_GENERAL);
                         break;
                 }
             }

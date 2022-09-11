@@ -2,12 +2,14 @@
 using UnityEngine;
 using TommoJProductions.ModApi.Database.GameParts;
 using System.Reflection;
+using System.Linq;
 
 namespace TommoJProductions.ModApi.Database
 {
     public class DatabaseMotor
     {
         private GameObject _databaseMotorGo;
+        private PropertyInfo[] _infos = null;
 
         internal GameObject getDatabaseMotor
         {
@@ -30,8 +32,11 @@ namespace TommoJProductions.ModApi.Database
         {
             // Written, 20.07.2022
 
-            PropertyInfo[] infos = GetType().GetProperties(BindingFlags.Public | BindingFlags.GetProperty);
-            return infos;
+            if (_infos == null)
+            {
+                _infos = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty).ToArray();
+            }
+            return _infos;
         }
 
         // playmaker references

@@ -25,7 +25,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <OutputPath>bin\x64\Release\</OutputPath>
     <DefineConstants>x64</DefineConstants>
-    <Optimize>false</Optimize>
+    <Optimize>true</Optimize>
     <DocumentationFile>bin\x64\Release\ModApi.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
@@ -34,6 +34,9 @@
     <DefineConstants>DEBUG;x64</DefineConstants>
     <DocumentationFile>bin\x64\Debug\ModApi.xml</DocumentationFile>
     <RegisterForComInterop>false</RegisterForComInterop>
+    <DebugType>full</DebugType>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -67,6 +70,8 @@
     <Compile Include="Database\GamePart.cs" />
     <Compile Include="Database\PartsStatus.cs" />
     <Compile Include="DevMode.cs" />
+    <Compile Include="ModApiBehaviour.cs" />
+    <Compile Include="ModApiExtentions.cs" />
     <Compile Include="ModApiLoader.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\FsmStateActionCallback.cs" />
     <Compile Include="ModClient.cs" />
@@ -91,6 +96,11 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>AssemblyInfo.cs</LastGenOutput>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.editorconfig">
+      <Link>.editorconfig</Link>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

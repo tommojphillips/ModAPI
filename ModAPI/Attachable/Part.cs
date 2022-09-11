@@ -8,18 +8,38 @@ using static MSCLoader.ModConsole;
 using static UnityEngine.GUILayout;
 using static TommoJProductions.ModApi.ModClient;
 using static TommoJProductions.ModApi.ModApiLoader;
+using MSCLoader;
+using TanjentOGG;
 
 namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
-    /// Represents an installable part.
+    /// Represents an installable and boltable part.
     /// </summary>
     public class Part : MonoBehaviour
     {
         // Written, 27.10.2018 | Updated, 09.2021
 
         #region Part Classes / Enums
-
+        
+        /// <summary>
+        /// Represents supported assemble types.
+        /// </summary>
+        public enum AssembleType
+        {
+            /// <summary>
+            /// Represents a static assembly via, deleting parts rigidbody.
+            /// </summary>
+            static_rigidbodyDelete,
+            /// <summary>
+            /// Represents a static assembly via, setting the parts rigidbody to kinematic.
+            /// </summary>
+            static_rigidibodySetKinematic,
+            /// <summary>
+            /// Represents a fixed joint assembly via, adding a fixed joint to connect two rigidbodies together.
+            /// </summary>
+            joint
+        }
         /// <summary>        
         /// Represents save info about a particluar part.        
         /// </summary>
@@ -59,25 +79,13 @@ namespace TommoJProductions.ModApi.Attachable
             #region Constructors
 
             /// <summary>
-            /// Initializes a new instance of this.
+            /// Initializes a new part save info with default values..
             /// </summary>
             public PartSaveInfo() { }
             /// <summary>
-            /// Initializes a new instance of this and assigns the parts fields to this.
+            /// Initializes a new part save info and assigns fields.
             /// </summary>
-            /// <param name="inPart">The part to save</param>
-            public PartSaveInfo(Part inPart)
-            {
-                // Written, 04.10.2018
-
-                installed = inPart.installed;
-                installedPointIndex = inPart.installPointIndex;
-                position = inPart.transform.position;
-                rotation = inPart.transform.eulerAngles;
-            }/// <summary>
-             /// Initializes a new instance of this and assigns the part save info fields to this.
-             /// </summary>
-             /// <param name="inSave">The save info to replicate</param>
+            /// <param name="inSave">The save info to replicate</param>
             public PartSaveInfo(PartSaveInfo inSave)
             {
                 // Written, 01.05.2022
@@ -85,9 +93,11 @@ namespace TommoJProductions.ModApi.Attachable
                 if (inSave != null)
                 {
                     installed = inSave.installed;
+                    bolted = inSave.bolted;
                     installedPointIndex = inSave.installedPointIndex;
                     position = inSave.position;
                     rotation = inSave.rotation;
+                    boltSaveInfos = inSave.boltSaveInfos;
                 }
             }
 
@@ -143,7 +153,6 @@ namespace TommoJProductions.ModApi.Attachable
             /// </summary>
             public float tightnessThreshold = 0.3f;
 
-
             /// <summary>
             /// Initializes a new instance of part settings.
             /// </summary>
@@ -156,15 +165,13 @@ namespace TommoJProductions.ModApi.Attachable
             {
                 if (s != null)
                 {
-                    collisionSettings.installedCollisionDetectionMode = s.collisionSettings.installedCollisionDetectionMode;
-                    collisionSettings.notInstalledCollisionDetectionMode = s.collisionSettings.notInstalledCollisionDetectionMode;
+                    collisionSettings = s.collisionSettings;
                     assembleType = s.assembleType;
                     assemblyTypeJointSettings = s.assemblyTypeJointSettings;
                     installedPartToLayer = s.installedPartToLayer;
                     notInstalledPartToLayer = s.notInstalledPartToLayer;
                     setPositionRotationOnInitialisePart = s.setPositionRotationOnInitialisePart;
                     setPhysicsMaterialOnInitialisePart = s.setPhysicsMaterialOnInitialisePart;
-                    collisionSettings.physicMaterial = s.collisionSettings.physicMaterial;
                     disassembleCollider = s.disassembleCollider;
                     assembleCollider = s.assembleCollider;
                     installEitherDirection = s.installEitherDirection;
@@ -243,24 +250,7 @@ namespace TommoJProductions.ModApi.Attachable
                 }
             }
         }
-        /// <summary>
-        /// Represents supported assemble types.
-        /// </summary>
-        public enum AssembleType
-        {
-            /// <summary>
-            /// Represents a static assembly via, deleting parts rigidbody.
-            /// </summary>
-            static_rigidbodyDelete,
-            /// <summary>
-            /// Represents a static assembly via, setting the parts rigidbody to kinematic.
-            /// </summary>
-            static_rigidibodySetKinematic,
-            /// <summary>
-            /// Represents a fixed joint assembly via, adding a fixed joint to connect two rigidbodies together.
-            /// </summary>
-            joint
-        }
+        
         /// <summary>
         /// Represents settings for assembly type, joint
         /// </summary>
@@ -275,13 +265,14 @@ namespace TommoJProductions.ModApi.Attachable
             /// </summary>
             public float breakForce = float.PositiveInfinity;
             /// <summary>
-            /// Represents the breakforce min limit. Relevant only to boltable parts that have a joint to install. and only when 
+            /// Represents the breakforce min limit. Relevant only to boltable parts.
             /// </summary>
             public float breakForceMin = 0;
             /// <summary>
             /// represents if the bolts tightness effects the joints breakforce.
             /// </summary>
             public bool boltTightnessEffectsBreakforce = false;
+
             /// <summary>
             /// Inits new joint settings class with default values
             /// </summary>
@@ -296,20 +287,20 @@ namespace TommoJProductions.ModApi.Attachable
             /// <summary>
             /// Inits new joint settings class and assigns class variables.
             /// </summary>
-            public AssemblyTypeJointSettings(float _breakForce, params Rigidbody[] rigidbodies)
+            public AssemblyTypeJointSettings(float breakForce, params Rigidbody[] rigidbodies)
             {
-                breakForce = _breakForce;
+                this.breakForce = breakForce;
                 installPointRigidbodies = rigidbodies;
             }
             /// <summary>
             /// Inits new joint settings class and assigns all class variables.
             /// </summary>
-            public AssemblyTypeJointSettings(float _breakForce, float _breakForceMin, bool _boltTightnessEffectsBreakForce, params Rigidbody[] rigidbodies)
+            public AssemblyTypeJointSettings(float breakForce, float breakForceMin, bool boltTightnessEffectsBreakForce, params Rigidbody[] rigidbodies)
             {
-                breakForce = _breakForce;
+                this.breakForce = breakForce;
                 installPointRigidbodies = rigidbodies;
-                breakForceMin = _breakForceMin;
-                boltTightnessEffectsBreakforce = _boltTightnessEffectsBreakForce;
+                this.breakForceMin = breakForceMin;
+                boltTightnessEffectsBreakforce = boltTightnessEffectsBreakForce;
             }
             /// <summary>
             /// Inits new joint settings class and assigns instance variables.
@@ -365,6 +356,7 @@ namespace TommoJProductions.ModApi.Attachable
         public event Action onPartUnBolted;
         /// <summary>
         /// Represents the on bolt screwed. occurs when any of the bolts have been screwed (up or down).
+        /// </summary>
         public event Action onBoltScrew;
         /// <summary>
         /// Represents the on part picked up event. occurs when this part has been picked up.
@@ -392,8 +384,8 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public PartSaveInfo defaultSaveInfo
         {
-            get { return _defaultSaveInfo; }
-            set { _defaultSaveInfo = new PartSaveInfo(value); }
+            get;
+            set;
         }
         /// <summary>
         /// Represents the runtime id of this part.
@@ -436,7 +428,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public float cachedMass { get; private set; }
         /// <summary>
-        /// Represents the  tightness step. calculated in <see cref="setupBoltTightnessVariables"/>
+        /// Represents the  tightness step. calculated in <see cref="setupBoltTightnessVariables"/>. how much the breakforce of the install point joint increases per bolt screw.
         /// </summary>
         public float tightnessStep { get; private set; }
         /// <summary>
@@ -493,11 +485,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// Represents if part has been initialized (<see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/> invoked
         /// </summary>
         private bool initialized = false;
-        /// <summary>
-        /// Represents default save info.
-        /// </summary>
-        private PartSaveInfo _defaultSaveInfo;
-        private bool _holdingCheck;
+
         /// <summary>
         /// Represents if this part is inherently picked up. (is a child of a part that is currently picked up)
         /// </summary>
@@ -514,7 +502,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the joint break runtime call
         /// </summary>
-        void OnJointBreak(float breakForce)
+        protected virtual void OnJointBreak(float breakForce)
         {
             disassemble();
             onJointBreak?.Invoke();
@@ -554,7 +542,6 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 10.08.2018 | Modified, 25.09.2021 | 09.06.2022
 
-            yield return null;
             onPreAssemble?.Invoke();
             installPointIndex = Array.IndexOf(installPointColliders, installPoint);
             triggers[installPointIndex].triggerCallback.part = this;
@@ -564,12 +551,12 @@ namespace TommoJProductions.ModApi.Attachable
             transform.parent = triggers[installPointIndex].partPivot.transform;
             transform.localPosition = Vector3.zero;
             transform.localEulerAngles = Vector3.zero;
-            setActiveAttachedToTrigger(false, false);
             if (hasBolts)
             {
                 boltParent.SetActive(true);
                 updateTotalBoltTightness();
             }
+            enableColliderAttachedToTrigger(false);
             switch (partSettings.assembleType)
             {
                 case AssembleType.static_rigidbodyDelete:
@@ -584,11 +571,6 @@ namespace TommoJProductions.ModApi.Attachable
                     cachedRigidBody.isKinematic = true;
                     break;
                 case AssembleType.joint:
-                    if (joint)
-                    {
-                        Destroy(joint);
-                        yield return null;
-                    }
                     joint = gameObject.AddComponent<FixedJoint>();
                     joint.connectedBody = (partSettings.assemblyTypeJointSettings.installPointRigidbodies.Length > 0 ? partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex] : installPointColliders[installPointIndex].transform.GetComponentInParent<Rigidbody>()) ?? throw new Exception($"[Assemble.{name}] (Joint) Error assigning connected body. could not find a rigidbody in parent. assign a rigidbody manually at 'partSettings.assemblyTypeJointSettings.installPointRigidbodies[installPointIndex]'");
                     updateJointBreakForce();
@@ -615,9 +597,18 @@ namespace TommoJProductions.ModApi.Attachable
             triggers[installPointIndex].triggerCallback.part = null;
             installed = false;
             if (mouseOver)
+            {
                 mouseOverGuiDisassembleEnable(false);
-            setActiveAttachedToTrigger(true, true);
-            transform.SetParent(null);
+            }
+
+            transform.parent = null;
+
+            if (hasBolts)
+            {
+                resetBoltTightness();
+                boltParent.SetActive(false);
+            }
+            enableColliderAttachedToTrigger(true);
 
             switch (partSettings.assembleType)
             {
@@ -639,16 +630,7 @@ namespace TommoJProductions.ModApi.Attachable
             makePartPickable(true);
 
             playSoundAt(transform, "CarBuilding", "disassemble");
-
-            if (hasBolts)
-            {
-                bolts.forEach(delegate(Bolt b) 
-                {
-                    b.resetTightness();
-                    b.updateNutPosRot();
-                });
-                boltParent.SetActive(false);
-            }
+            
             triggers[installPointIndex].invokeDisassembledEvent();
             onDisassemble?.Invoke();
         }
@@ -657,6 +639,9 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region Constructors
 
+        /// <summary>
+        /// removes this instance from <see cref="loadedParts"/>.
+        /// </summary>
         ~Part()
         {
             loadedParts.Remove(this);
@@ -666,11 +651,15 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region Event Handlers
 
-        private void callback_onTriggerEnter(Part p, TriggerCallback callback_ref)
+        /// <summary>
+        /// invoked when this part enters one of its triggers.
+        /// </summary>
+        /// <param name="callback_ref">the trigger callback that invoked this.</param>
+        protected internal virtual void onTriggerEnter(TriggerCallback callback_ref)
         {
             // Written, 04.10.2018 | Modified, 02.07.2022
 
-            if (holdingCheck(callback_ref) && colliderCheck(callback_ref) && p == this)
+            if (colliderCheck(callback_ref) && holdingCheck(callback_ref))
             {
                 if (triggerRoutine == null)
                 {
@@ -679,12 +668,15 @@ namespace TommoJProductions.ModApi.Attachable
                 }
             }
         }
-        
-        private void callback_onTriggerExit(Part p, TriggerCallback callback_ref)
+        /// <summary>
+        /// invoked when this part exits one of its triggers.
+        /// </summary>
+        /// <param name="callback_ref">the trigger callback that invoked this.</param>
+        protected internal virtual void onTriggerExit(TriggerCallback callback_ref)
         {
             // Written, 14.08.2018 | updated 18.09.2021
 
-            if (p == this && colliderCheck(callback_ref))
+            if (colliderCheck(callback_ref))
             {
                 if (triggerRoutine != null)
                 {
@@ -693,8 +685,10 @@ namespace TommoJProductions.ModApi.Attachable
                 guiAssemble = false;
             }
         }
-        
-        private void boltOnScrew()
+        /// <summary>
+        /// invoked when any bolt on this part is screwed in or out.
+        /// </summary>
+        protected virtual void boltOnScrew()
         {
             // Written, 08.07.2022
 
@@ -711,14 +705,13 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region Methods
 
+
         private void modApiSetupCheck() 
         {
             // Written, 03.07.2022
 
             if (!modApiSetUp)
             {
-                if (!modapiGo)
-                    setUpLoader();
                 loadModApi();
             }
         }
@@ -729,66 +722,61 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="saveInfo">The save info to load this part with.</param>
         /// <param name="partSettingsRef">The part settings to load this part with.</param>
         /// <param name="triggerRefs">The Install points for this part. (in the form of a trigger)</param>
-        public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettingsRef = default(PartSettings), params Trigger[] triggerRefs)
+        public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettingsRef = default, params Trigger[] triggerRefs)
         {
             // Written, 08.09.2021
-            if (!initialized)
+
+            modApiSetupCheck();
+            vaildiatePart(partSettingsRef);
+
+            PartID = "part" + loadedParts.Count.ToString("000");
+            partSettings = new PartSettings(partSettingsRef);
+            triggers = triggerRefs;
+            addInstanceToTriggers();
+            cachedRigidBody = GetComponent<Rigidbody>();
+            cachedMass = cachedRigidBody?.mass ?? 1;
+            loadedSaveInfo = new PartSaveInfo(saveInfo ?? defaultSaveInfo);
+            makePartPickable(!installed);
+            onPreInitPart?.Invoke();
+            if (triggerRefs != null && triggerRefs.Length > 0)
             {
-                modApiSetupCheck();
-                PartID = "part" + loadedParts.Count.ToString("000");
-                partSettings = new PartSettings(partSettingsRef);
-                triggers = triggerRefs;
-                addInstanceToTriggers();
-                cachedRigidBody = GetComponent<Rigidbody>();
-                cachedMass = cachedRigidBody?.mass ?? 1;
-                loadedSaveInfo = new PartSaveInfo(saveInfo ?? defaultSaveInfo);
-                makePartPickable(!installed);
-                onPreInitPart?.Invoke();
-                vaildiatePart();
-                if (triggerRefs != null && triggerRefs.Length > 0)
+                installPointColliders = new Collider[triggerRefs.Length];
+
+                for (int i = 0; i < triggers.Length; i++)
                 {
-                    installPointColliders = new Collider[triggerRefs.Length];
-                
-                    for (int i = 0; i < triggers.Length; i++)
-                    {
-                        installPointColliders[i] = triggers[i].triggerCollider;
-                        triggers[i].triggerCallback.onTriggerExit += callback_onTriggerExit;
-                        triggers[i].triggerCallback.onTriggerEnter += callback_onTriggerEnter;
-                    }
-                    if (installed)
-                    {
-                        assemble(installPointColliders[installPointIndex], false, true);
-                    }
+                    installPointColliders[i] = triggers[i].triggerCollider;
                 }
-                if (!installed && partSettings.setPositionRotationOnInitialisePart)
+                if (installed)
                 {
-                    transform.position = loadedSaveInfo.position;
-                    transform.eulerAngles = loadedSaveInfo.rotation;
+                    assemble(installPointColliders[installPointIndex], false, true);
                 }
-                if (partSettings.setPhysicsMaterialOnInitialisePart)
-                {
-                    IEnumerable<Collider> colliders;
-                    switch (partSettings.collisionSettings.physicMaterialType)
-                    {
-                        case CollisionSettings.PhysicMaterialType.setOnAllFoundColliders:
-                            colliders = GetComponents<Collider>().Where(_col => !_col.isTrigger);
-                            break;
-                        default:
-                        case CollisionSettings.PhysicMaterialType.setOnProvidedColliders:
-                            colliders = partSettings.collisionSettings.providedColliders;
-                            break;
-                    }
-                    foreach (Collider collider in colliders)
-                    {
-                        collider.material = partSettings.collisionSettings.physicMaterial;
-                    }
-                }
-                loadedParts.Add(this);
-                initialized = true;
-                onPostInitPart?.Invoke();
             }
-            else
-                Error($"[ModAPI] error: Part, {name} is already initialized");
+            if (!installed && partSettings.setPositionRotationOnInitialisePart)
+            {
+                transform.position = loadedSaveInfo.position;
+                transform.eulerAngles = loadedSaveInfo.rotation;
+            }
+            if (partSettings.setPhysicsMaterialOnInitialisePart)
+            {
+                Collider[] colliders;
+                switch (partSettings.collisionSettings.physicMaterialType)
+                {
+                    case CollisionSettings.PhysicMaterialType.setOnAllFoundColliders:
+                        colliders = GetComponents<Collider>().Where(col => !col.isTrigger).ToArray();
+                        break;
+                    default:
+                    case CollisionSettings.PhysicMaterialType.setOnProvidedColliders:
+                        colliders = partSettings.collisionSettings.providedColliders;
+                        break;
+                }
+                foreach (Collider collider in colliders)
+                {
+                    collider.material = partSettings.collisionSettings.physicMaterial;
+                }
+            }
+            loadedParts.Add(this);
+            initialized = true;
+            onPostInitPart?.Invoke();
         }
         /// <summary>
         /// Initializes this part with bolts
@@ -797,24 +785,24 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="partSettingsRef">The part settings to load this part with.</param>
         /// <param name="boltRefs">The bolts for this part</param>
         /// <param name="triggerRefs">The Install points for this part. (in the form of a trigger)</param>
-        public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettingsRef = default(PartSettings), Bolt[] boltRefs = null, params Trigger[] triggerRefs)
+        public virtual void initPart(PartSaveInfo saveInfo, PartSettings partSettingsRef = default, Bolt[] boltRefs = null, params Trigger[] triggerRefs)
         {
             // Written, 03.07.2022
 
-            if (!initialized)
+            modApiSetupCheck();
+
+            initBolts(boltRefs, saveInfo?.boltSaveInfos);
+            initPart(saveInfo, partSettingsRef, triggerRefs);
+            setupBoltTightnessVariables();
+            if (!installed)
             {
-                modApiSetupCheck();
-                initBolts(boltRefs, saveInfo?.boltSaveInfos);
-                initPart(saveInfo, partSettingsRef, triggerRefs);
-                if (!installed)
-                {
-                    boltParent.SetActive(false);
-                    setupBoltTightnessVariables();
-                }
-                else
-                {
-                    boltTightnessCheck();
-                }
+                boltParent.SetActive(false);
+                updateTotalBoltTightness();
+            }
+            else
+            {
+                boltTightnessCheck();
+                updateJointBreakForce();
             }
         }
         /// <summary>
@@ -828,85 +816,109 @@ namespace TommoJProductions.ModApi.Attachable
             // Written, 11.07.2022
 
             if (runSynchronously)
-                waitCoroutine(assembleFunction(installPoint, playSound));
+                assembleFunction(installPoint, playSound).waitCoroutine();
             else
                 StartCoroutine(assembleFunction(installPoint, playSound));
         }
         /// <summary>
-        /// Starts the disassemble coroutine. (<see cref="disassembleFunction(bool)"/>). async or sync
+        /// Starts the disassemble coroutine. (<see cref="disassembleFunction"/>). async or sync
         /// </summary>
         /// <param name="runSynchronously">Runs the disassemble function synchronously.</param>
-        /// <param name="playSound">Play disassemble sound?</param>
         public virtual void disassemble(bool runSynchronously = false)
         {
             // Written, 11.07.2022
 
             if (runSynchronously)
-                waitCoroutine(disassembleFunction());
+                disassembleFunction().waitCoroutine();
             else
                 StartCoroutine(disassembleFunction());
         }
         /// <summary>
-        /// Gets save info for this part and its bolts. (pos, rot, installed, install index, tightness)
+        /// Gets save info for this part and its bolts (if the part has any). (pos, rot, installed, install index, tightness)
         /// </summary>
         public virtual PartSaveInfo getSaveInfo()
         {
             // Written, 18.10.2018 | Modified, 11.07.2022
 
             PartSaveInfo info = new PartSaveInfo(loadedSaveInfo);
-            info.position = transform.position;
-            info.rotation = transform.eulerAngles;
-            if (hasBolts)
+            if (partSettings.setPositionRotationOnInitialisePart)
             {
-                info.boltSaveInfos = new Bolt.BoltSaveInfo[bolts.Length];
-                for (int i = 0; i < bolts.Length; i++)
-                {
-                    info.boltSaveInfos[i] = bolts[i].loadedSaveInfo;
-                }
+                info.position = transform.position;
+                info.rotation = transform.eulerAngles;
             }
+            else
+            {
+                info.position = Vector3.zero;
+                info.rotation = Vector3.zero;
+            }
+            info.boltSaveInfos = getBoltSaveInfo();
             return info;
         }
-        
         /// <summary>
-        /// Sets all part triggers (install points) to <paramref name="active"/>.
+        /// Gets bolts save info 
         /// </summary>
-        /// <param name="active">activate or not [part]</param>
-        /// <param name="disassembleLogic">toggle disassemble logic or not (toggles colliders)</param>
-        public void setActiveAllTriggers(bool active, bool disassembleLogic = false)
+        /// <returns></returns>
+        public virtual Bolt.BoltSaveInfo[] getBoltSaveInfo() 
         {
-            // Written, 18.09.2021 | Modified, 23.10.2021
+            // Written, 27.08.2022
 
-            if (disassembleLogic)
-                triggers.forEach(_trigger => _trigger.triggerCallback.disassembleLogicEnabled = active);
-            installPointColliders.forEach(_trigger => _trigger.enabled = active);
+            Bolt.BoltSaveInfo[] boltSaveInfos = null;
+
+            if (hasBolts)
+            {
+                boltSaveInfos = new Bolt.BoltSaveInfo[bolts.Length];
+                for (int i = 0; i < bolts.Length; i++)
+                {
+                    boltSaveInfos[i] = bolts[i].loadedSaveInfo;
+                }
+            }
+            return boltSaveInfos;
         }
+  
         /// <summary>
-        /// Sets a trigger (install point) from <paramref name="index"/> to <paramref name="active"/>.
+        /// Sets the triggers collider enable (install point) from <paramref name="index"/> to <paramref name="active"/>.
         /// </summary>
         /// <param name="active">active or not [part]</param>
         /// <param name="index">The idex ofg the trigger to active or not.</param>
-        /// <param name="disassembleLogic">toggle disassemble logic or not (toggles colliders)</param>
-        public void setActiveTrigger(bool active, int index, bool disassembleLogic = false)
+        public virtual void enableColliderTrigger(bool active, int index)
         {
             // Written, 18.09.2021 | Modified, 23.10.2021
 
-            if (disassembleLogic)
-                triggers[index].triggerCallback.disassembleLogicEnabled = active;
             installPointColliders[index].enabled = active;
         }
         /// <summary>
-        /// Sets the part trigger (install points) that the part is currently installed to <paramref name="active"/>.
+        /// Sets the triggers collider enable  (install points) that the part is currently installed to <paramref name="active"/>. (<see cref="installPointIndex"/>)
         /// </summary>
         /// <param name="active">active or not [part]</param>
-        /// <param name="disassembleLogic">toggle disassemble logic or not (toggles colliders)</param>
-        public void setActiveAttachedToTrigger(bool active, bool disassembleLogic = false)
+        public virtual void enableColliderAttachedToTrigger(bool active)
         {
             // Written, 18.09.2021 | Modified, 23.10.2021
 
-            if (disassembleLogic)
-                triggers[installPointIndex].triggerCallback.disassembleLogicEnabled = active;
-            setActiveTrigger(active, installPointIndex);
+            enableColliderTrigger(active, installPointIndex);
         }
+
+        /// <summary>
+        /// Sets the triggers disasemble logic enable (install point) from <paramref name="index"/> to <paramref name="active"/>.
+        /// </summary>
+        /// <param name="active">active or not [part]</param>
+        /// <param name="index">The idex ofg the trigger to active or not.</param>
+        public virtual void enableDissembleLogicActiveTrigger(bool active, int index)
+        {
+            // Written, 18.09.2021 | Modified, 23.10.2021
+
+            triggers[index].triggerCallback.disassembleLogicEnabled = active;
+        }
+        /// <summary>
+        /// Sets the triggers disasemble logic enable (install points) that the part is currently installed to <paramref name="active"/>. (<see cref="installPointIndex"/>)
+        /// </summary>
+        /// <param name="active">active or not [part]</param>
+        public virtual void enableDissembleLogicAttachedToTrigger(bool active)
+        {
+            // Written, 18.09.2021 | Modified, 23.10.2021
+
+            enableDissembleLogicActiveTrigger(active, installPointIndex);
+        }
+
         /// <summary>
         /// Makes the part a pickable item depending on the provided values.
         /// </summary>
@@ -943,75 +955,65 @@ namespace TommoJProductions.ModApi.Attachable
             guiDisassemble = enable;
         }         
         
+               
         /// <summary>
-        /// Initializes all part bolts.
+        /// Vaildates the part and reports to mod console. called at: <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/>.
         /// </summary>
-        /// <param name="boltRefs">The bolt refs to init</param>
-        /// <param name="infos">The save infos for the bolts.</param>
-        private void initBolts(Bolt[] boltRefs, Bolt.BoltSaveInfo[] infos)
+        protected virtual void vaildiatePart(PartSettings partSettings)
         {
-            // Written, 03.07.2022
+            // Written, 25.09.2021
 
-            bool error = false;
-            if (boltRefs != null)
+            string e = null;
+            if (initialized)
             {
-                if (boltRefs.Length > 0)
-                {
-                    hasBolts = true;
-                    createBoltParentGameObject();
-                    bolts = boltRefs;
-                    for (int i = 0; i < bolts.Length; i++)
-                    {
-                        bolts[i].onScrew += boltOnScrew;
-                        if (infos != null)
-                            bolts[i].initBoltOnPart(this, infos[i]);
-                        else
-                            bolts[i].initBoltOnPart(this);
-                    }
-                }
-                else
-                    error = true;
+                e += $"error: Part, {name} is already initialized\n";
             }
-            else
-                error = true;
+            if (!boltAssetsLoaded)
+            {
+                e += $"- Bolt assets aren't loaded. refused to initialize part, {name}\n";
+            }
+            if (!modApiSetUp)
+            {
+                e += $"- mod api isnt setup. refused to initialize part, {name}\n";
+            }
+            if (partSettings.assembleType == AssembleType.joint && (partSettings.assemblyTypeJointSettings?.installPointRigidbodies?.Length ?? -1) <= 0)
+            {
+                e += "- Invaild part assembly setup. assembly type 'joint' but no install point rigidbodies assigned.\n";               
+            }
+            if (e != null)
+            {
+                Error(e);
+                throw new Exception(e);
+            }
+        }
 
-            if (error) 
-                Print($"Error initialializing Part, {name}. initBolts was called but no bolts were found (either length was zero or boltRef array was null).");
+        /// <summary>
+        /// Check for deciding if part is in trigger to be installed
+        /// </summary>
+        /// <param name="callback">the callback that triggered this.</param>
+        protected virtual bool colliderCheck(TriggerCallback callback)
+        {
+            // Written, 09.06.2022
+
+            if (!partSettings.assembleCollider)
+                return true;
+            return callback.callbackCollider.gameObject == partSettings.assembleCollider.gameObject;
         }
         /// <summary>
-        /// Adds this part instance to each trigger in <see cref="triggers"/>.
+        /// Represents the holding check for a <see cref="Part"/>. Used for starting and checking trigger routine. <see cref="partInTrigger(TriggerCallback)"/>
         /// </summary>
-        private void addInstanceToTriggers() 
+        /// <param name="callback_ref">The trigger callback</param>
+        protected virtual bool holdingCheck(TriggerCallback callback_ref) 
         {
             // Written, 02.07.2022
 
-            foreach (Trigger trigger in triggers) 
-            {
-                trigger.parts.Add(this);
-            }
+            return pickedUp || (partSettings.installEitherDirection && (callback_ref.callbackCollider.gameObject.getBehaviourInParent<Part>(part => !part.installed)?.pickedUp ?? false));
         }
-        /// <summary>
-        /// Updates joint breakforce. (bolts)
-        /// </summary>
-        private void updateJointBreakForce() 
-        {
-            // Written, 08.07.2022
 
-            if (hasBolts && partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
-            {
-                joint.breakForce = (tightnessStep * tightnessTotal) + partSettings.assemblyTypeJointSettings.breakForceMin;
-                joint.breakTorque = joint.breakForce / 2;
-            }
-            else
-            {
-                joint.breakForce = partSettings.assemblyTypeJointSettings.breakForce;
-                joint.breakTorque = joint.breakForce / 2;
-            }
-        }
         /// <summary>
         /// sets up <see cref="maxTightnessTotal"/> and <see cref="tightnessStep"/>
         /// </summary>
-        private void setupBoltTightnessVariables() 
+        protected internal virtual void setupBoltTightnessVariables() 
         {
             // Written, 22.07.2022
 
@@ -1029,12 +1031,11 @@ namespace TommoJProductions.ModApi.Attachable
             {
                 tightnessStep = (partSettings.assemblyTypeJointSettings.breakForce - partSettings.assemblyTypeJointSettings.breakForceMin) / maxTightnessTotal;
             }
-            updateTotalBoltTightness();
         }
         /// <summary>
         /// Updates <see cref="tightnessTotal"/> from current state of <see cref="bolts"/>. see: <see cref="Bolt.BoltSaveInfo.boltTightness"/> and <see cref="Bolt.BoltSaveInfo.addNutTightness"/>
         /// </summary>
-        private void updateTotalBoltTightness() 
+        protected virtual void updateTotalBoltTightness() 
         {
             // Written, 10.07.2022
 
@@ -1046,6 +1047,166 @@ namespace TommoJProductions.ModApi.Attachable
                 {
                     tightnessTotal += b.loadedSaveInfo.addNutTightness;
                 }
+            }
+        }
+        /// <summary>
+        /// checks all bolts for their <see cref="Bolt.boltSettings"/>.<see cref="Bolt.BoltSaveInfo.boltTightness"/>.
+        /// invokes, <see cref="enableDissembleLogicAttachedToTrigger(bool)"/>, 
+        /// sets <see cref="bolted"/> state. and
+        /// invokes <see cref="onPartBolted"/>, <see cref="onPartUnBolted"/> events.
+        /// </summary>
+        protected virtual void boltTightnessCheck() 
+        {
+            // Written, 08.07.2022
+
+            if (tightnessTotal >= maxTightnessTotal * Mathf.Clamp(partSettings.tightnessThreshold, 0.25f, 1))
+            {
+                enableDissembleLogicAttachedToTrigger(false);
+                guiDisassemble = false;
+            }
+            if (tightnessTotal == maxTightnessTotal)
+            {
+                bolted = true;
+                onPartBolted?.Invoke();
+            }
+            else if (bolted && tightnessTotal < maxTightnessTotal)
+            {
+                bolted = false;
+            }
+            else if (tightnessTotal == 0)
+            {
+                enableDissembleLogicAttachedToTrigger(true);
+                onPartUnBolted?.Invoke();
+            }
+        }
+        /// <summary>
+        /// resets all bolts tightness on this part
+        /// </summary>
+        public void resetBoltTightness() 
+        {
+            // Written, 25.08.2022
+
+            setBoltTightness(bolt => bolt.resetTightness());
+        }
+        /// <summary>
+        /// sets all bolt tightness to the max tightness.
+        /// </summary>
+        public void setMaxBoltTightness()
+        {
+            // Written, 25.08.2022
+
+            setBoltTightness(bolt => bolt.setMaxTightness());
+        }
+        /// <summary>
+        /// Calls the <paramref name="func"/> on each bolt and updates bolt model, part total tightness and executes <see cref="boltTightnessCheck"/>
+        /// </summary>
+        /// <param name="func">the action to execute on each bolt</param>
+        private void setBoltTightness(Action<Bolt> func)
+        {
+            // Written, 25.08.2022
+
+            for (int i = 0; i < bolts.Length; i++)
+            {
+                func(bolts[i]);
+                bolts[i].updateModelPosition();
+            }
+            updateTotalBoltTightness();
+            boltTightnessCheck();
+        }
+
+        /// <summary>
+        /// Initializes all part bolts.
+        /// </summary>
+        /// <param name="boltRefs">The bolt refs to init</param>
+        /// <param name="infos">The save infos for the bolts.</param>
+        protected virtual void initBolts(Bolt[] boltRefs, Bolt.BoltSaveInfo[] infos)
+        {
+            // Written, 03.07.2022
+
+            bool error = false;
+            if (boltRefs != null)
+            {
+                if (boltRefs.Length > 0)
+                {
+                    hasBolts = true;
+                    createBoltParentGameObject();
+                    bolts = boltRefs;
+                    for (int i = 0; i < bolts.Length; i++)
+                    {
+                        bolts[i].onScrew -= boltOnScrew;
+                        bolts[i].onScrew += boltOnScrew;
+                        if (infos != null)
+                            bolts[i].initBoltOnPart(this, infos[i]);
+                        else
+                            bolts[i].initBoltOnPart(this);
+                    }
+                }
+                else
+                    error = true;
+            }
+            else
+                error = true;
+
+            if (error)
+                Print($"Error initialializing Part, {name}. initBolts was called but no bolts were found (either length was zero or boltRef array was null).");
+        }
+
+        /// <summary>
+        /// Updates joint breakforce. (bolts)
+        /// </summary>
+        internal void updateJointBreakForce()
+        {
+            // Written, 08.07.2022
+
+            if (hasBolts && partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
+            {
+                joint.breakForce = (tightnessStep * tightnessTotal) + partSettings.assemblyTypeJointSettings.breakForceMin;
+            }
+            else
+            {
+                joint.breakForce = partSettings.assemblyTypeJointSettings.breakForce;
+            }
+            joint.breakTorque = joint.breakForce / 2;
+        }
+        
+        /// <summary>
+        /// invokes the picked up event
+        /// </summary>
+        internal void invokePickedUpEvent()
+        {
+            // Written, 11.07.2022
+
+            onPartPickUp?.Invoke();
+        }
+        /// <summary>
+        /// invokes the thrown event.
+        /// </summary>
+        internal void invokeThrownEvent()
+        {
+            // Written, 11.07.2022
+
+            onPartThrow?.Invoke();
+        }
+        /// <summary>
+        /// invokes the dropped event.
+        /// </summary>
+        internal void invokeDroppedEvent()
+        {
+            // Written, 11.07.2022
+
+            onPartDrop?.Invoke();
+        }
+
+        /// <summary>
+        /// Adds this part instance to each trigger in <see cref="triggers"/>.
+        /// </summary>
+        private void addInstanceToTriggers() 
+        {
+            // Written, 02.07.2022
+
+            foreach (Trigger trigger in triggers) 
+            {
+                trigger.parts.Add(this);
             }
         }
         /// <summary>
@@ -1071,100 +1232,6 @@ namespace TommoJProductions.ModApi.Attachable
             inTrigger = false;
             StopCoroutine(triggerRoutine);
             triggerRoutine = null;
-        }
-        /// <summary>
-        /// Check for deciding if part is in trigger to be installed
-        /// </summary>
-        /// <param name="callback">the callback that triggered this.</param>
-        private bool colliderCheck(TriggerCallback callback)
-        {
-            // Written, 09.06.2022
-
-            if (!partSettings.assembleCollider)
-                return true;
-            return callback.callbackCollider.gameObject == partSettings.assembleCollider.gameObject;
-        }
-        /// <summary>
-        /// Vaildates the part and reports to mod console. called at: <see cref="initPart(PartSaveInfo, PartSettings, Trigger[])"/>.
-        /// </summary>
-        private bool vaildiatePart()
-        {
-            // Written, 25.09.2021
-
-            string e = null;
-            if (partSettings.assembleType == AssembleType.joint && (partSettings.assemblyTypeJointSettings?.installPointRigidbodies?.Length ?? -1) <= 0)
-            {
-                e += "ModApi.Part.vaildiatePart: invaild part assembly setup. assembly type 'joint' must have install point rigidbodies assigned.\n";
-               
-            }
-            if (e != null)
-            {
-                Error(e);
-                throw new Exception(e);
-            }
-            return true;
-        }
-        /// <summary>
-        /// checks all bolts for their <see cref="Bolt.boltSettings"/>.<see cref="Bolt.BoltSaveInfo.boltTightness"/>.
-        /// invokes, <see cref="setActiveAttachedToTrigger(bool, bool)"/>, 
-        /// sets <see cref="bolted"/> state. and
-        /// invokes <see cref="onPartBolted"/>, <see cref="onPartUnBolted"/> events.
-        /// </summary>
-        private void boltTightnessCheck() 
-        {
-            // Written, 08.07.2022
-
-            if (tightnessTotal >= maxTightnessTotal * Mathf.Clamp(partSettings.tightnessThreshold, 0.25f, 1))
-            {
-                setActiveAttachedToTrigger(false, true);
-                guiDisassemble = false;
-            }
-            if (tightnessTotal == maxTightnessTotal)
-            {
-                bolted = true;
-                onPartBolted?.Invoke();
-            }
-            else if (bolted && tightnessTotal < maxTightnessTotal)
-            {
-                bolted = false;
-            }
-            else if (tightnessTotal == 0)
-            {
-                setActiveAttachedToTrigger(true, true);
-                onPartUnBolted?.Invoke();
-            }
-        }
-        /// <summary>
-        /// Represents the holding check for a <see cref="Part"/>. Used for starting and checking trigger routine. <see cref="partInTrigger(TriggerCallback)"/>
-        /// </summary>
-        /// <param name="callback_ref">The trigger callback</param>
-        public bool holdingCheck(TriggerCallback callback_ref) 
-        {
-            // Written, 02.07.2022
-
-            _holdingCheck = gameObject.isPlayerHolding();
-            if (partSettings.installEitherDirection)
-                _holdingCheck |= callback_ref.callbackCollider.gameObject.getBehaviourInParent<Part>(part => part && !part.installed)?.gameObject.isPlayerHolding() ?? false;
-            return _holdingCheck;
-        }
-
-        internal void invokePickedUpEvent()
-        {
-            // Written, 11.07.2022
-
-            onPartPickUp?.Invoke();
-        }
-        internal void invokeThrownEvent()
-        {
-            // Written, 11.07.2022
-
-            onPartThrow?.Invoke();
-        }
-        internal void invokeDroppedEvent()
-        {
-            // Written, 11.07.2022
-
-            onPartDrop?.Invoke();
         }
 
         #endregion

@@ -72,23 +72,33 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public Renderer triggerRenderer { get; private set; }
         /// <summary>
-        /// Represents the default trigger collider scale.
+        /// Represents the default trigger collider size.
         /// </summary>
-        private Vector3 defaultScale = new Vector3(0.05f, 0.05f, 0.05f);
+        private Vector3 defaultSize = new Vector3(0.05f, 0.05f, 0.05f);
         /// <summary>
         /// Represents all parts that have this trigger in <see cref="Part.triggers"/> array.
         /// </summary>
         public List<Part> parts { get; internal set; }
 
+        /// <summary>
+        /// Represents the install point gameobject. the trigger and part pivot are children of this gameobject.
+        /// </summary>
         public GameObject installPoint { get; private set; }
+        /// <summary>
+        /// Represents the parts pivot. parts that are installed to this trigger will be parented here when installed.
+        /// </summary>
         public GameObject partPivot { get; private set; }
+        /// <summary>
+        /// Represents the triggers name.
+        /// </summary>
+        public string triggerName { get; private set; }
 
         #endregion
 
         #region Constructors
 
         /// <summary>
-        /// Initializes a new instance of trigger. Note, Make sure to set up the trigger! <see cref="setUpTrigger(string, GameObject, Vector3, Quaternion, Vector3, bool)"/>
+        /// Initializes a new instance of trigger. Note, Make sure to set up the trigger! <see cref="initTrigger(string, GameObject, Vector3, Vector3, Vector3?, bool)"/>
         /// </summary>
         public Trigger() { }
 
@@ -101,7 +111,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="eulerAngles">The rotation for the trigger. ('local') related to the parent.</param>
         /// <param name="scale">The scale for the trigger. NOTE: if null sets scale to 0.05 on all XYZ axes.</param>
         /// <param name="visible">Sets whether the trigger should be visualized or not.</param>
-        public Trigger(string triggerName, GameObject parent, Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3), Vector3? scale = null, bool visible = false)
+        public Trigger(string triggerName, GameObject parent, Vector3 position = default, Vector3 eulerAngles = default, Vector3? scale = null, bool visible = false)
         {
             // Written, 10.08.2018
 
@@ -115,7 +125,6 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Exposes <see cref="onPartAssembledToTrigger"/>'s <see cref="Action.Invoke"/> method.
         /// </summary>
-        /// <param name="part">The part that was assembled.</param>
         internal void invokeAssembledEvent()
         {
             // Written, 12.06.2022
@@ -125,7 +134,6 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Exposes <see cref="onPartDisassembledFromTrigger"/>'s <see cref="Action.Invoke"/> method.
         /// </summary>
-        /// <param name="part">The part that was disassembled.</param>
         internal void invokeDisassembledEvent()
         {
             // Written, 12.06.2022
@@ -135,7 +143,6 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Exposes <see cref="onPartPreAssembledToTrigger"/>'s <see cref="Action.Invoke"/> method.
         /// </summary>
-        /// <param name="part">The part that was assembled.</param>
         internal void invokePreAssembledEvent()
         {
             // Written, 12.06.2022
@@ -145,14 +152,13 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Exposes <see cref="onPartPreDisassembledFromTrigger"/>'s <see cref="Action.Invoke"/> method.
         /// </summary>
-        /// <param name="part">The part that was disassembled.</param>
         internal void invokePreDisassembledEvent()
         {
             // Written, 12.06.2022
 
             onPartPreDisassembledFromTrigger?.Invoke(this);
         }
-
+        
         /// <summary>
         /// Initializes the trigger.
         /// </summary>
@@ -160,24 +166,25 @@ namespace TommoJProductions.ModApi.Attachable
         /// <param name="_parent">The parent gameobject of the trigger.</param>
         /// <param name="position">The position for the trigger. ('local' related to the parent).</param>
         /// <param name="eulerAngles">The rotation for the trigger. ('local') related to the parent.</param>
-        /// <param name="scale">The scale for the trigger.</param>
+        /// <param name="size">The size of the triggers colldier.</param>
         /// <param name="visible">Sets whether the trigger should be visualized or not.</param>
-        public void initTrigger(string triggerName, GameObject _parent, Vector3 position = default(Vector3), Vector3 eulerAngles = default(Vector3), Vector3? scale = null, bool visible = false)
+        public void initTrigger(string triggerName, GameObject _parent, Vector3 position = default, Vector3 eulerAngles = default, Vector3? size = null, bool visible = false)
         {
             // Written, 04.10.2018 | Updated, 09.2021 | 02.07.2022
 
             parent = _parent.transform;
             triggerPosition = position;
             triggerEuler = eulerAngles;
+            this.triggerName = triggerName.Replace("Trigger", "").Replace("trigger", "");
             createInstallPointGameObject();
             triggerGameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
             triggerGameObject.transform.SetParent(installPoint.transform, false);
-            triggerGameObject.name = triggerName;
+            triggerGameObject.name = "Trigger";
             triggerGameObject.transform.localPosition = position.clone();
             triggerGameObject.transform.localEulerAngles = eulerAngles.clone();
             triggerGameObject.transform.localScale = Vector3.one;
             triggerCollider = triggerGameObject.GetComponent<BoxCollider>();
-            triggerCollider.size = scale ?? defaultScale;
+            triggerCollider.size = size ?? defaultSize;
             triggerCollider.isTrigger = true;
             triggerRenderer = triggerGameObject.GetComponent<Renderer>();
             triggerRenderer.enabled = visible;
@@ -192,7 +199,7 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 11.07.2022
 
-            installPoint = new GameObject("InstallPoint");
+            installPoint = new GameObject(triggerName + "_InstallPoint");
             installPoint.transform.parent = parent;
             installPoint.transform.localPosition = Vector3.zero;
             installPoint.transform.localEulerAngles = Vector3.zero;

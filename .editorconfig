@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# IDE0022: Use block body for methods
+csharp_style_expression_bodied_methods = when_on_single_line
+
+# IDE0058: Expression value is never used
+dotnet_diagnostic.IDE0058.severity = none

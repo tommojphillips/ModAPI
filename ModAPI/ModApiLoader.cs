@@ -2,9 +2,11 @@
 using MSCLoader;
 using System;
 using System.Collections;
+using System.IO;
 using System.Linq;
 
 using TommoJProductions.ModApi.Attachable;
+using TommoJProductions.ModApi.Attachable.CallBacks;
 using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,33 +22,56 @@ namespace TommoJProductions.ModApi
     {
         // Written, 11.07.2022
 
+
         // loader stuff
         /// <summary>
-        /// Represents the gameobject that holds the modapiloader behaviour
+        /// Represents the gameobject that holds the dev mode behaviour. gameobject is used to detect if game has been re-loaded/changed. used to inject mod api related stuff.
         /// </summary>
         public static GameObject modapiGo { get; private set; } = null;
-        private static FsmState activateGameState;
-        private static FsmStateActionCallback actionCallback;
 
-        // part stuff
-        private static bool pickedPartSet = false;
-        private static bool inherentyPickedPartsSet = false;
-        private static Action partLeaveAction;
+        private static ModApiBehaviour modapiBehaviour;
+        internal static FsmState activateGameState;
+
+        internal static FsmStateActionCallback actionCallback;
+        /// <summary>
+        /// Represents if <see cref="setUpModApi"/> has been injected into fsm state, <see cref="activateGameState"/>.
+        /// </summary>
+        internal  static bool activateGameStateInjected = false;
+        /// <summary>
+        /// represents if the user is playing with a pirtated game copy (not through steam).
+        /// </summary>
+        public static bool piratedGameCopy { get; private set; } = false;
+
+        // part related stuff
+        internal static bool pickedPartSet = false;
+        internal static bool inherentyPickedPartsSet = false;
+        internal static Action partLeaveAction;
         /// <summary>
         /// Reps all parts that were set in <see cref="partCheckFunction"/>. Reps all <see cref="Part"/> children in root <see cref="pickedPart"/>.
         /// </summary>
-        private static Part[] inherentlyPickedParts;
+        internal static Part[] inherentlyPickedParts;
         /// <summary>
         /// Reps the root picked part. the part that the player is currently holding.
         /// </summary>
-        private static Part pickedPart;
+        internal static Part pickedPart;
         /// <summary>
         /// Reps the picked object. the object that the player is currently holding.
         /// </summary>
-        private static GameObject pickedObject;
+        internal static GameObject pickedObject;
 
-        // bolt stuff
-        internal static PhysicsRaycaster raycaster = null;
+        // bolt related stuff
+        /// <summary>
+        /// Represents the current detected bolt gameobject. only works in tool mode.
+        /// </summary>
+        internal static FsmGameObject bolt;
+        /// <summary>
+        /// represents the set bolt callback that the player is looking at.
+        /// </summary>
+        internal static BoltCallback lookingAtCallback;
+        /// <summary>
+        /// represents the current bolt callback that the player is looking at.
+        /// </summary>
+        internal static BoltCallback currentCallback;
 
         #region IEnumerators
 
@@ -67,7 +92,7 @@ namespace TommoJProductions.ModApi
                 }
                 
                 inherentlyPickedParts = pickedObject.getBehavioursInChildren<Part>();
-
+                yield return null;
                 if (inherentlyPickedParts != null && inherentlyPickedParts.Length > 0)
                 {
                     inherentyPickedPartsSet = true;
@@ -85,72 +110,104 @@ namespace TommoJProductions.ModApi
 
         #region Methods
 
-        internal static void setUpLoader()
+        internal static void addDevMode() 
         {
-            // Written, 11.07.2022
+            // Written, 25.08.2022
 
-            modapiGo = new GameObject("Mod API Loader");
-            Print("modapi: Setup");
+            devModeBehaviour = modapiGo.AddComponent<DevMode>();
         }
         internal static void loadModApi()
         {
             // Written, 11.07.2022
 
-            if (!Camera.main) // game not set up yet.
+            if (!activateGameStateInjected)
             {
-                activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
-                actionCallback = activateGameState.appendNewAction(setUpModApi);
-                Print("modapi: Injected");
+                if (!ModLoader.CheckSteam()) // pirate detection.
+                {
+                    piratedGameCopy = true;
+                    string error = "ModAPI: merirosvo. please report to mod developer!";
+                    ModConsole.Error(error);
+                    throw new Exception(error);
+                }
+
+                if (!Camera.main) // game not set up yet.
+                {
+                    activateGameStateInjected = true;
+                    activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
+                    actionCallback = activateGameState.appendNewAction(setUpModApi);
+                    Print("modapi: Injected");
+                }
+                else
+                    setUpModApi();
             }
-            else
-                setUpModApi();
         }
         private static void setUpModApi()
         {
             // Written, 11.07.2022
 
-            ConsoleCommand.Add(new ConsoleCommands());
-            loadedParts.Clear();
-            loadedBolts.Clear();
+            activateGameStateInjected = false;
 
-            setUpPart();
-            setUpBolt();
-            if (devMode)
+            if (!modApiSetUp)
             {
-                devModeBehaviour = modapiGo.AddComponent<DevMode>();
+                deleteCache();
+
+                modapiGo = new GameObject("Mod API Loader");
+                modapiBehaviour = modapiGo.AddComponent<ModApiBehaviour>();
+                ConsoleCommand.Add(new ConsoleCommands());
+                loadedParts.Clear();
+                loadedBolts.Clear();
+
+                setUpPart();
+                setUpBolt();
+                if (devMode)
+                {
+                    addDevMode();
+                }
+                Print($"modapi v{VersionInfo.version}: Loaded");
+
+                if (actionCallback != null)
+                {
+                    int index = Array.IndexOf(activateGameState.Actions, actionCallback);
+                    if (index == -1)
+                        return;
+                    activateGameState.RemoveAction(index);
+                    Print("modapi: Cleaned up");
+                }
             }
-            Print($"modapi v{VersionInfo.version}: Loaded");
-
-            if (actionCallback != null)
+            else
             {
-                int index = Array.IndexOf(activateGameState.Actions, actionCallback);
-                if (index == -1)
-                    return;
-                activateGameState.RemoveAction(index);
-                Print("modapi: Cleaned up");
+                ModConsole.Error("[ModAPI].[setUpModApi] - tried setting up modapi but its already setup!");
             }
         }
-        private static void setUpPart() 
+        private static void setUpPart()
         {
             // Written, 02.07.2022
 
-            if (getHandPickUpFsm != null)
-            {
-                getHandPickUpFsm.GetState("Part picked").insertNewAction(partPickedUp, 5);
-                getHandPickUpFsm.GetState("Drop part").prependNewAction(partDropped);
-                getHandPickUpFsm.GetState("Throw part").prependNewAction(partThrown);
-            }
+            getHandPickUpFsm.GetState("Part picked").insertNewAction(partPickedUp, 5);
+            getHandPickUpFsm.GetState("Drop part").prependNewAction(partDropped);
+            getHandPickUpFsm.GetState("Throw part").prependNewAction(partThrown);
+
+            ModConsole.Print("[ModApiLoader] - part set up");
         }
+        private static void setUpBolt()
+        {
+            // Written, 02.07.2022
+
+            tryLoadBoltAssets();
+            injectBoltCheck();
+
+            ModConsole.Print("[ModApiLoader] - bolt set up");
+        }
+
         private static void partPickedUp()
         {
             // Written, 11.06.2022
 
-            getHandPickUpFsm?.StartCoroutine(partCheckFunction());
+            modapiBehaviour.StartCoroutine(partCheckFunction());
         }
         private static void partDropped()
         {
             // Written, 11.06.2022
-
 
             if (pickedPart)
                 partLeaveAction = pickedPart.invokeDroppedEvent;
@@ -168,6 +225,7 @@ namespace TommoJProductions.ModApi
                 partLeaveAction = null;
             objectLeaveHand(partLeaveAction, invokeThrowEvent);
         }
+
         private static void objectLeaveHand(Action partLeaveEvent, Action<GameObject> objectLeaveEvent) 
         {
             // Written, 14.06.2022
@@ -175,15 +233,18 @@ namespace TommoJProductions.ModApi
             if (pickedPartSet)
             {
                 partLeaveEvent?.Invoke();
-                pickedPartReset();
+                pickedPart.pickedUp = false;
+                pickedPart = null;
+                pickedPartSet = false;
             }
             if (inherentyPickedPartsSet)
             {
                 inherentlyPickedPartReset();
             }
-            objectLeaveEvent(pickedObject);
-            resetObject();
+            objectLeaveEvent.Invoke(pickedObject);
+            pickedObject = null;
         }
+
         private static void inherentlyPickedPartReset()
         {
             // Written, 09.06.2022
@@ -196,39 +257,110 @@ namespace TommoJProductions.ModApi
             inherentlyPickedParts = null;
             inherentyPickedPartsSet = false;
         }
-        private static void pickedPartReset()
+        
+        private static void injectBoltCheck() 
         {
-            // Written, 09.06.2022
+            // Written, 25.08.2022
 
-            pickedPart.pickedUp = false;
-            pickedPart = null;
-            pickedPartSet = false;
+            GameObject toolLogic = getFPS.transform.FindChild("2Spanner/Raycast").gameObject;
+
+            PlayMakerFSM raycast = toolLogic.GetPlayMaker("Raycast");
+            bolt = raycast.FsmVariables.FindFsmGameObject("Bolt");
+
+            PlayMakerFSM check = toolLogic.GetPlayMaker("Check");
+            check.GetState("Check bolt Name").appendNewAction(boltChangedCheck);
+
+            GameObject selectItem = getFPS.transform.FindChild("SelectItem").gameObject;
+            PlayMakerFSM selection = selectItem.GetPlayMaker("Selection");
+            selection.GetState("Reset tool").appendNewAction(resetBolt);
         }
-        private static void resetObject() 
-        {
-            pickedObject = null;
-        }
-        private static void setUpBolt()
+        /// <summary>
+        /// trys to load bolt assets.
+        /// </summary>
+        /// <returns>returns whether or not the bolt assets were loaded.</returns>
+        private static void tryLoadBoltAssets()
         {
             // Written, 02.07.2022
 
-            Bolt.tryLoadBoltAssets();
-
-            if (ModClient.getPlayerCamera)
+            if (!boltAssetsLoaded)
             {
-                if (!raycaster)
+                string assetPathPrefered = Path.Combine(ModClient.getModsFolder, "Assets/ModApi/modapi.unity3d");
+                string assetPathAlt = Path.Combine(ModClient.getGameFolder, "ModApi/modapi.unity3d");
+                string usingPath;
+
+                if (File.Exists(assetPathPrefered))
                 {
-                    raycaster = ModClient.getPOV.gameObject.AddComponent<PhysicsRaycaster>();
-                    raycaster.eventMask = getMask(LayerMasksEnum.Bolts);                    
-                    Print("[ModApi.Loader] physics raycaster set up on main camera");
+                    usingPath = assetPathPrefered;
                 }
                 else
-                    Print("[ModApi.Loader] physics raycaster already setup. :)");
+                {
+                    usingPath = assetPathAlt;
+                }
+
+                if (File.Exists(usingPath))
+                {
+                    AssetBundle ab = AssetBundle.CreateFromMemoryImmediate(File.ReadAllBytes(usingPath));
+                    nutPrefab = ab.LoadAsset("nut.prefab") as GameObject;
+                    shortBoltPrefab = ab.LoadAsset("short bolt.prefab") as GameObject;
+                    longBoltPrefab = ab.LoadAsset("long bolt.prefab") as GameObject;
+                    screwPrefab = ab.LoadAsset("screw.prefab") as GameObject;
+                    ab.Unload(false);
+
+                    Print("[ModApi.Bolt] bolt assets loaded");
+                    boltAssetsLoaded = true;
+                }
+                else
+                {
+                    Error("Please install Mod Reference, 'ModApi' correctly. modapi.unity3d could not be found. copy modapi.unity3d to:");
+                    Print(assetPathAlt);
+                }
             }
             else
+                Print("[ModApi.Bolt] bolt assets already loaded. :)");
+
+            Print($"nut         prefab: {nutPrefab}");
+            Print($"screw       prefab:  {screwPrefab}");
+            Print($"short bolt  prefab: {shortBoltPrefab}");
+            Print($"long bolt   prefab:  {longBoltPrefab}");
+        }
+
+        #endregion
+
+        #region Event handlers
+
+
+        /// <summary>
+        /// Occurs when the <see cref="bolt"/> gameobject reference changes or when the reset tool check takes place when player has changed to hand mode.. Handles <see cref="BoltCallback.onBoltExit"/> calls. invoked by injected playmaker state.
+        /// </summary>
+        private static void resetBolt()
+        {
+            // Written, 25.08.2022
+
+            if (lookingAtCallback)
             {
-                Print("[ModApi.Loader] main camera was null. could not set up physics raycaster. 'ModApi.Bolts' wont work.");
+                lookingAtCallback.onBoltExit();
+                lookingAtCallback = null;
             }
+        }
+        /// <summary>
+        /// Occurs when the <see cref="bolt"/> gameobject reference changes. Handles <see cref="BoltCallback.onBoltEnter"/>/<see cref="BoltCallback.onBoltExit"/> calls. invoked by injected playmaker state.
+        /// </summary>
+        private static void boltChangedCheck()
+        {
+            // Written, 25.08.2022
+
+            currentCallback = null;
+
+            if (bolt.Value)
+            {
+                currentCallback = bolt.Value.GetComponent<BoltCallback>();
+            }
+            resetBolt();
+            if (currentCallback)
+            {
+                currentCallback.onBoltEnter();
+            }
+            lookingAtCallback = currentCallback;
         }
 
         #endregion

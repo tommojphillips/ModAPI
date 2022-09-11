@@ -18,10 +18,6 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         /// </summary>
         public event Action<Part, TriggerCallback> onTriggerExit;
         /// <summary>
-        /// Represents the on trigger stay event.
-        /// </summary>
-        public event Action<Part, TriggerCallback> onTriggerStay;
-        /// <summary>
         /// Represents the on trigger enter event.
         /// </summary>
         public event Action<Part, TriggerCallback> onTriggerEnter;
@@ -37,7 +33,7 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         /// <summary>
         /// Represents if disassemble logic is enabled or not.
         /// </summary>
-        public bool disassembleLogicEnabled = true;
+        public bool disassembleLogicEnabled { get; internal set; } = true;
         /// <summary>
         /// Represents the part that is currently installed to this trigger. note null if no installed part.
         /// </summary>
@@ -57,20 +53,43 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
 
         #region Methods
 
-        private bool triggerCheck(Collider col) 
+        /// <summary>
+        /// checks all parts that have this trigger to see if <paramref name="col"/> is a <see cref="Part"/> and that it can be installed to this trigger.
+        /// </summary>
+        /// <param name="col">The collider that was in the trigger.</param>
+        /// <param name="part">the <see cref="Part"/> that was in the trigger, null if <paramref name="col"/> wasn't a <see cref="Part"/> or if the part can't be installed to this trigger.</param>
+        /// <returns></returns>
+        protected virtual bool triggerCheck(Collider col, out Part part) 
         {
-            return trigger.parts.Any(p => p.gameObject == col.gameObject);
+            // Written, 21.08.2022
+
+            for (int i = 0; i < trigger.parts?.Count; i++)
+            {
+                if (trigger.parts[i].gameObject.GetInstanceID() == col.gameObject.GetInstanceID())
+                {
+                    part = trigger.parts[i];
+                    return true;
+                }
+            }
+            part = null;
+            return false;
         }
 
         #endregion
 
         #region Unity runtime methods
 
-        private void Awake()
+        /// <summary>
+        /// awake function of the trigger callback.
+        /// </summary>
+        protected virtual void Awake()
         {
             callbackCollider = GetComponent<Collider>();
         }
-        private void Update()
+        /// <summary>
+        /// the update function of the trigger callback.
+        /// </summary>
+        protected virtual void Update()
         {
             if (part && disassembleLogicEnabled)
             {
@@ -79,6 +98,7 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
                 {
                     if (ModClient.guiDrive)
                         ModClient.guiDrive = false;
+
                     part.mouseOverGuiDisassembleEnable(true);
                     if (Input.GetMouseButtonDown(1))
                     {
@@ -86,31 +106,47 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
                     }
                 }
                 else if (part.mouseOver)
+                {
                     part.mouseOverGuiDisassembleEnable(false);
+                }
             }
         }
-        private void OnDisable()
+        /// <summary>
+        /// the disable function of this callback. inactives <see cref="Part.mouseOver"/>.
+        /// </summary>
+        protected virtual void OnDisable()
         {
             if (part)
             {
                 if (part.mouseOver)
+                {
                     part.mouseOverGuiDisassembleEnable(false);
+                }
             }
         }
-        private void OnTriggerExit(Collider collider)
+        /// <summary>
+        /// Occurs when a collider exits this trigger.
+        /// </summary>
+        /// <param name="collider">the collider that invoked this</param>
+        protected virtual void OnTriggerExit(Collider collider)
         {
-            if (triggerCheck(collider))
-                onTriggerExit?.Invoke(collider.GetComponent<Part>(), this);
+            if (triggerCheck(collider, out Part part))
+            {
+                part.onTriggerExit(this);
+                onTriggerExit?.Invoke(part, this);
+            }
         }
-        private void OnTriggerStay(Collider collider)
+        /// <summary>
+        /// Occurs when a collider enters this trigger.
+        /// </summary>
+        /// <param name="collider">the collider that invoked this</param>
+        protected virtual void OnTriggerEnter(Collider collider)
         {
-            if (triggerCheck(collider))
-                onTriggerStay?.Invoke(collider.GetComponent<Part>(), this);
-        }
-        private void OnTriggerEnter(Collider collider)
-        {
-            if (triggerCheck(collider))
-               onTriggerEnter?.Invoke(collider.GetComponent<Part>(), this);
+            if (triggerCheck(collider, out Part part))
+            {
+                part.onTriggerEnter(this);
+                onTriggerEnter?.Invoke(part, this);
+            }
         }
 
         #endregion

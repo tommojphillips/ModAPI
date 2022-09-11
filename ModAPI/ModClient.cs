@@ -20,7 +20,7 @@ namespace TommoJProductions.ModApi
     #region enums
 
     /// <summary>
-    /// Represents inject types for <see cref="injectAction"/>
+    /// Represents inject types.
     /// </summary>
     public enum InjectEnum
     {
@@ -205,7 +205,7 @@ namespace TommoJProductions.ModApi
         /// </summary>
         Tools,
         /// <summary>
-        /// Represents the wheel layer. (All UnityCar.Wheels use this. eg FL wheel on satsuma will be on this layer.
+        /// Represents the wheel layer.
         /// </summary>
         Wheel,
         /// <summary>
@@ -270,20 +270,26 @@ namespace TommoJProductions.ModApi
 
     #region Excections
 
+    /// <summary>
+    /// reps a save data not found error
+    /// </summary>
     public class saveDataNotFoundException : Exception 
     {
         // Written, 15.07.2022
 
+        /// <summary>
+        /// reps a save data not found error with a message.
+        /// </summary>
+        /// <param name="message"></param>
         public saveDataNotFoundException(string message) : base(message) { }
     }
 
-    #endregion
-      
+    #endregion      
 
     /// <summary>
     /// Represents useful properties for interacting with My Summer Car and PlayMaker.
     /// </summary>
-    public static class ModClient
+    public class ModClient
     {
         // Written, 10.08.2018 | Modified 25.09.2021
 
@@ -292,42 +298,56 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the complied runtime version of the api.
         /// </summary>
-        public const string version = VersionInfo.version;
+        public const string VERSION = VersionInfo.version;
         
+        /// <summary>
+        /// Represents the dev mode behaviour instance. null if <see cref="devMode"/> is <see langword="false"/>.
+        /// </summary>
         public static DevMode devModeBehaviour { get; internal set; }
+
 #if DEBUG
         internal static bool devMode = true;
 #else
         internal static bool devMode = false;
 #endif
 
-        internal static Part _inspectingPart = null;
-        internal static BoltCallback _inspectingBolt = null;
+        private static ModClient instance;
 
-        private static PlayMakerFSM _pickUp;
-        private static FsmGameObject _pickedUpGameObject;
-        private static FsmGameObject _raycastHitGameObject;
-        private static AudioSource _assembleAudio;
-        private static AudioSource _disassembleAudio;
-        private static AudioSource _screwAudio;
-        private static FsmBool _guiDisassemble;
-        private static FsmBool _guiAssemble;
-        private static FsmBool _guiUse;
-        private static FsmBool _guiDrive;
-        private static FsmBool _handEmpty;
-        private static FsmBool _playerInMenu;
-        private static FsmString _guiInteraction;
-        private static FsmString _playerCurrentVehicle;
-        private static FieldInfo _modsFolderFieldInfo;
-        private static FsmFloat _toolWrenchSize;
-        private static FsmFloat _boltingSpeed;
-        private static string[] _maskNames;
-        private static string _propertyString = "";
-        private static Material _activeBoltMaterial;
-        private static GameObject _masterAudioGameObject;
-        private static Dictionary<string, AudioSource> masterAudioDictionary = new Dictionary<string, AudioSource>();
-        private static Camera _playerCamera;
-        private static FsmGameObject _POV;
+        private PlayMakerFSM _pickUp;
+        private FsmGameObject _pickedUpGameObject;
+        private FsmGameObject _raycastHitGameObject;
+        private AudioSource _assembleAudio;
+        private AudioSource _disassembleAudio;
+        private AudioSource _screwAudio;
+        private FsmBool _guiDisassemble;
+        private FsmBool _guiAssemble;
+        private FsmBool _guiUse;
+        private FsmBool _guiDrive;
+        private FsmBool _handEmpty;
+        private FsmBool _playerInMenu;
+        private FsmString _guiInteraction;
+        private FsmString _playerCurrentVehicle;
+        private FieldInfo _modsFolderFieldInfo;
+        private FsmFloat _toolWrenchSize;
+        private string[] _maskNames;
+        private string _propertyString = "";
+        private float _propertyFloat = 0;
+        private Material _activeBoltMaterial;
+        private GameObject _masterAudioGameObject;
+        private readonly Dictionary<string, AudioSource> masterAudioDictionary = new Dictionary<string, AudioSource>();
+        private Camera _playerCamera;
+        private FsmGameObject _POV;
+        private GameObject _player;
+        private GameObject _fps;
+        private string _gameDirectory;
+
+        internal readonly Dictionary<string, string> descriptionCache = new Dictionary<string, string>();
+
+        internal static bool boltAssetsLoaded { get; set; } = false;
+        internal static GameObject shortBoltPrefab;
+        internal static GameObject longBoltPrefab;
+        internal static GameObject screwPrefab;
+        internal static GameObject nutPrefab;
 
         #endregion
 
@@ -349,7 +369,27 @@ namespace TommoJProductions.ModApi
 
         #endregion
 
+        internal static void deleteCache() 
+        {
+            instance = null;
+        }
+
         #region Properties
+
+        /// <summary>
+        /// Gets the current <see cref="ModClient"/> instance.
+        /// </summary>
+        public static ModClient getInstance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new ModClient();
+                }
+                return instance;
+            }
+        }
 
         /// <summary>
         /// Represents the assemble assemble audio source.
@@ -358,9 +398,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_assembleAudio == null)
-                    _assembleAudio = GameObject.Find("MasterAudio/CarBuilding/assemble").GetComponent<AudioSource>();
-                return _assembleAudio;
+                if (getInstance._assembleAudio == null)
+                    getInstance._assembleAudio = GameObject.Find("MasterAudio/CarBuilding/assemble").GetComponent<AudioSource>();
+                return getInstance._assembleAudio;
             }
         }
         /// <summary>
@@ -370,9 +410,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_disassembleAudio == null)
-                    _disassembleAudio = GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
-                return _disassembleAudio;
+                if (getInstance._disassembleAudio == null)
+                    getInstance._disassembleAudio = GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
+                return getInstance._disassembleAudio;
             }
         }
         /// <summary>
@@ -382,9 +422,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_screwAudio == null)
-                    _screwAudio = GameObject.Find("MasterAudio/CarBuilding/bolt_screw").GetComponent<AudioSource>();
-                return _screwAudio;
+                if (getInstance._screwAudio == null)
+                    getInstance._screwAudio = GameObject.Find("MasterAudio/CarBuilding/bolt_screw").GetComponent<AudioSource>();
+                return getInstance._screwAudio;
             }
         }
         /// <summary>
@@ -394,15 +434,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_guiDisassemble == null)
-                    _guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
-                return _guiDisassemble.Value;
+                if (getInstance._guiDisassemble == null)
+                    getInstance._guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
+                return getInstance._guiDisassemble.Value;
             }
             set
             {
-                if (_guiDisassemble == null)
-                    _guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
-                _guiDisassemble.Value = value;
+                if (getInstance._guiDisassemble == null)
+                    getInstance._guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
+                getInstance._guiDisassemble.Value = value;
             }
         }
         /// <summary>
@@ -412,15 +452,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_guiAssemble == null)
-                    _guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
-                return _guiAssemble.Value;
+                if (getInstance._guiAssemble == null)
+                    getInstance._guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
+                return getInstance._guiAssemble.Value;
             }
             set
             {
-                if (_guiAssemble == null)
-                    _guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
-                _guiAssemble.Value = value;
+                if (getInstance._guiAssemble == null)
+                    getInstance._guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
+                getInstance._guiAssemble.Value = value;
             }
         }
         /// <summary>
@@ -430,15 +470,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_guiUse == null)
-                    _guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
-                return _guiUse.Value;
+                if (getInstance._guiUse == null)
+                    getInstance._guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
+                return getInstance._guiUse.Value;
             }
             set
             {
-                if (_guiUse == null)
-                    _guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
-                _guiUse.Value = value;
+                if (getInstance._guiUse == null)
+                    getInstance._guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
+                getInstance._guiUse.Value = value;
             }
         }
         /// <summary>
@@ -448,15 +488,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_guiInteraction == null)
-                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
-                return _guiInteraction.Value;
+                if (getInstance._guiInteraction == null)
+                    getInstance._guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
+                return getInstance._guiInteraction.Value;
             }
             set
             {
-                if (_guiInteraction == null)
-                    _guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
-                _guiInteraction.Value = value;
+                if (getInstance._guiInteraction == null)
+                    getInstance._guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
+                getInstance._guiInteraction.Value = value;
             }
         }
         /// <summary>
@@ -466,15 +506,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_guiDrive == null)
-                    _guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
-                return _guiDrive.Value;
+                if (getInstance._guiDrive == null)
+                    getInstance._guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
+                return getInstance._guiDrive.Value;
             }
             set
             {
-                if (_guiDrive == null)
-                    _guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
-                _guiDrive.Value = value;
+                if (getInstance._guiDrive == null)
+                    getInstance._guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
+                getInstance._guiDrive.Value = value;
             }
         }
         /// <summary>
@@ -484,15 +524,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_playerInMenu == null)
-                    _playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
-                return _playerInMenu.Value;
+                if (getInstance._playerInMenu == null)
+                    getInstance._playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
+                return getInstance._playerInMenu.Value;
             }
             set
             {
-                if (_playerInMenu == null)
-                    _playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
-                _playerInMenu.Value = value;
+                if (getInstance._playerInMenu == null)
+                    getInstance._playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
+                getInstance._playerInMenu.Value = value;
             }
         }
         /// <summary>
@@ -502,15 +542,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_playerCurrentVehicle == null)
-                    _playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
-                return _playerCurrentVehicle.Value;
+                if (getInstance._playerCurrentVehicle == null)
+                    getInstance._playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
+                return getInstance._playerCurrentVehicle.Value;
             }
             set
             {
-                if (_playerCurrentVehicle == null)
-                    _playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
-                _playerCurrentVehicle.Value = value;
+                if (getInstance._playerCurrentVehicle == null)
+                    getInstance._playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
+                getInstance._playerCurrentVehicle.Value = value;
             }
         }
         /// <summary>
@@ -546,7 +586,6 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public static List<Bolt> loadedBolts { get; } = new List<Bolt>();
 
-
         /// <summary>
         /// Gets the pickup playmakerfsm from the hand gameobject.
         /// </summary>
@@ -554,9 +593,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_pickUp == null)
-                    _pickUp = GameObject.Find("PLAYER/Pivot/AnimPivot/Camera/FPSCamera/1Hand_Assemble/Hand")?.GetPlayMaker("PickUp");
-                return _pickUp;
+                if (getInstance._pickUp == null)
+                    getInstance._pickUp = getFPS.transform.Find("1Hand_Assemble/Hand").GetPlayMaker("PickUp");
+                return getInstance._pickUp;
             }
         }
         /// <summary>
@@ -566,9 +605,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_pickedUpGameObject == null)
-                    _pickedUpGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("PickedObject");
-                return _pickedUpGameObject;
+                if (getInstance._pickedUpGameObject == null)
+                    getInstance._pickedUpGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("PickedObject");
+                return getInstance._pickedUpGameObject;
             }
         }
         /// <summary>
@@ -578,9 +617,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_raycastHitGameObject == null)
-                    _raycastHitGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("RaycastHitObject");
-                return _raycastHitGameObject;
+                if (getInstance._raycastHitGameObject == null)
+                    getInstance._raycastHitGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("RaycastHitObject");
+                return getInstance._raycastHitGameObject;
             }
         }
         /// <summary>
@@ -594,9 +633,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_handEmpty == null)
-                    _handEmpty = getHandPickUpFsm?.FsmVariables.FindFsmBool("HandEmpty");
-                return _handEmpty.Value;
+                if (getInstance._handEmpty == null)
+                    getInstance._handEmpty = getHandPickUpFsm?.FsmVariables.FindFsmBool("HandEmpty");
+                return getInstance._handEmpty.Value;
             }
         }
         /// <summary>
@@ -608,9 +647,9 @@ namespace TommoJProductions.ModApi
 
             get
             {
-                if (_modsFolderFieldInfo == null)
-                    _modsFolderFieldInfo = typeof(ModLoader).GetField("ModsFolder", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.GetField);
-                return _modsFolderFieldInfo;
+                if (getInstance._modsFolderFieldInfo == null)
+                    getInstance._modsFolderFieldInfo = typeof(ModLoader).GetField("ModsFolder", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.GetField);
+                return getInstance._modsFolderFieldInfo;
             }
         }
         /// <summary>
@@ -622,10 +661,7 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public static Bolt.BoltSize getToolWrenchSize_boltSize
         {
-            get
-            {
-                return (Bolt.BoltSize)(getToolWrenchSize_float * 100f);
-            }
+            get => (Bolt.BoltSize)(getToolWrenchSize_float * 100f);
         }
         /// <summary>
         /// gets the currently used wrench size
@@ -634,9 +670,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_toolWrenchSize == null)
-                    _toolWrenchSize = PlayMakerGlobals.Instance.Variables.FindFsmFloat("ToolWrenchSize");
-                return _toolWrenchSize.Value;
+                if (getInstance._toolWrenchSize == null)
+                    getInstance._toolWrenchSize = PlayMakerGlobals.Instance.Variables.FindFsmFloat("ToolWrenchSize");
+                return getInstance._toolWrenchSize.Value;
             }
         }
         /// <summary>
@@ -644,17 +680,13 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public static bool modApiSetUp => ModApiLoader.modapiGo;
         /// <summary>
-        /// Gets the bolting speed wait.
+        /// Gets the spanner bolting speed wait time.
         /// </summary>
-        public static float getBoltingSpeed
-        {
-            get
-            {
-                if (_boltingSpeed == null)
-                    _boltingSpeed = PlayMakerGlobals.Instance.Variables.FindFsmFloat("BoltingSpeed");
-                return _boltingSpeed.Value;
-            }
-        }
+        public static float getSpannerBoltingSpeed => 0.28f;
+        /// <summary>
+        /// Gets the rachet bolting speed wait time.
+        /// </summary>
+        public static float getRachetBoltingSpeed => 0.08f;
         /// <summary>
         /// Gets the active bolt material. (green bolt texture)
         /// </summary>
@@ -662,89 +694,137 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (_activeBoltMaterial == null)
+                if (getInstance._activeBoltMaterial == null)
                 {
                     Material[] gameMaterials = Resources.FindObjectsOfTypeAll<Material>();
-                    _activeBoltMaterial = gameMaterials.First(m => m.name == "activebolt");
+                    getInstance._activeBoltMaterial = gameMaterials.First(m => m.name == "activebolt");
                 }
-                return _activeBoltMaterial;
+                return getInstance._activeBoltMaterial;
             }
         }
 
+        /// <summary>
+        /// gets the master audio gameobject and caches a reference.
+        /// </summary>
         public static GameObject getMasterAudioGameObject
         {
             get
             {
-                if (!_masterAudioGameObject)
-                    _masterAudioGameObject = GameObject.Find("MasterAudio");
-                return _masterAudioGameObject;
+                if (!getInstance._masterAudioGameObject)
+                    getInstance._masterAudioGameObject = GameObject.Find("MasterAudio");
+                return getInstance._masterAudioGameObject;
             }
         }
-        
+
         /// <summary>
-        /// cache. gets and stores a reference to the player camera gameobject.
+        /// cache. gets and stores a reference to the player camera gameobject (parent of player camera). PATH: "PLAYER/Pivot/AnimPivot/Camera/FPSCamera/FPSCamera"
         /// </summary>
-        public static GameObject getPOV 
+        public static GameObject getPOV
         {
-            get 
+            get
             {
-                if (_POV == null)
+                if (getInstance._POV == null)
                 {
-                    _POV = PlayMakerGlobals.Instance.Variables.FindFsmGameObject("POV");
+                    getInstance._POV = PlayMakerGlobals.Instance.Variables.FindFsmGameObject("POV");
                 }
-                return _POV.Value;
+                return getInstance._POV.Value;
             }
         }
         /// <summary>
-        /// cache. gets and stores a reference to the player camera.
+        /// cache. gets and stores a reference to the player gameobject. PATH: "PLAYER"
+        /// </summary>
+        public static GameObject getPlayer
+        {
+            get
+            {
+                if (getInstance._player == null)
+                {
+                    getInstance._player = getPOV.transform.root.gameObject;
+                }
+                return getInstance._player;
+            }
+        }
+        /// <summary>
+        /// cache. gets and stores a reference to the player fps gameobject. PATH: "PLAYER/Pivot/AnimPivot/Camera/FPSCamera"
+        /// </summary>
+        public static GameObject getFPS
+        {
+            get
+            {
+                if (getInstance._fps == null)
+                {
+                    getInstance._fps = getPOV.transform.parent.gameObject;
+                }
+                return getInstance._fps;
+            }
+        }
+        /// <summary>
+        /// cache. gets and stores a reference to the player camera. 
         /// </summary>
         public static Camera getPlayerCamera 
         {
             get 
             {
-                if (_playerCamera == null)
+                if (getInstance._playerCamera == null)
                 {
-                    _playerCamera = getPOV.GetComponent<Camera>();
+                    getInstance._playerCamera = getPOV.GetComponent<Camera>();
                 }
-                return _playerCamera;
+                return getInstance._playerCamera;
             }
         }
-
-        #endregion
-
-        #region IEnumerator
-
         /// <summary>
-        /// Runs a coroutine synchronously. Waits for the coroutine to finish.
+        /// Gets the full game directory path on the user system.
         /// </summary>
-        /// <param name="func">The corountine to run synchronously.</param>
-        public static void waitCoroutine(IEnumerator func)
+        public static string getGameFolder 
         {
-            while (func.MoveNext())
+            get
             {
-                if (func.Current != null)
+                if (getInstance._gameDirectory == null)
                 {
-                    IEnumerator num;
-                    try
-                    {
-                        num = (IEnumerator)func.Current;
-                    }
-                    catch (InvalidCastException)
-                    {
-                        if (func.Current.GetType() == typeof(WaitForSeconds))
-                            Debug.LogWarning("[wait for coroutine] Skipped call to WaitForSeconds.");
-                        return;
-                    }
-                    waitCoroutine(num);
+                    getInstance._gameDirectory = Path.GetFullPath(".");
                 }
+                return getInstance._gameDirectory;
             }
         }
-
 
         #endregion
 
         #region Methods
 
+        /// <summary>
+        /// finds child object of name <paramref name="childName"/> and gets playmaker called, "Data".
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="childName"></param>
+        /// <returns>"Data" playmakerFsm on child of <paramref name="go"/>.</returns>
+        internal static PlayMakerFSM getData(GameObject go, string childName)
+        {
+            return go.transform.FindChild(childName).GetPlayMaker("Data");
+        }
+
+        // [Texture]
+        /// <summary>
+        /// creates a texure with the color provided.
+        /// </summary>
+        /// <param name="width">width of texture</param>
+        /// <param name="height">height of texture</param>
+        /// <param name="col">the color of the texture</param>
+        /// <returns>a new texture instance of color param: <paramref name="col"/></returns>
+        public static Texture2D createTextureFromColor(int width, int height, Color col)
+        {
+            // Written, 21.08.2022
+
+            Color[] pix = new Color[width * height];
+
+            for (int i = 0; i < pix.Length; i++)
+                pix[i] = col;
+
+            Texture2D result = new Texture2D(width, height);
+            result.SetPixels(pix);
+            result.Apply();
+
+            return result;
+        }
 
         // [Sound]
         /// <summary>
@@ -794,13 +874,13 @@ namespace TommoJProductions.ModApi
 
             string search = $"{soundType}/{variantName}";
             AudioSource source;
-            if (!masterAudioDictionary.TryGetValue(search, out source))
+            if (!getInstance.masterAudioDictionary.TryGetValue(search, out source))
             {
                 source = getMasterAudioGameObject.transform.Find(search)?.gameObject.GetComponent<AudioSource>();
                 if (source)
-                    masterAudioDictionary.Add(search, source);
+                    getInstance.masterAudioDictionary.Add(search, source);
                 else
-                    print($"Error: Could not find audio path: {search}.");
+                    print($"Error: Could not find audio path: MasterAudio/{search}.");
             }
             return source;
         }
@@ -863,6 +943,15 @@ namespace TommoJProductions.ModApi
                     drawProperty("Spark angle", (gp as Distributor).sparkAngle);
                 if (gp is CamshaftGear)
                     drawProperty("Angle", (gp as CamshaftGear).angle);
+
+                if (Button("Teleport to player"))
+                {
+                    gp.thisPart.Value.transform.teleport(ModClient.getPOV.transform.position);
+                }
+                if (Button("Teleport to part"))
+                {
+                    ModClient.getPlayer.teleport(gp.thisPart.Value.transform.position);
+                }
             }
         }
         /// <summary>
@@ -936,22 +1025,70 @@ namespace TommoJProductions.ModApi
             return e;
         }
         /// <summary>
-        /// [GUI] draws a property that can be edited
+        /// [GUI] draws a property of type <see cref="string"/> that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property name</param>
+        /// <param name="property">the reference string to draw/edit</param>
+        /// <param name="maxLength">max length of textfield (number of letters.)</param>
+        /// <returns><see langword="true"/> if <paramref name="property"/> has changed.</returns>
+        public static bool drawPropertyEdit(string propertyName, ref string property, int maxLength = 10)
+        {
+            // Written 19.08.2022
+
+            using (new HorizontalScope())
+            {
+                Label(propertyName);
+                getInstance._propertyString = TextField(property, maxLength);
+            }
+
+            if (getInstance._propertyString != property)
+            {
+                property = getInstance._propertyString;
+                return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// [GUI] draws a property of type <see cref="string"/> that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property name</param>
+        /// <param name="property">the reference string to draw/edit</param>
+        /// <param name="maxLength">max length of textfield (number of letters.)</param>
+        /// <returns><see langword="true"/> returns the property</returns>
+        public static string drawPropertyEdit(string propertyName, string property, int maxLength = 10)
+        {
+            // Written 19.08.2022
+
+            using (new HorizontalScope())
+            {
+                Label(propertyName);
+                return TextField(property, maxLength);
+            }
+        }
+        /// <summary>
+        /// [GUI] draws a property of type <see cref="float"/> that can be edited
         /// </summary>
         /// <param name="propertyName">The property float name</param>
         /// <param name="property">the reference float to draw/edit</param>
-        /// <param name="maxLength">max length of textfield</param>
-        public static void drawPropertyEdit(string propertyName, ref float property, int maxLength = 10)
+        /// <param name="maxLength">max length of textfield (number of letters.)</param>
+        /// <returns><see langword="true"/> if <paramref name="property"/> has changed.</returns>
+        public static bool drawPropertyEdit(string propertyName, ref float property, int maxLength = 10)
         {
-            using (new HorizontalScope())
+            // Written 28.08.2022
+
+            getInstance._propertyString = drawPropertyEdit(propertyName, property.ToString());
+
+            float.TryParse(getInstance._propertyString, out getInstance._propertyFloat);
+
+            if (getInstance._propertyFloat != property)
             {
-                drawProperty(propertyName);
-                _propertyString = TextField(property.ToString(), maxLength);
+                property = getInstance._propertyFloat;
+                return true;
             }
-            float.TryParse(_propertyString, out property);
+            return false;
         }
         /// <summary>
-        /// [GUI] draws a property that can be edited
+        /// [GUI] draws a float property that can be edited
         /// </summary>
         /// <param name="propertyName">The property float name</param>
         /// <param name="property">the reference float to draw/edit</param>
@@ -1009,6 +1146,7 @@ namespace TommoJProductions.ModApi
         {
             Label($"{propertyName}: {property}");
         }
+
         /// <summary>
         /// Displays an interaction text and optional hand symbol. If no parameters are passed into the method (default parameters), turns off the interaction.
         /// </summary>
@@ -1028,7 +1166,6 @@ namespace TommoJProductions.ModApi
         /// sets all interactions to the passed boolean value.
         /// </summary>
         /// <param name="inGuiInteractSymbol">The gui symbol to change.</param>
-        /// <param name="inValue">The value..</param>
         private static void changeInteractSymbol(GuiInteractSymbolEnum inGuiInteractSymbol)
         {
             // Written, 16.03.2019
@@ -1069,968 +1206,112 @@ namespace TommoJProductions.ModApi
 
         // [Raycast]
         /// <summary>
-        /// Gets the layermask. Used to make raycast masks.
+        /// Gets the layermask. Used to make raycast masks. if no masks are passed. returns all layers (everything) '~0'
         /// </summary>
         /// <param name="masks">layermasks</param>
         public static int getMask(params LayerMasksEnum[] masks)
         {
             // Written, 03.07.2022
 
-            _maskNames = new string[masks.Length];
-            for (int i = 0; i < masks.Length; i++)
+            if (masks != null && masks.Length > 0)
             {
-                _maskNames[i] = masks[i].ToString();
+                getInstance._maskNames = new string[masks.Length];
+                for (int i = 0; i < masks.Length; i++)
+                {
+                    getInstance._maskNames[i] = masks[i].ToString();
+                }
+                return LayerMask.GetMask(getInstance._maskNames);
             }
-            return LayerMask.GetMask(_maskNames);
+            return ~0;
+        }
+        /// <summary>
+        /// Raycasts for a type of behaviour with a max distance of '1' from the camera at the cursor position.
+        /// </summary>
+        /// <typeparam name="T">the type of behaviour to raycast for.</typeparam>
+        /// <param name="layers">the layers to raycast on. Note: if nothing is passed, raycasts on all layers.</param>
+        /// <returns>the instance of <typeparamref name="T"/> if found. if not returns null.</returns>
+        public static T raycastForBehaviour<T>(params LayerMasksEnum[] layers) where T : MonoBehaviour
+        {
+            return raycastForBehaviour<T>(false, 1, layers);
+        }
+        /// <summary>
+        /// Raycasts for a type of behaviour with a max distance of '1' from the camera.
+        /// </summary>
+        /// <typeparam name="T">the type of behaviour to raycast for.</typeparam>
+        /// <param name="centerOfScreen">if true. uses the center of the screen regardless where the mouse is.</param>
+        /// <param name="layers">the layers to raycast on. Note: if nothing is passed, raycasts on all layers.</param>
+        /// <returns>the instance of <typeparamref name="T"/> if found. if not returns null.</returns>
+        public static T raycastForBehaviour<T>(bool centerOfScreen, params LayerMasksEnum[] layers) where T : MonoBehaviour
+        {
+            return raycastForBehaviour<T>(centerOfScreen, 1, layers);
+        }
+        /// <summary>
+        /// Raycasts for a type of behaviour from the camera at the cursor position.
+        /// </summary>
+        /// <typeparam name="T">the type of behaviour to raycast for.</typeparam>
+        /// <param name="maxDistance">the max distance of the ray.</param>
+        /// <param name="layers">the layers to raycast on. Note: if nothing is passed, raycasts on all layers.</param>
+        /// <returns>the instance of <typeparamref name="T"/> if found. if not returns null.</returns>
+        public static T raycastForBehaviour<T>(float maxDistance, params LayerMasksEnum[] layers) where T : MonoBehaviour
+        {
+            return raycastForBehaviour<T>(false, maxDistance, layers);
         }
         /// <summary>
         /// Raycasts for a type of behaviour
         /// </summary>
         /// <typeparam name="T">the type of behaviour to raycast for.</typeparam>
+        /// <param name="maxDistance">the max distance of the ray.</param>
         /// <param name="centerOfScreen">if true. uses the center of the screen regardless where the mouse is.</param>
-        /// <returns></returns>
-        public static T raycastForBehaviour<T>(bool centerOfScreen = false) where T : MonoBehaviour
+        /// <param name="layers">the layers to raycast on. Note: if nothing is passed, raycasts on all layers.</param>
+        /// <returns>the instance of <typeparamref name="T"/> if found. if not returns null.</returns>
+        public static T raycastForBehaviour<T>(bool centerOfScreen, float maxDistance, params LayerMasksEnum[] layers) where T : MonoBehaviour
         {
-            RaycastHit hitInfo;
-            bool hasHit = Physics.Raycast(centerOfScreen ? getPlayerCamera.ViewportPointToRay(Vector3.one * 0.5f) : getPlayerCamera.ScreenPointToRay(Input.mousePosition), out hitInfo);
-            T t = null;
-            if (hasHit)
+            if (raycast(out RaycastHit hitInfo, maxDistance, centerOfScreen, layers))
             {
-                t = hitInfo.collider.GetComponent<T>();
+                return hitInfo.collider.GetComponent<T>();
             }
-            return t;
+            return null;
+        }
+        /// <summary>
+        /// raycasts. uses cached player camera (see: <see cref="getPlayerCamera"/>) for improved performace. mod developers using ModAPI are recommended to use this instead of their own <see cref="Physics.Raycast(Ray)"/> calls.
+        /// </summary>
+        /// <param name="raycastHit">the raycast hit info.</param>
+        /// <param name="maxDistance">the max distance of the ray.</param>
+        /// <param name="centerOfScreen">if true. uses the center of the screen regardless where the mouse is.</param>
+        /// <param name="layers">the layers to raycast on. Note: if nothing is passed, raycasts on all layers.</param>
+        /// <returns><see langword="true"/> if the raycast hit anything.</returns>
+        public static bool raycast(out RaycastHit raycastHit, float maxDistance = 1, bool centerOfScreen = false, params LayerMasksEnum[] layers)
+        {
+            return Physics.Raycast(centerOfScreen ? getPlayerCamera.ViewportPointToRay(Vector3.one * 0.5f) : getPlayerCamera.ScreenPointToRay(Input.mousePosition), out raycastHit, maxDistance, getMask(layers));
         }
 
         // Expose event invoke.
+        /// <summary>
+        /// invokes the object pick up event and passes the param <paramref name="gameObject"/>.
+        /// </summary>
+        /// <param name="gameObject">the gameobject that was picked up</param>
         internal static void invokePickUpEvent(GameObject gameObject)
         {
             onGameObjectPickUp?.Invoke(gameObject);
         }
+        /// <summary>
+        /// invokes the object drop event and passes the param <paramref name="gameObject"/>.
+        /// </summary>
+        /// <param name="gameObject">the gameobject that was dropped</param>
         internal static void invokeDropEvent(GameObject gameObject)
         {
             onGameObjectDrop?.Invoke(gameObject);
         }
+        /// <summary>
+        /// invokes the object throw event and passes the param <paramref name="gameObject"/>.
+        /// </summary>
+        /// <param name="gameObject">the gameobject that was thrown</param>
         internal static void invokeThrowEvent(GameObject gameObject)
         {
             onGameObjectThrow?.Invoke(gameObject);
         }
 
         #endregion
-
-        #region ExMethods
-
-        /// <summary>
-        /// finds child object of name <paramref name="childName"/> and gets playmaker called, "Data".
-        /// </summary>
-        /// <param name="go"></param>
-        /// <param name="childName"></param>
-        /// <returns>"Data" playmakerFsm on child of <paramref name="go"/>.</returns>
-        internal static PlayMakerFSM getData(GameObject go, string childName)
-        {
-            return go.transform.FindChild(childName).GetPlayMaker("Data");
-        }
-        /// <summary>
-        /// Teleports a part to a world position.
-        /// </summary>
-        /// <param name="part">The part to teleport.</param>
-        /// <param name="force">force a uninstall if required?</param>
-        /// <param name="position">The position to teleport the part to.</param>
-        public static void teleport(this Part part, bool force, Vector3 position)
-        {
-            // Written, 09.07.2022
-
-            if (part.installed && force)
-                part.disassemble(true);
-            part.transform.teleport(position);
-        }
-        /// <summary>
-        /// Teleports a gameobject to a world position.
-        /// </summary>
-        /// <param name="gameobject">The gameobject to teleport</param>
-        /// <param name="position">The position to teleport the go to.</param>
-        public static void teleport(this GameObject gameobject, Vector3 position)
-        {
-            // Written, 09.07.2022
-
-            gameobject.transform.teleport(position);
-        }
-        /// <summary>
-        /// Teleports a transform to a world position.
-        /// </summary>
-        /// <param name="transform">The transform to teleport</param>
-        /// <param name="position">The position to teleport the go to.</param>
-        public static void teleport(this Transform transform, Vector3 position)
-        {
-            // Written, 09.07.2022
-
-            Rigidbody rb = transform.GetComponent<Rigidbody>();
-            if (rb)
-                if (!rb.isKinematic)
-                    rb = null;
-                else
-                    rb.isKinematic = true;
-            transform.root.position = position;
-            if (rb)
-                rb.isKinematic = false;
-        }
-        
-        /// <summary>
-        /// Gets the description of the enum member.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="e"></param>
-        /// <returns></returns>
-        public static string getDescription<T>(this T e) where T : Enum 
-        {
-            return e.GetType().GetField(e.ToString()).getDescription();
-        }
-        /// <summary>
-        /// Gets <see cref="DescriptionAttribute.Description"/> on provided object type. if attribute doesn't exist, returns <see cref="MemberInfo.Name"/>
-        /// </summary>
-        /// <param name="mi">the member info to get info from.</param>
-        public static string getDescription(this MemberInfo mi)
-        {
-            // Written, 07.07.2022
-
-            object o = mi.GetCustomAttributes(typeof(DescriptionAttribute), false);
-            DescriptionAttribute[] d = o as DescriptionAttribute[];
-            if (d != null && d.Length > 0)
-            {
-                return d[0].Description;
-            }
-            return mi.Name;
-        }
-        
-        /// <summary>
-        /// [GUI] draws a property. eg => <see cref="Part.partSettings"/>.drawProperty("assembleType") would draw a property as such: "assembleType: joint". if member has <see cref="DescriptionAttribute"/> will use the description as the property title. Works with fields, properties and enums
-        /// </summary>
-        /// <param name="t">The class instance get value from.</param>
-        /// <param name="memberName">The class member name to get a field/property instance from.</param>
-        public static void drawProperty<T>(this T t, string memberName) where T : class
-        {
-            // Written, 08.07.2022
-
-            Type _t = t.GetType();
-            FieldInfo fi = _t.GetField(memberName);
-            PropertyInfo pi = null;
-            if (fi == null)
-                pi = _t.GetProperty(memberName);
-            string title = "null";
-            object value = "null";
-            if (_t.IsEnum)
-            {
-                title = _t.getDescription();
-                value = _t.GetField(memberName).getDescription();
-            }
-            else if (fi != null)
-            {
-                title = fi.getDescription();
-                value = fi.GetValue(t);
-            }
-            else if (pi != null)
-            {
-                title = pi.getDescription();
-                value = pi.GetValue(t, null);
-            }
-            Label($"{title}: {value}");
-        }
-        /// <summary>
-        /// [GUI] draws an enum as a property.
-        /// </summary>
-        /// <param name="t">The enum instance get value from.</param>
-        public static void drawProperty<T>(this T t) where T : Enum
-        {
-            // Written, 08.07.2022
-
-            Type _t = t.GetType();
-            string title = _t.getDescription();
-            string valueName = t.ToString();
-            string value = _t.GetField(valueName)?.getDescription();
-            Label($"{title}: {value ?? valueName}");
-        }
-        
-        /// <summary>
-        /// gets the actual size of the mesh. based off mesh bounds and transform scale
-        /// </summary>
-        /// <param name="filter">the mesh filter to get mesh and scale.</param>
-        /// <returns>filter.mesh size * transform scale.</returns>
-        public static Vector3 getMeshSize(this MeshFilter filter)
-        {
-            // Written, 15.07.2022
-
-            Vector3 size = filter.mesh.bounds.size;
-            Vector3 scale = filter.transform.localScale;
-            return new Vector3(size.x * scale.x, size.y * scale.y, size.z * scale.z);
-        }
-        /// <summary>
-        /// gets the actual size of the mesh. based off mesh bounds and transform scale
-        /// </summary>
-        /// <param name="transform">the transform that this mesh is on.</param>
-        /// <param name="mesh">the mesh to get size of</param>
-        /// <returns>mesh size * transform scale.</returns>
-        public static Vector3 getMeshSize(this Transform transform, Mesh mesh)
-        {
-            // Written, 15.07.2022
-
-            Vector3 size = mesh.bounds.size;
-            Vector3 scale = transform.localScale;
-            return new Vector3(size.x * scale.x, size.y * scale.y, size.z * scale.z);
-        }
-        
-        /// <summary>
-        /// loads data from a file or throws an error on if save data doesn't exist.
-        /// </summary>
-        /// <typeparam name="T">The type of Object to load</typeparam>
-        /// <param name="data">The ref to load data to</param>
-        /// <param name="mod">The mod to save data on</param>
-        /// <param name="saveFileName">The save file name with or without file extention. </param>
-        /// <exception cref="saveDataNotFoundException"/>
-        public static void loadDataOrThrow<T>(this Mod mod, out T data, string saveFileName) where T : class, new()
-        {
-            // Written, 15.07.2022
-
-            if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
-            {
-                data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
-                ModConsole.Print($"{mod.ID}: loaded save data (Exists).");
-            }
-            else
-            {
-                string error = $"{mod.ID}: save file didn't exist.. throwing saveDataNotFoundException.";
-                ModConsole.Print(error);
-                throw new saveDataNotFoundException(error);
-            }
-        }
-        /// <summary>
-        /// saves data to a file.
-        /// </summary>
-        /// <typeparam name="T">The type of Object to save</typeparam>
-        /// <param name="data">the data to save.</param>
-        /// <param name="mod">The mods config folder to save data in</param>
-        /// <param name="saveFileName">The save file name with or without file extention. </param>
-        /// <returns>Returns <see langword="true"/> if save file exists.</returns>
-        public static void saveData<T>(this Mod mod, T data, string saveFileName) where T : class, new()
-        {
-            // Written, 12.06.2022
-
-            SaveLoad.SerializeSaveFile(mod, data, saveFileName);
-            ModConsole.Print($"{mod.ID}: saved data.");
-        }
-        /// <summary>
-        /// Loads data from a file. if data doesn't exist, creates new data.
-        /// </summary>
-        /// <typeparam name="T">The type of Object to load</typeparam>
-        /// <param name="data">The ref to load data to</param>
-        /// <param name="mod">The mod to save data on</param>
-        /// <param name="saveFileName">The save file name with or without file extention. </param>
-        /// <returns>Returns <see langword="true"/> if save file exists.</returns>
-        public static bool loadOrCreateData<T>(this Mod mod , out T data, string saveFileName) where T : class, new()
-        {
-            // Written, 12.06.2022
-
-            if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
-            {
-                data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
-                ModConsole.Print($"{mod.ID}: loaded save data (Exists).");
-                return true;
-            }
-            else
-            {
-                ModConsole.Print($"{mod.ID}: save file didn't exist.. creating a save file.");
-                data = new T();
-                return false;
-            }
-        }
-        
-        
-        /// <summary>
-        /// executes an action on all objects of an array.
-        /// </summary>
-        /// <typeparam name="T">The type of array</typeparam>
-        /// <param name="objects">the instance of the array</param>
-        /// <param name="func">the function to perform on all elements of the array.</param>
-        public static void forEach<T>(this T[] objects, Action<T> func) where T : class
-        {
-            // Written, 11.07.2022
-
-            for (int i = 0; i < objects.Count(); i++)
-            {
-                func.Invoke(objects[i]);
-            }
-        }
-        
-        /// <summary>
-        /// Gets the first found behaviour in the parent. where <paramref name="func"/> action returns true.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        /// <param name="func">the function to check with.</param>
-        /// <returns></returns>
-        public static T getBehaviourInParent<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
-        {
-            // Written, 02.07.2022
-
-            Transform parent = gameObject.transform.parent;
-            if (parent)
-            {
-                T t = parent.GetComponent<T>();
-                if (t && func.Invoke(t))
-                {
-                    return t;
-                }
-                return parent.gameObject.getBehaviourInParent(func);
-            }
-            return null;
-        }
-        /// <summary>
-        /// Gets the first found behaviour in the parent.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        /// <returns></returns>
-        public static T getBehaviourInParent<T>(this GameObject gameObject) where T : MonoBehaviour
-        {
-            // Written, 02.07.2022
-
-            return getBehaviourInParent<T>(gameObject, func => true);
-        }
-        /// <summary>
-        /// Gets all behaviours found in all parents. where <paramref name="func"/> action returns true.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        /// <param name="func">the function to check with.</param>
-        /// <returns></returns>
-        public static T[] getBehavioursInParent<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
-        {
-            // Written, 02.07.2022
-
-            List<T> values = new List<T>();
-            Transform parent = gameObject.transform.parent;
-            if (parent)
-            {
-                T t = parent.GetComponent<T>();
-                if (t && func.Invoke(t))
-                {
-                    values.Add(t);
-                }
-                T[] v = parent.gameObject.getBehavioursInParent(func);
-                if (v != null && v.Length > 0)
-                    values.AddRange(v);
-            }
-            if (values.Count == 0)
-                return null;
-            return values.ToArray();
-        }
-        /// <summary>
-        /// Gets all behaviours found in all parents.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        /// <returns></returns>
-        public static T[] getBehavioursInParent<T>(this GameObject gameObject) where T : MonoBehaviour
-        {
-            // Written, 02.07.2022
-
-            return getBehavioursInParent<T>(gameObject, func => true);
-        }
-        /// <summary>
-        /// Gets the first found behaviour in the children. where <paramref name="func"/> action returns true.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        /// <param name="func">the function to check with.</param>
-        /// <returns></returns>
-        public static T getBehaviourInChildren<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
-        {
-            // Written, 11.07.2022
-
-            if (gameObject.transform.childCount > 0)
-            {
-                for (int i = 0; i < gameObject.transform.childCount; i++)
-                {
-                    Transform child = gameObject.transform.GetChild(i);
-                    T t = child.GetComponent<T>();
-                    if (t && func.Invoke(t))
-                    {
-                        return t;
-                    }
-                    return child.gameObject.getBehaviourInChildren<T>();
-                }
-            }
-            return null;
-        }
-        /// <summary>
-        /// Gets the first found behaviour in the children.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        public static T getBehaviourInChildren<T>(this GameObject gameObject) where T : MonoBehaviour
-        {
-            // Written, 11.07.2022
-
-            return getBehaviourInChildren<T>(gameObject, func => true);
-        }
-        /// <summary>
-        /// Gets all behaviours found in all children. where <paramref name="func"/> action returns true.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        /// <param name="func">the function to check with.</param>
-        /// <returns></returns>
-        public static T[] getBehavioursInChildren<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
-        {
-            // Written, 02.07.2022
-
-            if (gameObject.transform.childCount > 0)
-            {
-                List<T> values = new List<T>();
-                for (int i = 0; i < gameObject.transform.childCount; i++)
-                {
-                    Transform child = gameObject.transform.GetChild(i);
-                    T t = child.GetComponent<T>();
-                    if (t && func.Invoke(t))
-                    {
-                        values.Add(t);
-                    }
-                    T[] v = child.gameObject.getBehavioursInChildren(func);
-                    if (v != null && v.Length > 0)
-                        values.AddRange(v);
-                }
-                if (values.Count == 0)
-                    return null;
-                return values.ToArray();
-            }
-            return null;
-        }
-        /// <summary>
-        /// Gets all behaviours found in all children.
-        /// </summary>
-        /// <typeparam name="T">The type of behaviour to get</typeparam>
-        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
-        public static T[] getBehavioursInChildren<T>(this GameObject gameObject) where T : MonoBehaviour
-        {
-            // Written, 02.07.2022
-
-            return getBehavioursInChildren<T>(gameObject, func => true);
-        }
        
-        /// <summary>
-        /// returns whether the player is currently looking at an gameobject. By raycast.
-        /// </summary>
-        /// <param name="gameObject">The gameobject to detect againist.</param>
-        /// <param name="withinDistance">raycast within distance from main camera.</param>
-        public static bool isPlayerLookingAt(this GameObject gameObject, float withinDistance = 1)
-        {
-            if (Physics.Raycast(getPlayerCamera.ScreenPointToRay(Input.mousePosition), out RaycastHit hit, withinDistance, 1 << gameObject.layer))
-            {
-                if (hit.collider?.gameObject == gameObject)
-                    return true;
-            }
-            return false;
-        }
-        /// <summary>
-        /// Checks if player is holding the GameObject, <paramref name="inGameObject"/>. by checking if <paramref name="inGameObject"/>'s <see cref="GameObject.layer"/> equals <see cref="LayerMasksEnum.Wheel"/>
-        /// </summary>
-        /// <param name="inGameObject">The gameObject to check on.</param>
-        public static bool isPlayerHolding(this GameObject inGameObject)
-        {
-            // Written, 02.10.2018
-
-            if (inGameObject.isOnLayer(LayerMasksEnum.Wheel))
-                return true;
-            return false;
-        }
-        /// <summary>
-        /// checks if the player is holding this gameobject. returns false if player is holding nothing. by checking Players pickedupgameobject FSM
-        /// </summary>
-        public static bool isPlayerHoldingByPickup(this GameObject go)
-        {
-            // Written, 08.05.2022
-
-            return getPickedUpGameObject?.Value == go;
-        }
-        /// <summary>
-        /// Checks if the player is looking at this gameobject. returns false if player is looking at nothing. by checking Players raycasthitgameobject FSM
-        /// </summary>
-        public static bool isPlayerLookingAtByPickUp(this GameObject go)
-        {
-            // Written, 08.05.2022
-
-            return getRaycastHitGameObject?.Value == go;
-        }
-        /// <summary>
-        /// Checks if the gameobject is on the layer, <paramref name="inLayer"/>.
-        /// </summary>
-        /// <param name="inGameObject">The gameobject to check layer.</param>
-        /// <param name="inLayer">The layer to check for.</param>
-        public static bool isOnLayer(this GameObject inGameObject, LayerMasksEnum inLayer)
-        {
-            // Written, 02.10.2018
-
-            if (inGameObject.layer == inLayer.layer())
-                return true;
-            return false;
-        }
-        
-        /// <summary>
-        /// Sends all children of game object to layer.
-        /// </summary>
-        /// <param name="inGameObject">The gameobject to get children from.</param>
-        /// <param name="inLayer">The layer to send gameobject children to.</param>
-        public static void sendChildrenToLayer(this GameObject inGameObject, LayerMasksEnum inLayer)
-        {
-            // Written, 27.09.2018
-
-            Transform transform = inGameObject.transform;
-
-            if (transform != null)
-                for (int i = 0; i < inGameObject.transform.childCount; i++)
-                {
-                    inGameObject.transform.GetChild(i).gameObject.sendToLayer(inLayer);
-                }
-        }
-        /// <summary>
-        /// Sends a gameobject to the desired layer.
-        /// </summary>
-        /// <param name="inGameObject">The gameObject.</param>
-        /// <param name="inLayer">The Layer.</param>
-        /// <param name="inSendAllChildren">[Optional] sends all children to the layer.</param>
-        public static void sendToLayer(this GameObject inGameObject, LayerMasksEnum inLayer, bool inSendAllChildren = false)
-        {
-            // Written, 02.10.2018
-
-            inGameObject.layer = layer(inLayer);
-            if (inSendAllChildren)
-                inGameObject.sendChildrenToLayer(inLayer);
-        }
-        /// <summary>
-        /// Returns the layer index number.
-        /// </summary>
-        /// <param name="inLayer">The layer to get index.</param>
-        public static int layer(this LayerMasksEnum inLayer)
-        {
-            // Written, 02.10.2018
-
-            return (int)inLayer;
-        }
-        /// <summary>
-        /// Returns the name of the layer.
-        /// </summary>
-        /// <param name="inLayer">The layer to get.</param>
-        public static string name(this LayerMasksEnum inLayer)
-        {
-            // Written, 02.10.2018
-
-            string layerName;
-            switch (inLayer)
-            {
-                case LayerMasksEnum.Bolts:
-                    layerName = "Bolts";
-                    break;
-                case LayerMasksEnum.Cloud:
-                    layerName = "Cloud";
-                    break;
-                case LayerMasksEnum.Collider:
-                    layerName = "Collider";
-                    break;
-                case LayerMasksEnum.Collider2:
-                    layerName = "Collider2";
-                    break;
-                case LayerMasksEnum.Dashboard:
-                    layerName = "Dashboard";
-                    break;
-                case LayerMasksEnum.Datsun:
-                    layerName = "Datsun";
-                    break;
-                case LayerMasksEnum.Default:
-                    layerName = "Default";
-                    break;
-                case LayerMasksEnum.DontCollide:
-                    layerName = "DontCollide";
-                    break;
-                case LayerMasksEnum.Forest:
-                    layerName = "Forest";
-                    break;
-                case LayerMasksEnum.Glass:
-                    layerName = "Glass";
-                    break;
-                case LayerMasksEnum.GUI:
-                    layerName = "GUI";
-                    break;
-                case LayerMasksEnum.HingedObjects:
-                    layerName = "HingedObjects";
-                    break;
-                case LayerMasksEnum.IgnoreRaycast:
-                    layerName = "IgnoreRaycast";
-                    break;
-                case LayerMasksEnum.Lifter:
-                    layerName = "Lifter";
-                    break;
-                case LayerMasksEnum.NoRain:
-                    layerName = "NoRain";
-                    break;
-                case LayerMasksEnum.Parts:
-                    layerName = "Parts";
-                    break;
-                case LayerMasksEnum.Player:
-                    layerName = "Player";
-                    break;
-                case LayerMasksEnum.PlayerOnlyColl:
-                    layerName = "PlayerOnlyColl";
-                    break;
-                case LayerMasksEnum.Road:
-                    layerName = "Road";
-                    break;
-                case LayerMasksEnum.Terrain:
-                    layerName = "Terrain";
-                    break;
-                case LayerMasksEnum.Tools:
-                    layerName = "Tools";
-                    break;
-                case LayerMasksEnum.TransparentFX:
-                    layerName = "TransparentFX";
-                    break;
-                case LayerMasksEnum.TriggerOnly:
-                    layerName = "TriggerOnly";
-                    break;
-                case LayerMasksEnum.UI:
-                    layerName = "UI";
-                    break;
-                case LayerMasksEnum.Water:
-                    layerName = "Water";
-                    break;
-                case LayerMasksEnum.Wheel:
-                    layerName = "Wheel";
-                    break;
-                default:
-                    layerName = "Blank";
-                    break;
-            }
-            return layerName;
-        }
-        
-        /// <summary>
-        /// Creates and returns a new rigidbody on the gameobject and assigns parameters listed.
-        /// </summary>
-        /// <param name="gameObject">The gameobject to create a rigidbody on.</param>
-        /// <param name="rigidbodyConstraints">Create rigidbody with these constraints.</param>
-        /// <param name="mass">The mass of the rb.</param>
-        /// <param name="drag">The drag of the rb</param>
-        /// <param name="angularDrag">The angular drag of the rb.</param>
-        /// <param name="isKinematic">is this rigidbody kinmatic?</param>
-        /// <param name="useGravity">is this rigidbody affected by gravity?</param>
-        public static Rigidbody createRigidbody(this GameObject gameObject, RigidbodyConstraints rigidbodyConstraints = RigidbodyConstraints.None, float mass = 1,
-            float drag = 0, float angularDrag = 0.05f, bool isKinematic = false, bool useGravity = true)
-        {
-            // Written, 10.09.2021
-
-            Rigidbody rb = gameObject.AddComponent<Rigidbody>();
-            rb.constraints = rigidbodyConstraints;
-            rb.mass = mass;
-            rb.drag = drag;
-            rb.angularDrag = angularDrag;
-            rb.isKinematic = isKinematic;
-            rb.useGravity = useGravity;
-            return rb;
-        }
-        /// <summary>
-        /// Fixes a transform to another transform.
-        /// </summary>
-        /// <param name="transform">The transform to fix</param>
-        /// <param name="parent">The parent transform to fix <paramref name="transform"/></param>
-        /// <param name="onFixedToParent">action to call when fixed to parent.</param>
-        public static IEnumerator fixToParent(this Transform transform, Transform parent)
-        {
-            while (transform.parent != parent)
-            {
-                transform.parent = parent;
-                yield return null;
-            }
-        }
-        /// <summary>
-        /// Sets its position and rotation.
-        /// </summary>
-        /// <param name="transform">The transform to fix</param>
-        /// <param name="pos">The pos to set</param>
-        /// <param name="eulerAngles">the rot to set</param>
-        /// <param name="onFixedTransform">action to call when fixed transform.</param>
-        public static IEnumerator fixTransform(this Transform transform, Vector3 pos, Vector3 eulerAngles)
-        {
-            while (transform.localPosition != pos && transform.localEulerAngles != eulerAngles)
-            {
-                transform.localPosition = pos;
-                transform.localEulerAngles = eulerAngles;
-                yield return null;
-            }
-        }
-        
-        private static FsmStateActionCallback determineAndCreateCallbackType(CallbackTypeEnum type, Action action, bool everyFrame = false)
-        {
-            // Written, 13.06.2022
-
-            switch (type)
-            {
-                case CallbackTypeEnum.onFixedUpdate:
-                    return new OnFixedUpdateCallback(action, everyFrame);
-                case CallbackTypeEnum.onUpdate:
-                    return new OnUpdateCallback(action, everyFrame);
-                case CallbackTypeEnum.onGui:
-                    return new OnGuiCallback(action, everyFrame);
-                default:
-                case CallbackTypeEnum.onEnter:
-                    return new OnEnterCallback(action, everyFrame);
-            }
-        }
-        private static FsmStateActionCallback determineAndCreateActionType(this FsmState state, InjectEnum injectType, Action action, CallbackTypeEnum callbackType, bool everyFrame, int index = 0)
-        {
-            // Written, 18.06.2022
-
-            FsmStateActionCallback cb;
-            switch (injectType)
-            {
-                case InjectEnum.prepend:
-                    cb = state.prependNewAction(action, callbackType, everyFrame);
-                    break;
-                case InjectEnum.insert:
-                    cb = state.insertNewAction(action, index, callbackType, everyFrame);
-                    break;
-                case InjectEnum.replace:
-                    cb = state.replaceAction(action, index, callbackType, everyFrame);
-                    break;
-                default:
-                case InjectEnum.append:
-                    cb = state.appendNewAction(action, callbackType, everyFrame);
-                    break;
-            }
-            return cb;
-        }
-        /// <summary>
-        /// adds a new global transition.
-        /// </summary>
-        /// <param name="fsm"></param>
-        /// <param name="_event"></param>
-        /// <param name="toStateName"></param>
-        public static FsmTransition addNewGlobalTransition(this PlayMakerFSM fsm, FsmEvent _event, string toStateName)
-        {
-            FsmTransition[] fsmGlobalTransitions = fsm.FsmGlobalTransitions;
-            List<FsmTransition> temp = new List<FsmTransition>();
-            foreach (FsmTransition t in fsmGlobalTransitions)
-            {
-                temp.Add(t);
-            }
-            FsmTransition ft = new FsmTransition
-            {
-                FsmEvent = _event,
-                ToState = toStateName
-            };
-            temp.Add(ft);
-            fsm.Fsm.GlobalTransitions = temp.ToArray();
-            print($"Adding new global transition, to fsm, {fsm.gameObject.name}.{fsm.name}. {_event.Name} transitions this fsm state to {toStateName}");
-            return ft;
-        }
-        /// <summary>
-        /// Adds a new local transition.
-        /// </summary>
-        /// <param name="state">The state to add a transition.</param>
-        /// <param name="eventName">The event that triggers this transition.</param>
-        /// <param name="toStateName">the state it should change to when transition is triggered.</param>
-        public static FsmTransition addNewTransitionToState(this FsmState state, string eventName, string toStateName)
-        {
-            List<FsmTransition> temp = new List<FsmTransition>();
-            foreach (FsmTransition t in state.Transitions)
-            {
-                temp.Add(t);
-            }
-            FsmTransition ft = new FsmTransition
-            {
-                FsmEvent = state.Fsm.GetEvent(eventName),
-                ToState = toStateName
-            };
-            temp.Add(ft);
-            state.Transitions = temp.ToArray();
-            print($"Adding new local transition, to state, {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. {eventName} transitions this fsm from {state.Name} to {toStateName}");
-            return ft;
-        }
-        /// <summary>
-        /// Appends a new action in a state.
-        /// </summary>
-        /// <param name="state">the sate to modify.</param>
-        /// <param name="action">the action to append.</param>
-        /// <param name="callbackType">Represents the callback type.</param>
-        /// <param name="everyFrame">Represents if it should run everyframe..</param>
-        public static FsmStateActionCallback appendNewAction(this FsmState state, Action action, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
-        {
-            List<FsmStateAction> temp = new List<FsmStateAction>();
-            foreach (FsmStateAction v in state.Actions)
-            {
-                temp.Add(v);
-            }
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
-            temp.Add(cb);
-            state.Actions = temp.ToArray();
-            print($"Appending new action {action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {callbackType} {(everyFrame ? "every frame" : "once")}.");
-            return cb;
-        }
-        /// <summary>
-        /// prepends a new action in a state.
-        /// </summary>
-        /// <param name="state">the sate to modify.</param>
-        /// <param name="action">the action to prepend.</param>
-        /// <param name="callbackType">Represents the callback type.</param>
-        /// <param name="everyFrame">Represents if it should run everyframe..</param>
-        public static FsmStateActionCallback prependNewAction(this FsmState state, Action action, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
-        {
-            List<FsmStateAction> temp = new List<FsmStateAction>();
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
-            temp.Add(cb);
-            foreach (FsmStateAction v in state.Actions)
-            {
-                temp.Add(v);
-            }
-            state.Actions = temp.ToArray();
-            print($"Prepending new {action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {(everyFrame ? "every frame" : "once")}.");
-            return cb;
-        }
-        /// <summary>
-        /// Inserts a new action in a state.
-        /// </summary>
-        /// <param name="state">the sate to modify.</param>
-        /// <param name="action">the action to insert.</param>
-        /// <param name="index">the index to insert action</param>
-        /// <param name="callbackType">Represents the callback type.</param>
-        /// <param name="everyFrame">Represents if it should run everyframe..</param>
-        public static FsmStateActionCallback insertNewAction(this FsmState state, Action action, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
-        {
-            List<FsmStateAction> temp = new List<FsmStateAction>();
-            foreach (FsmStateAction v in state.Actions)
-            {
-                temp.Add(v);
-            }
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
-            temp.Insert(index, cb);
-            state.Actions = temp.ToArray();
-            print($"Inserting new {action.Method.Name} into {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(everyFrame ? "every frame" : "once")}.");
-            return cb;
-        }
-        /// <summary>
-        /// Replaces an action in a state.
-        /// </summary>
-        /// <param name="state">the sate to modify.</param>
-        /// <param name="action">the action to replace.</param>
-        /// <param name="index">the index to replace action</param>
-        /// <param name="callbackType">Represents the callback type.</param>
-        /// <param name="everyFrame">Represents if it should run everyframe..</param>
-        public static FsmStateActionCallback replaceAction(this FsmState state, Action action, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
-        {
-            // Written, 13.04.2022
-
-            List<FsmStateAction> temp = new List<FsmStateAction>();
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
-            for (int i = 0; i < state.Actions.Length; i++)
-            {
-                if (i == index)
-                    temp.Add(cb);
-                else
-                    temp.Add(state.Actions[i]);
-            }
-            state.Actions = temp.ToArray();
-            print($"Replacing {action.Method.Name} with {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(everyFrame ? "every frame" : "once")}.");
-            return cb;
-        }
-        /// <summary>
-        /// Represents inject action logic.
-        /// </summary>
-        /// <param name="playMakerFSM">The playermaker to search on.</param>
-        /// <param name="stateName">the state name to inject on.</param>
-        /// <param name="injectType">inject type.</param>
-        /// <param name="callback">inject callback</param>
-        /// <param name="index">index to inject at. NOTE: only applies to <see cref="InjectEnum.insert"/> and <see cref="InjectEnum.replace"/></param>
-        /// <param name="callbackType">Represents the callback type.</param>
-        /// <param name="everyFrame">Represents if it should run everyframe..</param>
-        public static FsmStateActionCallback injectAction(this PlayMakerFSM playMakerFSM, string stateName, InjectEnum injectType, Action callback, int index = 0, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
-        {
-            return injectAction(playMakerFSM.gameObject, playMakerFSM.FsmName, stateName, injectType, callback, index, callbackType, everyFrame);
-        }
-        /// <summary>
-        /// Represents inject action logic.
-        /// </summary>
-        /// <param name="go">The gamobject to search on.</param>
-        /// <param name="fsmName">the playmaker fsm name to search on</param>
-        /// <param name="stateName">the state name to inject on.</param>
-        /// <param name="injectType">inject type.</param>
-        /// <param name="callback">inject callback</param>
-        /// <param name="index">index to inject at. NOTE: only applies to <see cref="InjectEnum.insert"/> and <see cref="InjectEnum.replace"/></param>
-        /// <param name="callbackType">Represents the callback type.</param>
-        /// <param name="everyFrame">Represents if it should run everyframe..</param>
-        public static FsmStateActionCallback injectAction(this GameObject go, string fsmName, string stateName, InjectEnum injectType, Action callback, int index = 0, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
-        {
-            PlayMakerFSM fsm = go.GetPlayMaker(fsmName);
-            FsmState state = go.GetPlayMakerState(stateName);
-            return state.determineAndCreateActionType(injectType, callback, callbackType, everyFrame, index);
-        }
-       
-        /// <summary>
-        /// Rounds to <paramref name="decimalPlace"/>
-        /// </summary>
-        /// <param name="fsmFloat">The fsmFloat to round</param>
-        /// <param name="decimalPlace">how many decimal places. eg. 2 = 0.01</param>
-        public static FsmFloat round(this FsmFloat fsmFloat, int decimalPlace = 0)
-        {
-            return fsmFloat.Value.round(decimalPlace);
-        }
-        /// <summary>
-        /// Rounds to <paramref name="decimalPlace"/>
-        /// </summary>
-        /// <param name="_float">The float to round</param>
-        /// <param name="decimalPlace">how many decimal places. eg. 2 = 0.01</param>
-        public static float round(this float _float, int decimalPlace = 0)
-        {
-            // Written, 15.01.2022
-
-            return (float)Math.Round(_float, decimalPlace);
-        }
-        
-        /// <summary>
-        /// Maps a value and its range to another. eg. (v=1 min=0, max=2). could map to (v=2 min=1 max=3).
-        /// </summary>
-        /// <param name="mainValue">the value to map</param>
-        /// <param name="inValueMin">value min</param>
-        /// <param name="inValueMax">value max</param>
-        /// <param name="outValueMin">result min</param>
-        /// <param name="outValueMax">result max</param>
-        public static float mapValue(this float mainValue, float inValueMin, float inValueMax, float outValueMin, float outValueMax)
-        {
-            return (mainValue - inValueMin) * (outValueMax - outValueMin) / (inValueMax - inValueMin) + outValueMin;
-        }
-        /// <summary>
-        /// Converts a <see cref="Vector3Info"/> to a <see cref="Vector3"/>.
-        /// </summary>
-        /// <param name="i">the vector3 info to convert</param>
-        /// <returns>the vector3 info as a vector3.</returns>
-        public static Vector3 toVector3(this Vector3Info i)
-        {
-            return new Vector3(i.x, i.y, i.z);
-        }
-        /// <summary>
-        /// converts a vector3.
-        /// </summary>
-        /// <param name="v">the vector3 to convert.</param>
-        /// <returns>new instance Vector3Info</returns>
-        public static Vector3Info toInfo(this Vector3 v)
-        {
-            return new Vector3Info(v);
-        }
-        /// <summary>
-        /// Creates a new vector3 from an old one.
-        /// </summary>
-        /// <param name="v"></param>
-        /// <returns></returns>
-        public static Vector3 clone(this Vector3 v)
-        {
-            return new Vector3(v.x, v.y, v.z);
-        }
-
-        #endregion
     }
 }

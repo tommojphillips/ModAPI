@@ -2,53 +2,90 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using System.Text;
+
+using MSCLoader;
+
 using TommoJProductions.ModApi.Attachable;
 using TommoJProductions.ModApi.Attachable.CallBacks;
+using TommoJProductions.ModApi.Database;
+using TommoJProductions.ModApi.Database.GameParts;
+
 using UnityEngine;
 using static TommoJProductions.ModApi.ModClient;
 using static UnityEngine.GUILayout;
 
 namespace TommoJProductions.ModApi
 {
+    /// <summary>
+    /// Represents debug behaviour for mod api.
+    /// </summary>
     public class DevMode : MonoBehaviour
     {
-        internal static Part inspectionPart;
+        private static Part _inspectionPart;
         private bool inspectionPartSet = false;
         private Vector3[] inspectionPartPosition;
         private Vector3[] inspectionPartEuler;
         private bool inspectingBolt = false;
         private bool inspectionBoltSet = false;
+
         internal static Bolt inspectionBolt;
         internal static Vector3 inspectionPosition;
         internal static Vector3 inspectionEuler;
         internal static float inspectionOffset;
 
-        private int top = 75;
-        private int margin = 20;
+        internal static bool listGameParts = false;
+        internal static bool listModApiParts = false;
+
+        private readonly int top = 75;
+        private readonly int margin = 20;
         private int height => Screen.height - top;
-        private int width = 500;
+        private readonly int width = 500;
         private int left => Screen.width - width - margin;
-        private Vector2 scroll;
+        private Vector2 triggerScroll;
+        private Vector2 gamePartsScroll;
         private ScrollViewScope scrollViewScope;
         private Color c1 = new Color32(0, 178, 230, 176);
-        private Color c2 = new Color32(0, 62, 230, 153);
-        private GUIStyle style = new GUIStyle();
+        private readonly GUIStyle style = new GUIStyle();
+        private Texture2D defaultBackground;
+        private Texture2D primaryItemBackground;
+        private Texture2D secondaryItemBackground;
 
-        void Start() 
+        private GamePart[] allGameParts;
+        private GamePart[] listedGameParts;
+        private Part[] listedModApiParts;
+
+        private bool showWearOnlyParts = false;
+        private bool showBoltOnlyParts = false;
+        private string searchString = string.Empty;
+
+        void Start()
         {
-            StartCoroutine(devModeFunc());
+            defaultBackground = createTextureFromColor(1, 1, new Color32(125, 125, 125, 255));
+            primaryItemBackground = createTextureFromColor(1, 1, new Color32(75, 140, 200, 255));
+            secondaryItemBackground = createTextureFromColor(1, 1, new Color32(24, 120, 130, 255));
+
+            allGameParts = (Database.Database.databaseMotor.getProperties().Select(p => (GamePart)p.GetValue(Database.Database.databaseMotor, null))).ToArray();
         }
         void OnGUI() 
         {
             // Written, 03.07.2022
 
-            if (inspectionPart)
+            GUI.skin.box.normal.background = defaultBackground;
+
+            if (devMode)
+            {
+                drawDevGui();
+            }
+
+            if (_inspectionPart)
             {
                 Transform t;
                 int tl;
                 
-                tl = inspectionPart.triggers.Length;
+                tl = _inspectionPart.triggers.Length;
 
                 if (!inspectionPartSet)
                 {
@@ -56,22 +93,21 @@ namespace TommoJProductions.ModApi
                     inspectionPartEuler = new Vector3[tl];
                     for (int i = 0; i < tl; i++)
                     {
-                        t = inspectionPart.triggers[i].triggerGameObject.transform;
+                        t = _inspectionPart.triggers[i].triggerGameObject.transform;
                         inspectionPartPosition[i] = t.localPosition;
                         inspectionPartEuler[i] = t.localEulerAngles;
                     }
                     inspectionPartSet = true;
                 }
-                drawToolStatsGui();
                 drawPartGui();
-                if (inspectionPart.hasBolts)
+                if (_inspectionPart.hasBolts)
                 {
                     if (inspectingBolt)
                     {
                         if (!inspectionBoltSet)
                         {
                             if (inspectionBolt == null)
-                                inspectionBolt = inspectionPart.bolts[0];
+                                inspectionBolt = _inspectionPart.bolts[0];
                             inspectionPosition = inspectionBolt.startPosition;
                             inspectionEuler = inspectionBolt.startEulerAngles;
                             if (inspectionBolt.boltSettings.addNut)
@@ -82,60 +118,199 @@ namespace TommoJProductions.ModApi
                         {
                             using (new HorizontalScope("box"))
                             { 
-                                style.border = new RectOffset(0, 0, 0, 0);
+                                style.border = new RectOffset(1, 1, top: 1, 2);
                                 style.alignment = TextAnchor.MiddleCenter;
                                 style.fontSize = 14;
-                                for (int i = 0; i < inspectionPart.bolts.Length; i++)
+                                for (int i = 0; i < _inspectionPart.bolts.Length; i++)
                                 {
-                                    bool menuCheck = inspectionPart.bolts[i] == inspectionBolt;
-                                    style.normal.textColor = menuCheck ? c1 : Color.white;
-
-                                    if (Button(inspectionPart.bolts[i].boltModel.name, style))
+                                    if (_inspectionPart.bolts[i] == inspectionBolt)
                                     {
-                                        inspectionBolt = inspectionPart.bolts[i];
-                                        inspectionBoltSet = false;
+                                        style.normal.textColor = c1;
+                                        GUI.skin.box.normal.background = primaryItemBackground;
+                                    }
+                                    else
+                                    {
+                                        style.normal.textColor = Color.white;
+                                        GUI.skin.box.normal.background = secondaryItemBackground;
+                                    }
+
+                                    if (Button(_inspectionPart.bolts[i].boltModel.name, style))
+                                    {
+                                        setInspectionBolt(_inspectionPart.bolts[i]);
                                     }
                                 }
+                                GUI.skin.box.normal.background = defaultBackground;
                             }
                             drawBoltGui();
                         }
                     }
                 }
             }
-            else if (inspectionPartSet)
-            {
-                inspectionPartSet = false;
-            }
-        } 
-
-        /// <summary>
-        /// if <see cref="devModeBehaviour"/> is true, this enumerator will poll for (CTRL+P) raycating for parts. allows raycast for parts. and assigns inspection VAR with out behaviour or null.
-        /// </summary>
-        public IEnumerator devModeFunc()
-        {
-            ModClient.print("Dev mode started");
-            
-            while (devMode)
-            {
-                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.P))
-                {
-                    inspectionPart = raycastForBehaviour<Part>();
-                }
-                yield return null;
-            }
-            ModClient.print("Dev mode ended");
         }
-        
+        void Update()
+        {
+            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.P))
+            {
+                setInspectionPart(raycastForBehaviour<Part>());
+            }
+        }
+
+        internal void setInspectionPart(Part part)
+        {
+            _inspectionPart = part;
+            inspectionPartSet = false;
+        }
+        internal void setInspectionBolt(Bolt bolt)
+        {
+            inspectionBolt = bolt;
+            inspectionBoltSet = false;
+        }
+
         private void drawToolStatsGui()
         {
             getToolWrenchSize_boltSize.drawProperty();
             drawProperty("tool size", getToolWrenchSize_float);
-            drawProperty("bolting speed", getBoltingSpeed);
+            //drawProperty("spanner bolting speed", getSpannerBoltingSpeed);
+            //drawProperty("rachet bolting speed", getRachetBoltingSpeed);
         }
         private void drawDevGui()
         {
+            using (AreaScope area = new AreaScope(new Rect(margin, top, width, height)))
+            {
+                using (new VerticalScope("box", Width(275)))
+                {
+                    drawProperty($"ModAPI v{VersionInfo.version} | DEV MODE |\n- Use <b>Ctrl+P</b> while looking at a part to inspect it");
+                    drawToolStatsGui();
 
+                    if (Button("List Mod Api Parts"))
+                    {
+                        listModApiParts = !listModApiParts;
+                        listGameParts = false;
+                    }
+                    if (Button("List Game Parts"))
+                    {
+                        listGameParts = !listGameParts;
+                        listModApiParts = false;
+                    }
+                    drawModApiLoaderInfo();
+                }
+
+                using (new VerticalScope("box"))
+                {
+                    drawGamePartsList();
+                    drawModApiList();
+                }
+            }
         }
+        private void drawModApiLoaderInfo()
+        {
+            drawProperty("ModApi:", ModApiLoader.modapiGo?.ToString() ?? "null");
+            drawProperty("picked object:", ModApiLoader.pickedObject?.ToString() ?? "null");
+            drawProperty("picked part:", ModApiLoader.pickedPart?.ToString() ?? "null");
+            drawProperty("currently detected bolt:", ModApiLoader.lookingAtCallback?.ToString() ?? "null");
+            drawProperty("activateGameStateInjected:", ModApiLoader.activateGameStateInjected);
+            drawProperty("activateGameState:", ModApiLoader.activateGameState?.ToString() ?? "null");
+            drawProperty("loader inject action:", ModApiLoader.actionCallback?.ToString() ?? "null");
+            drawProperty("picked part SET:", ModApiLoader.pickedPartSet);
+            drawProperty("inherenty picked part SET:", ModApiLoader.inherentyPickedPartsSet);
+        }
+
+        private void drawModApiList()
+        {
+            if (listModApiParts)
+            {
+                using (new HorizontalScope())
+                {
+                    drawPropertyEdit("Search", ref searchString);
+                    drawPropertyBool("Show only bolt modapi-parts", ref showBoltOnlyParts);
+                }
+                using (scrollViewScope = new ScrollViewScope(gamePartsScroll, false, false))
+                {
+                    gamePartsScroll = scrollViewScope.scrollPosition;
+                    scrollViewScope.handleScrollWheel = true;
+
+                    listedModApiParts = loadedParts.ToArray();
+
+                    if (!string.IsNullOrEmpty(searchString))
+                    {
+                        listedModApiParts = loadedParts.Where(p => p.name.ToLower().Contains(searchString)).ToArray();
+                    }
+
+                    if (showBoltOnlyParts)
+                    {
+                        listedModApiParts = loadedParts.Where(p => p.hasBolts).ToArray();
+                    }
+
+                    for (int i = 0; i < listedModApiParts.Length; i++)
+                    {
+                        if (i.isEven())
+                        {
+                            GUI.skin.box.normal.background = primaryItemBackground;
+                        }
+                        else
+                        {
+                            GUI.skin.box.normal.background = secondaryItemBackground;
+                        }
+                        using (new VerticalScope("box"))
+                        {
+                            drawProperty(listedModApiParts[i].name);
+                            if (Button("Inspect"))
+                            {
+                                setInspectionPart(listedModApiParts[i]);
+                            }
+                        }
+                    }
+                    GUI.skin.box.normal.background = defaultBackground;
+                }
+            }
+        }
+
+        private void drawGamePartsList()
+        {
+            if (listGameParts)
+            {
+                using (new HorizontalScope())
+                {
+                    drawPropertyEdit("Search", ref searchString);
+                    drawPropertyBool("Show only wear-able game-parts", ref showWearOnlyParts);
+                }
+
+
+                listedGameParts = allGameParts;
+
+                if (!string.IsNullOrEmpty(searchString))
+                {
+                    listedGameParts = listedGameParts.Where(p => p.thisPart.Value.name.ToLower().Contains(searchString)).ToArray();
+                }
+
+                if (showWearOnlyParts)
+                {
+                    listedGameParts = allGameParts.Where(p => p is GamePartWear).ToArray();
+                }
+                using (scrollViewScope = new ScrollViewScope(gamePartsScroll, false, false))
+                {
+                    gamePartsScroll = scrollViewScope.scrollPosition;
+                    scrollViewScope.handleScrollWheel = true;
+                    for (int i = 0; i < listedGameParts.Length; i++)
+                    {
+                        if (i.isEven())
+                        {
+                            GUI.skin.box.normal.background = primaryItemBackground;
+                        }
+                        else
+                        {
+                            GUI.skin.box.normal.background = secondaryItemBackground;
+                        }
+                        using (new VerticalScope("box"))
+                        {
+                            drawGamePartInfo(listedGameParts[i]);
+                        }
+                    }
+                    GUI.skin.box.normal.background = defaultBackground;
+                }
+            }
+        }
+
         private void drawPartGui() 
         {
             using (AreaScope area = new AreaScope(new Rect(left, top, width, height - top)))
@@ -146,58 +321,76 @@ namespace TommoJProductions.ModApi
                     {
                         using (new VerticalScope("box"))
                         {
-                            drawProperty("Part Inspection", name);
+                            drawProperty("Part Inspection", _inspectionPart.name);
                             Space(1);
-                            drawProperty($"Trigger routine: {(inspectionPart.triggerRoutine == null ? "in" : "")}active");
-                            drawProperty("Position", inspectionPart.transform.position);
-                            drawProperty("Euler", inspectionPart.transform.eulerAngles);
-                            drawProperty("Installed", inspectionPart.installed);
-                            drawProperty($"Picked up: {inspectionPart.pickedUp} | {(inspectionPart.inherentlyPickedUp ? "inherently" : "")}");
-                            drawProperty("InTrigger", inspectionPart.inTrigger);
-                            drawProperty("Install point index", inspectionPart.installPointIndex);
-                            inspectionPart.partSettings.drawProperty("assembleType");
+                            drawProperty($"Trigger routine: {(_inspectionPart.triggerRoutine == null ? "in" : "")}active");
+                            drawProperty("Position", _inspectionPart.transform.position);
+                            drawProperty("Euler", _inspectionPart.transform.eulerAngles);
+                            drawProperty("Installed", _inspectionPart.installed);
+                            drawProperty($"Picked up: {_inspectionPart.pickedUp} | {(_inspectionPart.inherentlyPickedUp ? "inherently" : "")}");
+                            drawProperty("InTrigger", _inspectionPart.inTrigger);
+                            drawProperty("Install point index", _inspectionPart.installPointIndex);
+                            _inspectionPart.partSettings.assembleType.drawProperty();
                         }
                         using (new VerticalScope())
                         {
-                            if (inspectionPart.partSettings.assembleType == Part.AssembleType.joint)
+                            if (_inspectionPart.partSettings.assembleType == Part.AssembleType.joint)
                             {
                                 using (new VerticalScope("box"))
                                 {
                                     drawProperty("Joint settings");
-                                    if (inspectionPart.hasBolts)
+                                    if (_inspectionPart.hasBolts)
                                     {
-                                        drawPropertyBool("bolt tightness effects breakforce", ref inspectionPart.partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce);
-                                        if (inspectionPart.partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
+                                        drawPropertyBool("bolt tightness effects breakforce", ref _inspectionPart.partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce);
+                                        if (_inspectionPart.partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
                                         {
-                                            drawPropertyEdit("breakforce min", ref inspectionPart.partSettings.assemblyTypeJointSettings.breakForceMin);
+                                            drawPropertyEdit("breakforce min", ref _inspectionPart.partSettings.assemblyTypeJointSettings.breakForceMin);
                                         }
-                                        drawPropertyEdit("tightness threshold", ref inspectionPart.partSettings.tightnessThreshold);
+                                        drawPropertyEdit("tightness threshold", ref _inspectionPart.partSettings.tightnessThreshold);
                                     }
-                                    drawPropertyEdit("breakforce", ref inspectionPart.partSettings.assemblyTypeJointSettings.breakForce);
+                                    drawPropertyEdit("breakforce", ref _inspectionPart.partSettings.assemblyTypeJointSettings.breakForce);
                                 }
                             }
-                            if (inspectionPart.joint)
+                            if (_inspectionPart.joint)
                             {
                                 using (new VerticalScope("box"))
                                 {
-                                    drawProperty("breakforce", inspectionPart.joint.breakForce);
-                                    if (inspectionPart.hasBolts)
+                                    if (_inspectionPart.joint.breakForce == float.PositiveInfinity)
                                     {
-                                        float bf = inspectionPart.partSettings.assemblyTypeJointSettings.breakForce;
-                                        float thresholdObsolute = bf * inspectionPart.partSettings.tightnessThreshold;
+                                        drawProperty($"breakforce: unbreakable (infinity)");
+                                    }
+                                    else
+                                    {
+                                        drawProperty($"breakforce: {_inspectionPart.joint.breakForce}Nm");
+                                    }
+                                    if (_inspectionPart.hasBolts)
+                                    {
+                                        float bf = _inspectionPart.partSettings.assemblyTypeJointSettings.breakForce;
+                                        float thresholdObsolute = bf * _inspectionPart.partSettings.tightnessThreshold;
                                         drawProperty($"\t- Threshold: {thresholdObsolute}Nm ({thresholdObsolute / bf * 100})");
-                                        drawProperty("");
+                                    }
+                                    if (Button("Update joint breakforce"))
+                                    {
+                                        _inspectionPart.updateJointBreakForce();
                                     }
                                 }
                             }
-                            if (inspectionPart.hasBolts)
+                            if (_inspectionPart.hasBolts)
                             {
                                 using (new VerticalScope("box"))
                                 {
-                                    drawProperty($"{(inspectionPart.bolted ? "" : "Not")} Bolted");
-                                    drawProperty($"Tightness: {inspectionPart.tightnessTotal} / {inspectionPart.maxTightnessTotal} ({inspectionPart.tightnessTotal / inspectionPart.maxTightnessTotal * 100})");
-                                    drawProperty($"Tightness Step: {inspectionPart.tightnessStep}");
+                                    drawProperty($"{(_inspectionPart.bolted ? "" : "Not")} Bolted");
+                                    drawProperty($"Tightness: {_inspectionPart.tightnessTotal} / {_inspectionPart.maxTightnessTotal} ({_inspectionPart.tightnessTotal / _inspectionPart.maxTightnessTotal * 100})");
+                                    drawProperty($"Tightness Step: {_inspectionPart.tightnessStep}");
                                     drawPropertyBool("Inspect Bolts", ref inspectingBolt);
+                                    using (new HorizontalScope("box"))
+                                    {
+                                        
+                                        if (Button("Update tightness vars"))
+                                        {
+                                            _inspectionPart.setupBoltTightnessVariables();
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -205,47 +398,91 @@ namespace TommoJProductions.ModApi
                     Space(1);
                     using (new HorizontalScope("box"))
                     {
-                        if (inspectionPart.hasBolts && Button((inspectionPart.boltParent.activeInHierarchy ? "Deactivate" : "Activate") + " bolts"))
+                        if (_inspectionPart.hasBolts && Button((_inspectionPart.boltParent.activeInHierarchy ? "Deactivate" : "Activate") + " bolts"))
                         {
-                            inspectionPart.boltParent.SetActive(!inspectionPart.boltParent.activeInHierarchy);
+                            _inspectionPart.boltParent.SetActive(!_inspectionPart.boltParent.activeInHierarchy);
+                        }
+                        if (_inspectionPart.installed)
+                        {
+                            if (_inspectionPart.tightnessTotal < _inspectionPart.maxTightnessTotal)
+                            {
+                                if (Button("Tighten bolts"))
+                                {
+                                    _inspectionPart.setMaxBoltTightness();
+                                }
+                            }
+                            else
+                            {
+                                if (Button("Loosen bolts"))
+                                {
+                                    _inspectionPart.resetBoltTightness();
+                                }
+                            }
+                            if (Button("Disassemble"))
+                            {
+                                _inspectionPart.disassemble();
+                            }
                         }
                         if (Button("Teleport to player"))
                         {
-                            inspectionPart.teleport(true, ModClient.getPOV.transform.position);
+                            _inspectionPart.teleport(true, getPOV.transform.position);
                         }
                         if (Button("Teleport to part"))
                         {
-                            ModClient.getPOV.transform.root.gameObject.teleport(gameObject.transform.position);
+                            getPlayer.teleport(_inspectionPart.transform.position);
                         }
                     }
                     Space(1);
                     drawProperty("Triggers");
-                    using (scrollViewScope = new ScrollViewScope(scroll, false, false))
+                    using (scrollViewScope = new ScrollViewScope(triggerScroll, false, false))
                     {
-                        scroll = scrollViewScope.scrollPosition;
+                        triggerScroll = scrollViewScope.scrollPosition;
                         scrollViewScope.handleScrollWheel = true;
 
-                        for (int i = 0; i < inspectionPart.triggers.Length; i++)
+                        if (_inspectionPart.triggers != null && _inspectionPart.triggers.Length > 0)
                         {
-                            using (new VerticalScope("box"))
+                            for (int i = 0; i < _inspectionPart.triggers.Length; i++)
                             {
-                                using (new HorizontalScope())
+                                if (i.isEven())
                                 {
-                                    drawProperty(inspectionPart.triggers[i].triggerGameObject.name);
-                                    if (Button("Teleport to trigger"))
+                                    GUI.skin.box.normal.background = primaryItemBackground;
+                                }
+                                else
+                                {
+                                    GUI.skin.box.normal.background = secondaryItemBackground;
+                                }
+                                using (new VerticalScope("box"))
+                                {
+                                    using (new HorizontalScope())
                                     {
-                                        ModClient.getPOV.transform.root.gameObject.teleport(inspectionPart.triggers[i].triggerGameObject.transform.position);
+                                        drawProperty(_inspectionPart.triggers[i].triggerName);
+                                        if (Button("Teleport to trigger"))
+                                        {
+                                            getPlayer.teleport(_inspectionPart.triggers[i].triggerGameObject.transform.position);
+                                        }
+                                        if (!_inspectionPart.installed)
+                                        {
+                                            if (Button("Assemble"))
+                                            {
+                                                _inspectionPart.assemble(_inspectionPart.installPointColliders[i]);
+                                            }
+                                        }
+                                    }
+                                    drawPropertyVector3("position", ref inspectionPartPosition[i]);
+                                    drawPropertyVector3("euler", ref inspectionPartEuler[i]);
+
+                                    if (Button("apply"))
+                                    {
+                                        _inspectionPart.triggers[i].partPivot.transform.localPosition = inspectionPartPosition[i];
+                                        _inspectionPart.triggers[i].partPivot.transform.localEulerAngles = inspectionPartEuler[i];
                                     }
                                 }
-                                drawPropertyVector3("position", ref inspectionPartPosition[i]);
-                                drawPropertyVector3("euler", ref inspectionPartEuler[i]);
-
-                                if (Button("apply"))
-                                {
-                                    inspectionPart.triggers[i].partPivot.transform.localPosition = inspectionPartPosition[i];
-                                    inspectionPart.triggers[i].partPivot.transform.localEulerAngles = inspectionPartEuler[i];
-                                }
                             }
+                            GUI.skin.box.normal.background = defaultBackground;
+                        }
+                        else
+                        {
+                            drawProperty("No triggers");
                         }
                     }
                 }
@@ -257,16 +494,16 @@ namespace TommoJProductions.ModApi
             {
                 using (new VerticalScope("box"))
                 {
-                    drawProperty("Bolt Inspection", name);
+                    drawProperty("Bolt Inspection", inspectionBolt.boltCallback.name);
                     Space(1);
                     drawProperty($"routine: {(inspectionBolt.boltRoutine == null ? "in" : "")}active");
-                    inspectionBolt.boltSettings.drawProperty("boltType");
+                    inspectionBolt.boltSettings.boltType.drawProperty();
                     drawProperty("Bolt tightness", inspectionBolt.loadedSaveInfo.boltTightness);
-                    inspectionBolt.boltSettings.drawProperty("boltSize");
+                    inspectionBolt.boltSettings.boltSize.drawProperty();
                     if (inspectionBolt.boltSettings.addNut)
                     {
                         drawProperty("Nut tightness", inspectionBolt.loadedSaveInfo.addNutTightness);
-                        inspectionBolt.boltSettings.addNutSettings.drawProperty("nutSize");
+                        (inspectionBolt.boltSettings.addNutSettings.nutSize ?? inspectionBolt.boltSettings.boltSize).drawProperty();
                     }
                 }
                 Space(1);
@@ -281,7 +518,7 @@ namespace TommoJProductions.ModApi
                         inspectionBolt.startPosition = inspectionPosition;
                         inspectionBolt.startEulerAngles = inspectionEuler;
                         inspectionBolt.boltSettings.addNutSettings.nutOffset = inspectionOffset;
-                        inspectionBolt.updateNutPosRot();
+                        inspectionBolt.updateModelPosition();
                     }
                 }
                 Space(1);
@@ -291,18 +528,7 @@ namespace TommoJProductions.ModApi
                     drawPropertyVector3("rot direction", ref inspectionBolt.boltSettings.rotDirection);
                     drawPropertyEdit("pos step", ref inspectionBolt.boltSettings.posStep);
                     drawPropertyEdit("rot step", ref inspectionBolt.boltSettings.rotStep);
-                    drawPropertyEdit("tightness step", ref inspectionBolt.boltSettings.tightnessStep);
-                }
-                Space(1);
-                using (new HorizontalScope("box"))
-                {
-                    if (Button((inspectionPart.boltParent.activeInHierarchy ? "Deactivate" : "Activate") + " bolts"))
-                        inspectionPart.boltParent.SetActive(!inspectionPart.boltParent.activeInHierarchy);
-
-                    if (Button("Teleport to bolt"))
-                    {
-                        ModClient.getPOV.transform.root.gameObject.teleport(gameObject.transform.position);
-                    }
+                    //drawPropertyEdit("tightness step", ref inspectionBolt.boltSettings.tightnessStep);
                 }
             }
         }
