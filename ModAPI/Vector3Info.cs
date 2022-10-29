@@ -16,21 +16,43 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// represents the x cord.
         /// </summary>
-        public float x { get; set; } = 0;
+        public float x
+        {
+            get => vector3.x;
+            set => vector3.x = value;
+        }
         /// <summary>
         /// represents the y cord.
         /// </summary>
-        public float y { get; set; } = 0;
+        public float y
+        {
+            get => vector3.y;
+            set => vector3.y = value;
+        }
         /// <summary>
         /// represents the z cord.
         /// </summary>
-        public float z { get; set; } = 0;
+        public float z
+        {
+            get => vector3.z;
+            set => vector3.z = value;
+        }
+
+        internal Vector3 vector3 = new Vector3();
 
         /// <summary>
         /// inits a new info with zeros.
         /// </summary>
         public Vector3Info() { }
-
+        /// <summary>
+        /// inits a new info.
+        /// </summary>
+        public Vector3Info(float x, float y, float z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
         /// <summary>
         /// inits a new vector3info with vector3 values.
         /// </summary>
@@ -41,6 +63,7 @@ namespace TommoJProductions.ModApi
             y = v.y;
             z = v.z;
         }
+
         /// <summary>
         /// converts a vector3.
         /// </summary>
@@ -50,6 +73,21 @@ namespace TommoJProductions.ModApi
         {
             return new Vector3Info(v);
         }
+
+        /// <summary>
+        /// casts an info to a vector3. (creates a new instance.)
+        /// </summary>
+        /// <param name="v">the vector3 to convert.</param>
+        public static implicit operator Vector3(Vector3Info v)
+        {
+            v.vector3.Set(v.x, v.y, v.z);
+            return v.vector3;
+        }
+        /// <summary>
+        /// casts a vector3 to an info. (creates a new instance.)
+        /// </summary>
+        /// <param name="v">the vector3 to convert.</param>
+        public static implicit operator Vector3Info(Vector3 v) => new Vector3Info(v);
         /// <summary>
         /// times x by x, y by y, z by z.
         /// </summary>
@@ -70,35 +108,25 @@ namespace TommoJProductions.ModApi
         /// </summary>
         /// <param name="v1">the info</param>
         /// <param name="v2">the v3</param>
-        public static Vector3Info operator +(Vector3Info v1, Vector3 v2) => new Vector3Info(v1.toVector3() + v2);
+        public static Vector3Info operator +(Vector3Info v1, Vector3 v2) => new Vector3Info(v1.vector3 + v2);
         /// <summary>
         /// adds these objects together
         /// </summary>
         /// <param name="v1">the info</param>
         /// <param name="v2">the v3</param>
-        public static Vector3Info operator -(Vector3Info v1, Vector3 v2) => new Vector3Info(v1.toVector3() - v2);
+        public static Vector3Info operator -(Vector3Info v1, Vector3 v2) => new Vector3Info(v1.vector3 - v2);
         /// <summary>
         /// determines if these objects are equal.
         /// </summary>
         /// <param name="v1">the info</param>
         /// <param name="v2">the v3</param>
-        public static bool operator ==(Vector3Info v1, Vector3 v2) => v1.toVector3() == v2;
+        public static bool operator ==(Vector3Info v1, Vector3 v2) => v1.vector3 == v2;
         /// <summary>
         /// determines if these objects are not equal.
         /// </summary>
         /// <param name="v1">the info</param>
         /// <param name="v2">the v3</param>
-        public static bool operator !=(Vector3Info v1, Vector3 v2) => v1.toVector3() != v2;
-        /// <summary>
-        /// casts an info to a vector3. (creates a new instance.)
-        /// </summary>
-        /// <param name="v">the vector3 to convert.</param>
-        public static implicit operator Vector3(Vector3Info v) => v.toVector3();
-        /// <summary>
-        /// casts a vector3 to an info. (creates a new instance.)
-        /// </summary>
-        /// <param name="v">the vector3 to convert.</param>
-        public static implicit operator Vector3Info(Vector3 v) => new Vector3Info(v);
+        public static bool operator !=(Vector3Info v1, Vector3 v2) => v1.vector3 != v2;
         /// <summary>
         /// Determines if object is a vector 3 info and if that instance equals this instance.
         /// </summary>
@@ -107,6 +135,6 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// gets the vector3 hashcode.
         /// </summary>
-        public override int GetHashCode() => this.toVector3().GetHashCode();
+        public override int GetHashCode() => vector3.GetHashCode();
     }
 }

@@ -48,7 +48,7 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         /// <summary>
         /// The bolt size for this callback.
         /// </summary>
-        public Bolt.BoltSize boltSize { get; internal set; }
+        public BoltSize boltSize { get; internal set; }
         /// <summary>
         /// Represents the bolt check. checks if in the correct mode based on <see cref="boltSize"/> (if <see cref="Bolt.BoltSize.hand"/> player would need to be in HandMode otherwise tool mode would be required) and that the player is holding the correct tool for the fastener.
         /// </summary>
@@ -82,7 +82,10 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
 
             if (boltCheck)
             {
-                boltRenderer.material = getActiveBoltMaterial;
+                if (bolt.boltSettings.highlightBoltWhenActive)
+                {
+                    boltRenderer.material = getActiveBoltMaterial;
+                }
                 bolt.bcb_mouseEnter(this);
                 onMouseEnter?.Invoke(this);
             }
@@ -94,7 +97,10 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         {
             // Written, 24.08.2022
 
-            boltRenderer.material = boltMaterial;
+            if (bolt.boltSettings.highlightBoltWhenActive)
+            {
+                boltRenderer.material = boltMaterial;
+            }
             bolt.bcb_mouseExit(this);
             onMouseExit?.Invoke(this);
         }
@@ -105,9 +111,9 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
         /// <returns>returns true if player is holding correct tool for the bolt.</returns>
         protected virtual bool doBoltCheck() 
         {
-            if (boltSize == Bolt.BoltSize.hand)
+            if (boltSize == BoltSize.hand)
             {
-                return isInHandMode && isHandEmpty;
+                return isHandEmpty && getToolWrenchSize_float == 0;
             }
             else
             {
@@ -133,14 +139,9 @@ namespace TommoJProductions.ModApi.Attachable.CallBacks
                 error += $"# could not find a collider on the bolt model. player will not be able to detect this bolt. <u>required</u>: <i>Collider:isTrigger:<b>false</b></i> | {gameObject.name} ({bolt?.boltID ?? "null"})\n";
             }
 
-            if (!gameObject.isOnLayer(LayerMasksEnum.Bolts))
-            {
-                error += $"# bolt is not on the correct layer. player will not be able to detect this bolt. <u>required</u>: <i>Layer:<b>Bolts</b></i>. {gameObject.name} ({bolt?.boltID ?? "null"})\n";
-            }
-
             if (!string.IsNullOrEmpty(error))
             {
-                ModClient.print("[BoltCallback.Awake]\n" + error);
+                ModClient.print("[BoltCallback]\n" + error);
                 throw new Exception(error);
             }
         }

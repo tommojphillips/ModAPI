@@ -300,11 +300,6 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public const string VERSION = VersionInfo.version;
         
-        /// <summary>
-        /// Represents the dev mode behaviour instance. null if <see cref="devMode"/> is <see langword="false"/>.
-        /// </summary>
-        public static DevMode devModeBehaviour { get; internal set; }
-
 #if DEBUG
         internal static bool devMode = true;
 #else
@@ -313,37 +308,52 @@ namespace TommoJProductions.ModApi
 
         private static ModClient instance;
 
-        private PlayMakerFSM _pickUp;
-        private FsmGameObject _pickedUpGameObject;
-        private FsmGameObject _raycastHitGameObject;
+        private GameObject _masterAudioGameObject;
+        private GameObject _player;
+        private GameObject _fps;
+
         private AudioSource _assembleAudio;
         private AudioSource _disassembleAudio;
         private AudioSource _screwAudio;
+
+        private Material _activeBoltMaterial;
+
+        private Camera _playerCamera;
+
+        private PlayMakerFSM _pickUp;
+
+        private FsmGameObject _pickedUpGameObject;
+        private FsmGameObject _raycastHitGameObject;
+        private FsmGameObject _POV;
+
         private FsmBool _guiDisassemble;
         private FsmBool _guiAssemble;
         private FsmBool _guiUse;
         private FsmBool _guiDrive;
         private FsmBool _handEmpty;
         private FsmBool _playerInMenu;
+        private FsmBool _ratchetSwitch;
+        private FsmBool _playerHasRatchet;
+
         private FsmString _guiInteraction;
         private FsmString _playerCurrentVehicle;
-        private FieldInfo _modsFolderFieldInfo;
+
         private FsmFloat _toolWrenchSize;
+
+        private FieldInfo _modsFolderFieldInfo;
+
         private string[] _maskNames;
         private string _propertyString = "";
-        private float _propertyFloat = 0;
-        private Material _activeBoltMaterial;
-        private GameObject _masterAudioGameObject;
-        private readonly Dictionary<string, AudioSource> masterAudioDictionary = new Dictionary<string, AudioSource>();
-        private Camera _playerCamera;
-        private FsmGameObject _POV;
-        private GameObject _player;
-        private GameObject _fps;
         private string _gameDirectory;
 
+        private float _propertyFloat = 0;
+        private double _propertyDouble = 0;
+
+        private readonly Dictionary<string, AudioSource> masterAudioDictionary = new Dictionary<string, AudioSource>();
         internal readonly Dictionary<string, string> descriptionCache = new Dictionary<string, string>();
 
         internal static bool boltAssetsLoaded { get; set; } = false;
+
         internal static GameObject shortBoltPrefab;
         internal static GameObject longBoltPrefab;
         internal static GameObject screwPrefab;
@@ -368,11 +378,6 @@ namespace TommoJProductions.ModApi
         public static event Action<GameObject> onGameObjectThrow;
 
         #endregion
-
-        internal static void deleteCache() 
-        {
-            instance = null;
-        }
 
         #region Properties
 
@@ -659,9 +664,9 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// gets the currently used wrench size casted to a <see cref="Bolt.BoltSize"/>
         /// </summary>
-        public static Bolt.BoltSize getToolWrenchSize_boltSize
+        public static BoltSize getToolWrenchSize_boltSize
         {
-            get => (Bolt.BoltSize)(getToolWrenchSize_float * 100f);
+            get => (BoltSize)(getToolWrenchSize_float * 100f);
         }
         /// <summary>
         /// gets the currently used wrench size
@@ -786,11 +791,51 @@ namespace TommoJProductions.ModApi
                 return getInstance._gameDirectory;
             }
         }
+        /// <summary>
+        /// Represents if the player is using the ratchet.
+        /// </summary>
+        public static bool playerHasRatchet
+        {
+            get
+            {
+                if (getInstance._playerHasRatchet == null)
+                {
+                    getInstance._playerHasRatchet = PlayMakerGlobals.Instance.Variables.GetFsmBool("PlayerHasRatchet");
+                }
+                return getInstance._playerHasRatchet.Value;
+            }
+        }
+        /// <summary>
+        /// Represents if the ratchet is switched. (direction)
+        /// </summary>
+        public static bool ratchetSwitch
+        {
+            get
+            {
+                if (getInstance._ratchetSwitch == null)
+                {
+                    getInstance._ratchetSwitch = getFPS.transform.FindChild("2Spanner/Pivot/Ratchet").gameObject.GetPlayMaker("Switch").FsmVariables.GetFsmBool("Switch");
+                }
+                return getInstance._ratchetSwitch.Value;
+            }
+        }
+        /// <summary>
+        /// Represents the dev mode behaviour instance. null if <see cref="devMode"/> is <see langword="false"/>.
+        /// </summary>
+        public static DevMode devModeBehaviour { get; internal set; }
 
         #endregion
 
         #region Methods
 
+        /// <summary>
+        /// sets <see cref="instance"/> to null. thus next call to <see cref="getInstance"/> will create a new instance.
+        /// </summary>
+        internal static void deleteCache() 
+        {
+            instance = null;
+            Database.Database.deleteCache();
+        }
         /// <summary>
         /// finds child object of name <paramref name="childName"/> and gets playmaker called, "Data".
         /// </summary>
@@ -1094,6 +1139,41 @@ namespace TommoJProductions.ModApi
         /// <param name="property">the reference float to draw/edit</param>
         /// <param name="maxLength">max length of textfield</param>
         public static float drawPropertyEdit(string propertyName, float property, int maxLength = 10)
+        {
+            // Written, 04.07.2022
+
+            drawPropertyEdit(propertyName, ref property, maxLength);
+            return property;
+        }
+        /// <summary>
+        /// [GUI] draws a property of type <see cref="double"/> that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property double name</param>
+        /// <param name="property">the reference double to draw/edit</param>
+        /// <param name="maxLength">max length of textfield (number of letters.)</param>
+        /// <returns><see langword="true"/> if <paramref name="property"/> has changed.</returns>
+        public static bool drawPropertyEdit(string propertyName, ref double property, int maxLength = 10)
+        {
+            // Written 03.10.2022
+
+            getInstance._propertyString = drawPropertyEdit(propertyName, property.ToString());
+
+            double.TryParse(getInstance._propertyString, out getInstance._propertyDouble);
+
+            if (getInstance._propertyDouble != property)
+            {
+                property = getInstance._propertyDouble;
+                return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// [GUI] draws a double property that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property double name</param>
+        /// <param name="property">the reference double to draw/edit</param>
+        /// <param name="maxLength">max length of textfield</param>
+        public static double drawPropertyEdit(string propertyName, double property, int maxLength = 10)
         {
             // Written, 04.07.2022
 

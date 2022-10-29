@@ -487,6 +487,51 @@ namespace TommoJProductions.ModApi
         }
 
         /// <summary>
+        /// returns whether the player is currently looking at a part. By raycast.
+        /// </summary>
+        /// <param name="part">The part to detect againist.</param>
+        /// <param name="maxDistance">raycast within distance from main camera.</param>
+        public static bool isPlayerLookingAt(this Part part, float maxDistance = 1)
+        {
+            if (raycast(out RaycastHit hit, maxDistance, false, (LayerMasksEnum)part.gameObject.layer))
+            {
+                if (hit.collider?.gameObject == part.gameObject)
+                    return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// Checks if player is holding the Part, <paramref name="part"/>. by checking if <paramref name="part"/>'s <see cref="GameObject.layer"/> equals <see cref="LayerMasksEnum.Wheel"/>
+        /// </summary>
+        /// <param name="part">The gameObject to check on.</param>
+        public static bool isPlayerHolding(this Part part)
+        {
+            // Written, 02.10.2018
+
+            if (part.gameObject.isOnLayer(LayerMasksEnum.Wheel))
+                return true;
+            return false;
+        }
+        /// <summary>
+        /// checks if the player is holding this part. returns false if player is holding nothing. by checking Players pickedupgameobject FSM
+        /// </summary>
+        public static bool isPlayerHoldingByPickup(this Part part)
+        {
+            // Written, 08.05.2022
+
+            return getPickedUpGameObject?.Value == part.gameObject;
+        }
+        /// <summary>
+        /// Checks if the player is looking at this part. returns false if player is looking at nothing. by checking Players raycasthitgameobject FSM
+        /// </summary>
+        public static bool isPlayerLookingAtByPickUp(this Part part)
+        {
+            // Written, 08.05.2022
+
+            return getRaycastHitGameObject?.Value == part.gameObject;
+        }
+
+        /// <summary>
         /// returns whether the player is currently looking at an gameobject. By raycast.
         /// </summary>
         /// <param name="gameObject">The gameobject to detect againist.</param>
@@ -960,6 +1005,17 @@ namespace TommoJProductions.ModApi
             // Written, 15.01.2022
 
             return (float)Math.Round(_float, decimalPlace);
+        }
+        /// <summary>
+        /// Rounds to <paramref name="decimalPlace"/>
+        /// </summary>
+        /// <param name="_double">The float to round</param>
+        /// <param name="decimalPlace">how many decimal places. eg. 2 = 0.01</param>
+        public static double round(this double _double, int decimalPlace = 0)
+        {
+            // Written, 15.01.2022
+
+            return Math.Round(_double, decimalPlace);
         }
 
         /// <summary>

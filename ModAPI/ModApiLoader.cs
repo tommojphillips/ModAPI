@@ -65,13 +65,13 @@ namespace TommoJProductions.ModApi
         /// </summary>
         internal static FsmGameObject bolt;
         /// <summary>
-        /// represents the set bolt callback that the player is looking at.
-        /// </summary>
-        internal static BoltCallback lookingAtCallback;
-        /// <summary>
         /// represents the current bolt callback that the player is looking at.
         /// </summary>
         internal static BoltCallback currentCallback;
+        /// <summary>
+        /// represents the set bolt callback that the player is looking at.
+        /// </summary>
+        internal static BoltCallback lookingAtCallback;
 
         #region IEnumerators
 
@@ -194,7 +194,7 @@ namespace TommoJProductions.ModApi
             // Written, 02.07.2022
 
             tryLoadBoltAssets();
-            injectBoltCheck();
+            injectBoltChecks();
 
             ModConsole.Print("[ModApiLoader] - bolt set up");
         }
@@ -258,7 +258,22 @@ namespace TommoJProductions.ModApi
             inherentyPickedPartsSet = false;
         }
         
-        private static void injectBoltCheck() 
+        private static void injectBoltChecks() 
+        {
+            // Written, 08.10.22
+
+            injectBoltCheckToolMode();
+            injectBoltCheckHandMode();
+        }
+        private static void injectBoltCheckHandMode()
+        {
+            // Written, 08.10.2022
+
+            PlayMakerFSM pickUp = ModClient.getHandPickUpFsm;
+
+            pickUp.GetState("Look for object").appendNewAction(handModeBoltCheck, CallbackTypeEnum.onUpdate, true);
+        }
+        private static void injectBoltCheckToolMode()
         {
             // Written, 25.08.2022
 
@@ -268,7 +283,7 @@ namespace TommoJProductions.ModApi
             bolt = raycast.FsmVariables.FindFsmGameObject("Bolt");
 
             PlayMakerFSM check = toolLogic.GetPlayMaker("Check");
-            check.GetState("Check bolt Name").appendNewAction(boltChangedCheck);
+            check.GetState("Check bolt Name").appendNewAction(toolModeBoltCheck);
 
             GameObject selectItem = getFPS.transform.FindChild("SelectItem").gameObject;
             PlayMakerFSM selection = selectItem.GetPlayMaker("Selection");
@@ -323,12 +338,42 @@ namespace TommoJProductions.ModApi
             Print($"short bolt  prefab: {shortBoltPrefab}");
             Print($"long bolt   prefab:  {longBoltPrefab}");
         }
+        private static void boltCheck(GameObject raycastGameObject)
+        {
+            currentCallback = null;
+
+            if (raycastGameObject)
+            {
+                currentCallback = raycastGameObject.GetComponent<BoltCallback>();
+            }
+            resetBolt();
+            if (currentCallback)
+            {
+                currentCallback.onBoltEnter();
+            }
+            lookingAtCallback = currentCallback;
+        }
 
         #endregion
 
         #region Event handlers
 
+        /// <summary>
+        /// Occurs when the <see cref="ModClient.getRaycastHitGameObject"/> gameobject reference changes. Handles <see cref="BoltCallback.onBoltEnter"/>/<see cref="BoltCallback.onBoltExit"/> calls. invoked by injected playmaker state.
+        /// </summary>
+        private static void handModeBoltCheck()
+        {
+            boltCheck(getRaycastHitGameObject.Value);
+        }
+        /// <summary>
+        /// Occurs when the <see cref="bolt"/> gameobject reference changes. Handles <see cref="BoltCallback.onBoltEnter"/>/<see cref="BoltCallback.onBoltExit"/> calls. invoked by injected playmaker state.
+        /// </summary>
+        private static void toolModeBoltCheck()
+        {
+            // Written, 25.08.2022
 
+            boltCheck(bolt.Value);
+        }
         /// <summary>
         /// Occurs when the <see cref="bolt"/> gameobject reference changes or when the reset tool check takes place when player has changed to hand mode.. Handles <see cref="BoltCallback.onBoltExit"/> calls. invoked by injected playmaker state.
         /// </summary>
@@ -341,26 +386,6 @@ namespace TommoJProductions.ModApi
                 lookingAtCallback.onBoltExit();
                 lookingAtCallback = null;
             }
-        }
-        /// <summary>
-        /// Occurs when the <see cref="bolt"/> gameobject reference changes. Handles <see cref="BoltCallback.onBoltEnter"/>/<see cref="BoltCallback.onBoltExit"/> calls. invoked by injected playmaker state.
-        /// </summary>
-        private static void boltChangedCheck()
-        {
-            // Written, 25.08.2022
-
-            currentCallback = null;
-
-            if (bolt.Value)
-            {
-                currentCallback = bolt.Value.GetComponent<BoltCallback>();
-            }
-            resetBolt();
-            if (currentCallback)
-            {
-                currentCallback.onBoltEnter();
-            }
-            lookingAtCallback = currentCallback;
         }
 
         #endregion

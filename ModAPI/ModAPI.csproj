@@ -13,7 +13,8 @@
     <AssemblyName>ModApi</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup>
     <ProjectGuid>{65DDDAC8-54EA-4116-A53D-05B126FD5A49}</ProjectGuid>
@@ -27,6 +28,7 @@
     <DefineConstants>x64</DefineConstants>
     <Optimize>true</Optimize>
     <DocumentationFile>bin\x64\Release\ModApi.xml</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <PlatformTarget>x64</PlatformTarget>
@@ -37,6 +39,7 @@
     <DebugType>full</DebugType>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -59,14 +62,26 @@
     <Reference Include="UnityScript.Lang" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Attachable\Bolt.cs" />
+    <Compile Include="Attachable\Bolt\AddNutSettings.cs" />
+    <Compile Include="Attachable\Bolt\Bolt.cs" />
+    <Compile Include="Attachable\Bolt\BoltSaveInfo.cs" />
+    <Compile Include="Attachable\Bolt\BoltSettings.cs" />
+    <Compile Include="Attachable\Bolt\BoltSize.cs" />
+    <Compile Include="Attachable\Bolt\BoltType.cs" />
     <Compile Include="Attachable\CallBacks\BoltCallback.cs" />
-    <Compile Include="Attachable\Part.cs" />
+    <Compile Include="Attachable\Part\AssembleType.cs" />
+    <Compile Include="Attachable\Part\AssemblyTypeJointSettings.cs" />
+    <Compile Include="Attachable\Part\CollisionSettings.cs" />
+    <Compile Include="Attachable\Part\Part.cs" />
+    <Compile Include="Attachable\Part\PartSaveInfo.cs" />
+    <Compile Include="Attachable\Part\PartSettings.cs" />
     <Compile Include="ConsoleCommands.cs" />
+    <Compile Include="CustomYieldInstructions.cs" />
     <Compile Include="Database\Database.cs" />
     <Compile Include="Database\DatabaseMechanics.cs" />
     <Compile Include="Database\DatabaseMotor.cs" />
     <Compile Include="Database\DatabaseOrders.cs" />
+    <Compile Include="Database\DatabaseVehicles.cs" />
     <Compile Include="Database\GamePart.cs" />
     <Compile Include="Database\PartsStatus.cs" />
     <Compile Include="DevMode.cs" />

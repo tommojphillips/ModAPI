@@ -12,16 +12,16 @@ using System.Resources;
 [assembly: NeutralResourcesLanguage("en-AU")]
 
 // Version information
-[assembly: AssemblyVersion("1.0.253.2")]
-[assembly: AssemblyFileVersion("1.0.253.2")]
+[assembly: AssemblyVersion("1.0.301.8")]
+[assembly: AssemblyFileVersion("1.0.301.8")]
 
 namespace TommoJProductions.ModApi
 {
 
     public class VersionInfo
     {
-	    public const string lastestRelease = "11.09.2022 02:18 PM";
-	    public const string version = "1.0.253.2";
+	    public const string lastestRelease = "29.10.2022 12:58 PM";
+	    public const string version = "1.0.301.8";
 
         /// <summary>
         /// Represents if the mod has been complied for x64

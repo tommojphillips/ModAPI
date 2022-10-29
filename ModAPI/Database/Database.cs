@@ -8,13 +8,35 @@ using HutongGames.PlayMaker;
 
 namespace TommoJProductions.ModApi.Database
 {
-    public static class Database
+    /// <summary>
+    /// Represents the game database.
+    /// </summary>
+    public class Database
     {
+        private DatabaseMotor motor;
+        private DatabaseMechanics mechanics;
+        private DatabaseOrders orders;
+        private Status status;
+        private DatabaseVehicles vehicles;
 
-        private static DatabaseMotor _databaseMotor;
-        private static DatabaseMechanics _databaseMechanics;
-        private static DatabaseOrders _databaseOrders;
-        private static Status _partsStatus;
+        private static Database instance;
+
+        private static Database getInstance 
+        {
+            get 
+            {
+                if (instance == null)
+                {
+                    instance = new Database();
+                }
+                return instance;
+            }
+        }
+
+        internal static void deleteCache() 
+        {
+            instance = null;
+        }
 
         /// <summary>
         /// Represents all stock engine parts.
@@ -23,18 +45,21 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (_databaseMotor == null)
-                    _databaseMotor = new DatabaseMotor();
-                return _databaseMotor;
+                if (getInstance.motor == null)
+                    getInstance.motor = new DatabaseMotor();
+                return getInstance.motor;
             }
         }
+        /// <summary>
+        /// Represents all database mechanics
+        /// </summary>
         public static DatabaseMechanics databaseMechanics
         {
             get
             {
-                if (_databaseMechanics == null)
-                    _databaseMechanics = new DatabaseMechanics();
-                return _databaseMechanics;
+                if (getInstance.mechanics == null)
+                    getInstance.mechanics = new DatabaseMechanics();
+                return getInstance.mechanics;
             }
         }
         /// <summary>
@@ -44,9 +69,9 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (_databaseOrders == null)
-                    _databaseOrders = new DatabaseOrders();
-                return _databaseOrders;
+                if (getInstance.orders == null)
+                    getInstance.orders = new DatabaseOrders();
+                return getInstance.orders;
             }
         }
         /// <summary>
@@ -56,10 +81,23 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (_partsStatus == null)
-                    _partsStatus = new Status();
-                return _partsStatus;
+                if (getInstance.status == null)
+                    getInstance.status = new Status();
+                return getInstance.status;
             }
         }
-    } 
+        /// <summary>
+        /// Represents the vehicle database. all vehicle references in the game.
+        /// </summary>
+        public static DatabaseVehicles databaseVehicles
+        {
+            get
+            {
+                if (getInstance.vehicles == null)
+                    getInstance.vehicles = new DatabaseVehicles();
+                return getInstance.vehicles;
+            }
+        }
+
+    }
 }
