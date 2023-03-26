@@ -13,6 +13,8 @@ using UnityEngine.EventSystems;
 using static MSCLoader.ModConsole;
 using static TommoJProductions.ModApi.ModClient;
 
+using Resources = TommoJProductions.ModApi.Properties.Resources;
+
 namespace TommoJProductions.ModApi
 {
     /// <summary>
@@ -149,9 +151,8 @@ namespace TommoJProductions.ModApi
 
             if (!modApiSetUp)
             {
-                deleteCache();
-
                 modapiGo = new GameObject("Mod API Loader");
+                GameObject.DontDestroyOnLoad(modapiGo);
                 modapiBehaviour = modapiGo.AddComponent<ModApiBehaviour>();
                 ConsoleCommand.Add(new ConsoleCommands());
                 loadedParts.Clear();
@@ -169,7 +170,10 @@ namespace TommoJProductions.ModApi
                 {
                     int index = Array.IndexOf(activateGameState.Actions, actionCallback);
                     if (index == -1)
+                    {
+                        Print("modapi.setup: action callback was not null but could not find index.");
                         return;
+                    }
                     activateGameState.RemoveAction(index);
                     Print("modapi: Cleaned up");
                 }
@@ -299,39 +303,20 @@ namespace TommoJProductions.ModApi
 
             if (!boltAssetsLoaded)
             {
-                string assetPathPrefered = Path.Combine(ModClient.getModsFolder, "Assets/ModApi/modapi.unity3d");
-                string assetPathAlt = Path.Combine(ModClient.getGameFolder, "ModApi/modapi.unity3d");
-                string usingPath;
+                AssetBundle ab = AssetBundle.CreateFromMemoryImmediate(Resources.modapi);
+                nutPrefab = ab.LoadAsset("nut.prefab") as GameObject;
+                shortBoltPrefab = ab.LoadAsset("short bolt.prefab") as GameObject;
+                longBoltPrefab = ab.LoadAsset("long bolt.prefab") as GameObject;
+                screwPrefab = ab.LoadAsset("screw.prefab") as GameObject;
+                ab.Unload(false);
 
-                if (File.Exists(assetPathPrefered))
-                {
-                    usingPath = assetPathPrefered;
-                }
-                else
-                {
-                    usingPath = assetPathAlt;
-                }
-
-                if (File.Exists(usingPath))
-                {
-                    AssetBundle ab = AssetBundle.CreateFromMemoryImmediate(File.ReadAllBytes(usingPath));
-                    nutPrefab = ab.LoadAsset("nut.prefab") as GameObject;
-                    shortBoltPrefab = ab.LoadAsset("short bolt.prefab") as GameObject;
-                    longBoltPrefab = ab.LoadAsset("long bolt.prefab") as GameObject;
-                    screwPrefab = ab.LoadAsset("screw.prefab") as GameObject;
-                    ab.Unload(false);
-
-                    Print("[ModApi.Bolt] bolt assets loaded");
-                    boltAssetsLoaded = true;
-                }
-                else
-                {
-                    Error("Please install Mod Reference, 'ModApi' correctly. modapi.unity3d could not be found. copy modapi.unity3d to:");
-                    Print(assetPathAlt);
-                }
+                Print("[ModApiLoader] bolt assets loaded");
+                boltAssetsLoaded = true;
             }
             else
-                Print("[ModApi.Bolt] bolt assets already loaded. :)");
+            {
+                Print("[ModApiLoader] bolt assets already loaded. :)");
+            }
 
             Print($"nut         prefab: {nutPrefab}");
             Print($"screw       prefab:  {screwPrefab}");

@@ -17,6 +17,7 @@ using UnityEngine;
 
 using static UnityEngine.GUILayout;
 using static TommoJProductions.ModApi.ModClient;
+using HutongGames.PlayMaker.Actions;
 
 namespace TommoJProductions.ModApi
 {
@@ -331,6 +332,19 @@ namespace TommoJProductions.ModApi
             {
                 func.Invoke(objects[i]);
             }
+        }
+        public static T first<T>(this T[] objects, Func<T, bool> func) where T : class
+        {
+            // Written, 11.07.2022
+
+            for (int i = 0; i < objects.Length; i++)
+            {
+                if (func.Invoke(objects[i]))
+                {
+                    return objects[i];
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -796,6 +810,23 @@ namespace TommoJProductions.ModApi
                     return new OnEnterCallback(action, everyFrame);
             }
         }
+        private static FsmStateActionCallback determineAndCreateCallbackType(CallbackTypeEnum type, Func<bool> func, bool everyFrame = false)
+        {
+            // Written, 13.06.2022
+
+            switch (type)
+            {
+                case CallbackTypeEnum.onFixedUpdate:
+                    return new OnFixedUpdateCallback(func, everyFrame);
+                case CallbackTypeEnum.onUpdate:
+                    return new OnUpdateCallback(func, everyFrame);
+                case CallbackTypeEnum.onGui:
+                    return new OnGuiCallback(func, everyFrame);
+                default:
+                case CallbackTypeEnum.onEnter:
+                    return new OnEnterCallback(func, everyFrame);
+            }
+        }
         private static FsmStateActionCallback determineAndCreateActionType(this FsmState state, InjectEnum injectType, Action action, CallbackTypeEnum callbackType, bool everyFrame, int index = 0)
         {
             // Written, 18.06.2022
@@ -869,7 +900,7 @@ namespace TommoJProductions.ModApi
         }
 
         /// <summary>
-        /// Appends a new action in a state.
+        /// Appends an action in a state.
         /// </summary>
         /// <param name="state">the sate to modify.</param>
         /// <param name="action">the action to append.</param>
@@ -877,19 +908,52 @@ namespace TommoJProductions.ModApi
         /// <param name="everyFrame">Represents if it should run everyframe..</param>
         public static FsmStateActionCallback appendNewAction(this FsmState state, Action action, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
+            // Written, 07.12.2022
+
+            return state.appendAction(determineAndCreateCallbackType(callbackType, action, everyFrame));
+        }
+        /// <summary>
+        /// Appends an action in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="func">the action to append.</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback appendNewAction(this FsmState state, Func<bool> func, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
+        {
+            // Written, 07.12.2022
+
+            return state.appendAction(determineAndCreateCallbackType(callbackType, func, everyFrame));
+        }
+        /// <summary>
+        /// Appends an enumerator in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="routine">the enumerator to append.</param>
+        public static FsmStateActionCallback appendNewAction(this FsmState state, IEnumerator routine)
+        {
+            // Written, 18.11.2022
+
+            return appendNewAction(state, () => { state.Fsm.Owner.StartCoroutine(routine); });
+        }
+        private static FsmStateActionCallback appendAction(this FsmState state, FsmStateActionCallback callback)
+        {
+            // Written, 13.04.2022
+
             List<FsmStateAction> temp = new List<FsmStateAction>();
             foreach (FsmStateAction v in state.Actions)
             {
                 temp.Add(v);
             }
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
-            temp.Add(cb);
+            temp.Add(callback);
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{action.Method.DeclaringType.Name}] Appending new action {action.Method.DeclaringType.Name}.{action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {callbackType} {(everyFrame ? "every frame" : "once")}.");
-            return cb;
+            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Appending new action {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {callback.callbackType} {(callback.everyFrame ? "every frame" : "once")}.");
+            return callback;
         }
+
+
         /// <summary>
-        /// prepends a new action in a state.
+        /// prepends an action in a state.
         /// </summary>
         /// <param name="state">the sate to modify.</param>
         /// <param name="action">the action to prepend.</param>
@@ -897,17 +961,49 @@ namespace TommoJProductions.ModApi
         /// <param name="everyFrame">Represents if it should run everyframe..</param>
         public static FsmStateActionCallback prependNewAction(this FsmState state, Action action, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
+            // Written, 07.12.2022
+
+            return state.prependAction(determineAndCreateCallbackType(callbackType, action, everyFrame));
+        }
+        /// <summary>
+        /// prepends an action in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="func">the func to prepend. the func should return if fsmAction should finish.</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback prependNewAction(this FsmState state, Func<bool> func, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
+        {
+            // Written, 07.12.2022
+
+            return state.prependAction(determineAndCreateCallbackType(callbackType, func, everyFrame));
+        }
+        /// <summary>
+        /// prepends an enumerator in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="routine">the routine to prepend.</param>
+        public static FsmStateActionCallback prependNewAction(this FsmState state, IEnumerator routine)
+        {
+            // Written, 18.11.2022
+
+            return prependNewAction(state, () => { state.Fsm.Owner.StartCoroutine(routine); });
+        }
+        private static FsmStateActionCallback prependAction(this FsmState state, FsmStateActionCallback callback)
+        {
+            // Written, 13.04.2022
+
             List<FsmStateAction> temp = new List<FsmStateAction>();
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
-            temp.Add(cb);
+            temp.Add(callback);
             foreach (FsmStateAction v in state.Actions)
             {
                 temp.Add(v);
             }
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{action.Method.DeclaringType.Name}] Prepending new {action.Method.DeclaringType.Name}.{action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {(everyFrame ? "every frame" : "once")}.");
-            return cb;
+            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Prepending new {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {(callback.everyFrame ? "every frame" : "once")}.");
+            return callback;
         }
+
         /// <summary>
         /// Inserts a new action in a state.
         /// </summary>
@@ -918,17 +1014,51 @@ namespace TommoJProductions.ModApi
         /// <param name="everyFrame">Represents if it should run everyframe..</param>
         public static FsmStateActionCallback insertNewAction(this FsmState state, Action action, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
+            // Written, 07.12.2022
+
+            return state.insertAction(determineAndCreateCallbackType(callbackType, action, everyFrame), index);
+        }
+        /// <summary>
+        /// Inserts a new func in a state. return true if you would like the FsmAction to finish. (if true invokes, <see cref="FsmStateAction.Finish()"/>)
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="func">the action to insert.</param>
+        /// <param name="index">the index to insert action</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback insertNewAction(this FsmState state, Func<bool> func, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
+        {
+            // Written, 07.12.2022
+
+            return state.insertAction(determineAndCreateCallbackType(callbackType, func, everyFrame), index);
+        }
+        /// <summary>
+        /// Inserts an enumerator in a state.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="routine">the enumerator to insert.</param>
+        /// <param name="index">the index to insert action</param>
+        public static FsmStateActionCallback insertNewAction(this FsmState state, IEnumerator routine, int index)
+        {
+            // Written, 18.11.2022
+
+            return insertNewAction(state, () => { state.Fsm.Owner.StartCoroutine(routine); }, index);
+        }
+        private static FsmStateActionCallback insertAction(this FsmState state, FsmStateActionCallback callback, int index)
+        {
+            // Written, 13.04.2022
+
             List<FsmStateAction> temp = new List<FsmStateAction>();
             foreach (FsmStateAction v in state.Actions)
             {
                 temp.Add(v);
             }
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
-            temp.Insert(index, cb);
+            temp.Insert(index, callback);
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{action.Method.DeclaringType.Name}] Inserting new {action.Method.DeclaringType.Name}.{action.Method.Name} into {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(everyFrame ? "every frame" : "once")}.");
-            return cb;
+            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Inserting new {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} into {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(callback.everyFrame ? "every frame" : "once")}.");
+            return callback;
         }
+
         /// <summary>
         /// Replaces an action in a state.
         /// </summary>
@@ -939,21 +1069,53 @@ namespace TommoJProductions.ModApi
         /// <param name="everyFrame">Represents if it should run everyframe..</param>
         public static FsmStateActionCallback replaceAction(this FsmState state, Action action, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
         {
+            // Written, 07.12.2022
+
+            return state.replaceAction(determineAndCreateCallbackType(callbackType, action, everyFrame), index);
+        }
+        /// <summary>
+        /// Replaces an func in a state. return true if you would like the FsmAction to finish. (if true invokes, <see cref="FsmStateAction.Finish()"/>)
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="func">the action to replace.</param>
+        /// <param name="index">the index to replace action</param>
+        /// <param name="callbackType">Represents the callback type.</param>
+        /// <param name="everyFrame">Represents if it should run everyframe..</param>
+        public static FsmStateActionCallback replaceAction(this FsmState state, Func<bool> func, int index, CallbackTypeEnum callbackType = 0, bool everyFrame = false)
+        {
+            // Written, 07.12.2022
+
+            return state.replaceAction(determineAndCreateCallbackType(callbackType, func, everyFrame), index);
+        }
+        /// <summary>
+        /// Replaces an action in a state with an enumerator.
+        /// </summary>
+        /// <param name="state">the sate to modify.</param>
+        /// <param name="routine">the enumerator to replace.</param>
+        /// <param name="index">the index to replace action</param>
+        public static FsmStateActionCallback replaceAction(this FsmState state, IEnumerator routine, int index)
+        {
+            // Written, 18.11.2022
+
+            return replaceAction(state, () => { state.Fsm.Owner.StartCoroutine(routine); }, index);
+        }
+        private static FsmStateActionCallback replaceAction(this FsmState state, FsmStateActionCallback callback, int index)
+        {
             // Written, 13.04.2022
 
             List<FsmStateAction> temp = new List<FsmStateAction>();
-            FsmStateActionCallback cb = determineAndCreateCallbackType(callbackType, action, everyFrame);
             for (int i = 0; i < state.Actions.Length; i++)
             {
                 if (i == index)
-                    temp.Add(cb);
+                    temp.Add(callback);
                 else
                     temp.Add(state.Actions[i]);
             }
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{action.Method.DeclaringType.Name}] Replacing {action.Method.DeclaringType.Name}.{action.Method.Name} with {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(everyFrame ? "every frame" : "once")}.");
-            return cb;
+            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Replacing {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} with {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(callback.everyFrame ? "every frame" : "once")}.");
+            return callback;
         }
+
         /// <summary>
         /// Represents inject action logic.
         /// </summary>

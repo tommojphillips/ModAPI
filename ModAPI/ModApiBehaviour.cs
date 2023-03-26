@@ -10,5 +10,15 @@ namespace TommoJProductions.ModApi
     public class ModApiBehaviour : MonoBehaviour
     {
         // Written, 11.09.2022
+
+        private void OnLevelWasLoaded(int level)
+        {
+            if (level == 1)
+            {
+                ModClient.deleteCache();
+                Destroy(gameObject);
+            }
+            Debug.Log("Level was loaded: " + level);
+        }
     }
 }
