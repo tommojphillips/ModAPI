@@ -5,7 +5,6 @@ using System.IO;
 using TommoJProductions.ModApi.Attachable.CallBacks;
 
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 using static MSCLoader.ModConsole;
 using static UnityEngine.Object;

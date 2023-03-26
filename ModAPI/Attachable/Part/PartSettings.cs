@@ -40,7 +40,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public Collider disassembleCollider = null;
         /// <summary>
-        /// Represents the assemble collider. collider must be of IsTrigger. if null, logic uses <see cref="installPointColliders"/> to determine if part is in trigger. otherwise logic uses this collider to determine if part is in trigger.
+        /// Represents the assemble collider. collider must be of IsTrigger. if null, logic uses <see cref="Part.installPointColliders"/> to determine if part is in trigger. otherwise logic uses this collider to determine if part is in trigger.
         /// </summary>
         public Collider assembleCollider = null;
         /// <summary>

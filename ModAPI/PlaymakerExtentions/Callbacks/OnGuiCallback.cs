@@ -8,6 +8,10 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
 
         public OnGuiCallback(Action onGuiAction, bool everyFrame) : base(onGuiAction, everyFrame) { }
 
+        public OnGuiCallback(Func<bool> func, bool everyFrame) : base(func, everyFrame) { }
+
+        public override CallbackTypeEnum callbackType => CallbackTypeEnum.onGui;
+
         public override void OnGUI()
         {
             invokeAction();

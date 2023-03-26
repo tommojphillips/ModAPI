@@ -1,74 +1,133 @@
-﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+﻿// VERSION 1.1
+
+<#@ template debug="true" hostspecific="true" language="C#" #>
 <#@ output extension=".cs" #>
+
 <#@ import namespace="System.IO" #>
 <#@ import namespace="System.Text.RegularExpressions" #>
 <#@ import namespace="System.Reflection" #>
 <#
-    string output = File.ReadAllText(this.Host.ResolvePath("AssemblyInfo.cs"));
-    Regex pattern = new Regex("AssemblyVersion\\(\"(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<revision>\\d+)\\.(?<build>\\d+)\"\\)");
-    MatchCollection matches = pattern.Matches(output);
-    if( matches.Count == 1 )
-    {
-        major = Convert.ToInt32(matches[0].Groups["major"].Value);
-        minor = Convert.ToInt32(matches[0].Groups["minor"].Value);
+{
+    // LOGIC
 
-        int r = Convert.ToInt32(matches[0].Groups["revision"].Value);
-        revision = (int)(DateTime.UtcNow - new DateTime(2022,1,1)).TotalDays;
-        build = Convert.ToInt32(matches[0].Groups["build"].Value);
-        if (r != revision)
+    string ttPath = this.Host.ResolvePath(ttFileName);
+
+    string historyFile = ttPath.Replace(ttFileName, "FileHistory.txt");
+    bool historyFileExist = File.Exists(historyFile);
+    string historyVersion;
+    if (historyFileExist)
+    {
+        historyVersion = File.ReadAllText(historyFile);
+
+    }
+    else
+    {
+        historyVersion = "0.0.0.0";
+    }
+
+    int historyRevision = -1;
+    MatchCollection historyMatches;
+    Regex historyPattern = new Regex("(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<revision>\\d+)\\.(?<build>\\d+)");
+    historyMatches = historyPattern.Matches(historyVersion);
+    if (historyMatches.Count == 1)
+    {
+        historyRevision = Convert.ToInt32(historyMatches[0].Groups["revision"].Value);
+    }
+
+    string path = ttPath.Replace(".tt", ".cs");
+    bool assemblyInfoExists = File.Exists(path);
+
+    if (assemblyInfoExists)
+    {
+        string output = File.ReadAllText(path);
+        Regex pattern = new Regex("AssemblyVersion\\(\"(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<revision>\\d+)\\.(?<build>\\d+)\"\\)");
+        MatchCollection matches = pattern.Matches(output);
+        if (matches.Count == 1)
         {
-            build = 0;
+            major = Convert.ToInt32(matches[0].Groups["major"].Value);
+            minor = Convert.ToInt32(matches[0].Groups["minor"].Value);
+
+            if (autoRevisionUpdateDaily)
+            {
+                revision = (int)(DateTime.UtcNow - new DateTime(2022, 1, 1)).TotalDays;
+            }
+            else
+            {
+                revision = Convert.ToInt32(matches[0].Groups["revision"].Value);
+            }
+            build = Convert.ToInt32(matches[0].Groups["build"].Value) + 1;
+
+            if (historyRevision != revision)
+            {
+                build = 0;
+            }
         }
-        build++;
-    }   
+    }
+
+    Console.WriteLine($"[{assemblyTitle}] v{historyVersion} => v{major}.{minor}.{revision}.{build}");
+
+    File.WriteAllText(historyFile, $"{major}.{minor}.{revision}.{build}");
+}
 #>
 using System.Reflection;
 using System.Resources;
 
 // General Information
 [assembly: AssemblyTitle("<#= this.assemblyTitle #>")]
-[assembly: AssemblyDescription("Mod API is an application programming interface designed for the My Summer Car Modding Community.")]
+[assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Tommo J. Productions")]
+[assembly: AssemblyCompany("<#= this.assemblyAuthor #>")]
 [assembly: AssemblyProduct("<#= this.assemblyTitle #>")]
-[assembly: AssemblyCopyright("Tommo J. Productions Copyright © <#= DateTime.Now.ToString("yyyy") #>")]
-[assembly: AssemblyTrademark("Azine")]
+[assembly: AssemblyCopyright("<#= this.assemblyAuthor #> Copyright © <#= DateTime.Now.ToString("yyyy") #>")]
 [assembly: NeutralResourcesLanguage("en-AU")]
 
 // Version information
 [assembly: AssemblyVersion("<#= this.major #>.<#= this.minor #>.<#= this.revision #>.<#= this.build #>")]
 [assembly: AssemblyFileVersion("<#= this.major #>.<#= this.minor #>.<#= this.revision #>.<#= this.build #>")]
 
-namespace TommoJProductions.<#= this.assemblyTitle.Replace(" ", "") #>
+namespace <#= this.namespaceName #>.<#= this.assemblyTitle.Replace(" ", "") #>
 {
-
+    /// <summary>
+    /// Represents the version info
+    /// </summary>
     public class VersionInfo
-    {
-	    public const string lastestRelease = "<#= DateTime.Now.ToString("dd.MM.yyyy hh:mm tt") #>";
-	    public const string version = "<#= $"{major}.{minor}.{revision}.{build}" #>";
+{
+    /// <summary>
+    /// Rerpresents the latest release date
+    /// </summary>
+    public const string lastestRelease = "<#= DateTime.Now.ToString("dd.MM.yyyy hh:mm tt") #>";
+    /// <summary>
+    /// Represents the current version
+    /// </summary>
+    public const string version = "<#= $"{major}.{minor}.{revision}.{build}" #>";
 
-        /// <summary>
-        /// Represents if the mod has been complied for x64
-        /// </summary>
-        #if x64
+/// <summary>
+/// Represents if the mod has been complied for x64
+/// </summary>
+#if x64
             internal const bool IS_64_BIT = true;
-        #else
-            internal const bool IS_64_BIT = false;
-        #endif
-        /// <summary>
-        /// Represents if the mod has been complied in Debug mode
-        /// </summary>
-        #if DEBUG
+#else
+internal const bool IS_64_BIT = false;
+#endif
+/// <summary>
+/// Represents if the mod has been complied in Debug mode
+/// </summary>
+#if DEBUG
             internal const bool IS_DEBUG_CONFIG = true;
-        #else
-            internal const bool IS_DEBUG_CONFIG = false;
+#else
+internal const bool IS_DEBUG_CONFIG = false;
         #endif
     }
 }
 <#+
-    int major = 1;
-    int minor = 0;
-    int revision = 0;
-    int build = 0;
-    string assemblyTitle = "Mod Api";
+int major = 0;
+int minor = 0;
+int revision = 0;
+int build = 0;
+string assemblyTitle = "ModApi";
+string assemblyAuthor = "Tommo J. Productions";
+string namespaceName = "TommoJProductions";
+string ttFileName = "AssemblyInfo.tt";
+bool autoRevisionUpdateDaily = false;
+
 #>

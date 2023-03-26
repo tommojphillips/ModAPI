@@ -9,7 +9,6 @@ using TommoJProductions.ModApi.Attachable;
 using TommoJProductions.ModApi.Attachable.CallBacks;
 using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using static MSCLoader.ModConsole;
 using static TommoJProductions.ModApi.ModClient;
 
@@ -22,30 +21,26 @@ namespace TommoJProductions.ModApi
     {
         // Written, 11.07.2022
 
-
         // loader stuff
+        private static ModApiBehaviour m_modapiBehaviour;
+        private static FsmState m_activateGameState;
+        private static FsmStateActionCallback m_actionCallback;
+        private static bool m_activateGameStateInjected = false;
+
         /// <summary>
         /// Represents the gameobject that holds the dev mode behaviour. gameobject is used to detect if game has been re-loaded/changed. used to inject mod api related stuff.
         /// </summary>
         public static GameObject modapiGo { get; private set; } = null;
-
-        private static ModApiBehaviour modapiBehaviour;
-        internal static FsmState activateGameState;
-
-        internal static FsmStateActionCallback actionCallback;
-        /// <summary>
-        /// Represents if <see cref="setUpModApi"/> has been injected into fsm state, <see cref="activateGameState"/>.
-        /// </summary>
-        internal  static bool activateGameStateInjected = false;
         /// <summary>
         /// represents if the user is playing with a pirtated game copy (not through steam).
         /// </summary>
         public static bool piratedGameCopy { get; private set; } = false;
 
         // part related stuff
+        private static Action m_partLeaveAction;
+
         internal static bool pickedPartSet = false;
         internal static bool inherentyPickedPartsSet = false;
-        internal static Action partLeaveAction;
         /// <summary>
         /// Reps all parts that were set in <see cref="partCheckFunction"/>. Reps all <see cref="Part"/> children in root <see cref="pickedPart"/>.
         /// </summary>
@@ -120,7 +115,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 11.07.2022
 
-            if (!activateGameStateInjected)
+            if (!m_activateGameStateInjected)
             {
                 if (!ModLoader.CheckSteam()) // pirate detection.
                 {
@@ -132,9 +127,9 @@ namespace TommoJProductions.ModApi
 
                 if (!Camera.main) // game not set up yet.
                 {
-                    activateGameStateInjected = true;
-                    activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
-                    actionCallback = activateGameState.appendNewAction(setUpModApi);
+                    m_activateGameStateInjected = true;
+                    m_activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
+                    m_actionCallback = m_activateGameState.appendNewAction(setUpModApi);
                     Print("modapi: Injected");
                 }
                 else
@@ -145,14 +140,13 @@ namespace TommoJProductions.ModApi
         {
             // Written, 11.07.2022
 
-            activateGameStateInjected = false;
+            m_activateGameStateInjected = false;
 
             if (!modApiSetUp)
             {
-                deleteCache();
-
                 modapiGo = new GameObject("Mod API Loader");
-                modapiBehaviour = modapiGo.AddComponent<ModApiBehaviour>();
+                GameObject.DontDestroyOnLoad(modapiGo);
+                m_modapiBehaviour = modapiGo.AddComponent<ModApiBehaviour>();
                 ConsoleCommand.Add(new ConsoleCommands());
                 loadedParts.Clear();
                 loadedBolts.Clear();
@@ -165,12 +159,15 @@ namespace TommoJProductions.ModApi
                 }
                 Print($"modapi v{VersionInfo.version}: Loaded");
 
-                if (actionCallback != null)
+                if (m_actionCallback != null)
                 {
-                    int index = Array.IndexOf(activateGameState.Actions, actionCallback);
+                    int index = Array.IndexOf(m_activateGameState.Actions, m_actionCallback);
                     if (index == -1)
+                    {
+                        Print("modapi.setup: action callback was not null but could not find index.");
                         return;
-                    activateGameState.RemoveAction(index);
+                    }
+                    m_activateGameState.RemoveAction(index);
                     Print("modapi: Cleaned up");
                 }
             }
@@ -203,27 +200,27 @@ namespace TommoJProductions.ModApi
         {
             // Written, 11.06.2022
 
-            modapiBehaviour.StartCoroutine(partCheckFunction());
+            m_modapiBehaviour.StartCoroutine(partCheckFunction());
         }
         private static void partDropped()
         {
             // Written, 11.06.2022
 
             if (pickedPart)
-                partLeaveAction = pickedPart.invokeDroppedEvent;
+                m_partLeaveAction = pickedPart.invokeDroppedEvent;
             else
-                partLeaveAction = null;
-            objectLeaveHand(partLeaveAction, invokeDropEvent);
+                m_partLeaveAction = null;
+            objectLeaveHand(m_partLeaveAction, invokeDropEvent);
         }
         private static void partThrown()
         {
             // Written, 11.06.2022
 
             if (pickedPart)
-                partLeaveAction = pickedPart.invokeThrownEvent;
+                m_partLeaveAction = pickedPart.invokeThrownEvent;
             else
-                partLeaveAction = null;
-            objectLeaveHand(partLeaveAction, invokeThrowEvent);
+                m_partLeaveAction = null;
+            objectLeaveHand(m_partLeaveAction, invokeThrowEvent);
         }
 
         private static void objectLeaveHand(Action partLeaveEvent, Action<GameObject> objectLeaveEvent) 
@@ -299,39 +296,20 @@ namespace TommoJProductions.ModApi
 
             if (!boltAssetsLoaded)
             {
-                string assetPathPrefered = Path.Combine(ModClient.getModsFolder, "Assets/ModApi/modapi.unity3d");
-                string assetPathAlt = Path.Combine(ModClient.getGameFolder, "ModApi/modapi.unity3d");
-                string usingPath;
+                AssetBundle ab = AssetBundle.CreateFromMemoryImmediate(Properties.Resources.modapi);
+                nutPrefab = ab.LoadAsset("nut.prefab") as GameObject;
+                shortBoltPrefab = ab.LoadAsset("short bolt.prefab") as GameObject;
+                longBoltPrefab = ab.LoadAsset("long bolt.prefab") as GameObject;
+                screwPrefab = ab.LoadAsset("screw.prefab") as GameObject;
+                ab.Unload(false);
 
-                if (File.Exists(assetPathPrefered))
-                {
-                    usingPath = assetPathPrefered;
-                }
-                else
-                {
-                    usingPath = assetPathAlt;
-                }
-
-                if (File.Exists(usingPath))
-                {
-                    AssetBundle ab = AssetBundle.CreateFromMemoryImmediate(File.ReadAllBytes(usingPath));
-                    nutPrefab = ab.LoadAsset("nut.prefab") as GameObject;
-                    shortBoltPrefab = ab.LoadAsset("short bolt.prefab") as GameObject;
-                    longBoltPrefab = ab.LoadAsset("long bolt.prefab") as GameObject;
-                    screwPrefab = ab.LoadAsset("screw.prefab") as GameObject;
-                    ab.Unload(false);
-
-                    Print("[ModApi.Bolt] bolt assets loaded");
-                    boltAssetsLoaded = true;
-                }
-                else
-                {
-                    Error("Please install Mod Reference, 'ModApi' correctly. modapi.unity3d could not be found. copy modapi.unity3d to:");
-                    Print(assetPathAlt);
-                }
+                Print("[ModApiLoader] bolt assets loaded");
+                boltAssetsLoaded = true;
             }
             else
-                Print("[ModApi.Bolt] bolt assets already loaded. :)");
+            {
+                Print("[ModApiLoader] bolt assets already loaded. :)");
+            }
 
             Print($"nut         prefab: {nutPrefab}");
             Print($"screw       prefab:  {screwPrefab}");

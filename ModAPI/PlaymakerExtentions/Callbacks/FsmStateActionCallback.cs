@@ -3,14 +3,27 @@ using System;
 
 namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
 {
-    public class FsmStateActionCallback : FsmStateAction
+    /// <summary>
+    /// 
+    /// </summary>
+    public abstract class FsmStateActionCallback : FsmStateAction
     {
         // Written, 13.06.2022
+
+        public abstract CallbackTypeEnum callbackType { get; }
 
         /// <summary>
         /// The action to invoke.
         /// </summary>
         public event Action onInvokeAction;
+        /// <summary>
+        /// The func to invoke.
+        /// </summary>
+        public event Func<bool> inInvokeAction;
+
+        public Delegate action;
+
+        private bool? invokedFinish;
 
         /// <summary>
         /// Represents if should loop this untill state is inactive.
@@ -30,6 +43,15 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
         {
             init(action, everyFrame);
         }
+        /// <summary>
+        /// inits new action callback
+        /// </summary>
+        /// <param name="func">the func to callback on. the func should return if fsmAction should finish.</param>
+        /// <param name="everyFrame">call action every frame?</param>
+        public FsmStateActionCallback(Func<bool> func, bool everyFrame)
+        {
+            init(func, everyFrame);
+        }
 
         /// <summary>
         /// inits this action callback.
@@ -44,6 +66,22 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
             Name = action.Method.Name;
             debugActionName = Name;
             onInvokeAction += action;
+            this.action = action;
+        }
+        /// <summary>
+        /// inits this action callback.
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="everyFrame"></param>
+        private void init(Func<bool> func, bool everyFrame)
+        {
+            // Written, 13.06.2022
+
+            this.everyFrame = everyFrame;
+            Name = func.Method.Name;
+            debugActionName = Name;
+            inInvokeAction += func;
+            this.action = func;
         }
 
         /// <summary>
@@ -51,8 +89,11 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
         /// </summary>
         protected void invokeAction() 
         {
+            // Modified, 07.12.2022
+
             onInvokeAction?.Invoke();
-            if (!everyFrame)
+            invokedFinish = inInvokeAction?.Invoke();
+            if (!everyFrame || invokedFinish == true)
                 Finish();
         }
 

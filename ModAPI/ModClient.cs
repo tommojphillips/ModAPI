@@ -9,7 +9,6 @@ using MSCLoader;
 using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
 using System.Reflection;
 using System.Linq;
-using System.ComponentModel;
 using static UnityEngine.GUILayout;
 using TommoJProductions.ModApi.Attachable.CallBacks;
 using System.IO;
@@ -73,22 +72,18 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the motor database.
         /// </summary>
-        [Description("DatabaseMotor")]
         motor,
         /// <summary>
         /// Represents the mechanics database.
         /// </summary>
-        [Description("DatabaseMechanics")]
         mechanics,
         /// <summary>
         /// Represents the orders database.
         /// </summary>
-        [Description("DatabaseOrders")]
         orders,
         /// <summary>
         /// Represents the body database.
         /// </summary>
-        [Description("DatabaseBody")]
         body
     }
     /// <summary>
@@ -346,6 +341,7 @@ namespace TommoJProductions.ModApi
         private string _propertyString = "";
         private string _gameDirectory;
 
+        private int _propertyInt = 0;
         private float _propertyFloat = 0;
         private double _propertyDouble = 0;
 
@@ -930,6 +926,48 @@ namespace TommoJProductions.ModApi
             return source;
         }
 
+        // [Lerp]
+        /// <summary>
+        /// Same logic as <see cref="Mathf.Lerp(float, float, float)"/>, but  <paramref name="t"/> is not clamped. to 0 - 1.
+        /// </summary>
+        /// <param name="from"></param>
+        /// <param name="to"></param>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static float unclampedLerp(float from, float to, float t)
+        {
+            // Written, 13.11.2022
+
+            return from + (to - from) * t;
+        }
+        /// <summary>
+        /// Same logic as <see cref="Mathf.Lerp(float, float, float)"/> but defines min and max clamp params for <paramref name="t"/>.
+        /// </summary>
+        /// <param name="from">the start or from value.</param>
+        /// <param name="to">the end or to value.</param>
+        /// <param name="t">the time value.</param>
+        /// <param name="min">The min value for <paramref name="t"/>.</param>
+        /// <param name="max">The max value for <paramref name="t"/>.</param>
+        /// <returns></returns>
+        public static float clampedLerp(float from, float to, float t, float min = 0, float max = 1)
+        {
+            // Written, 13.11.2022
+
+            return from + (to - from) * Mathf.Clamp(t, min, max);
+        }
+
+        /// <summary>
+        /// Same logic as <see cref="Mathf.Approximately(float, float)"/> but with threshold parameter.
+        /// </summary>
+        /// <param name="a">the a param to compare</param>
+        /// <param name="b">the b param to compare.</param>
+        /// <param name="threshold"></param>
+        /// <returns></returns>
+        public static bool approximately(float a, float b, float threshold)
+        {
+            return ((a - b) < 0 ? ((a - b) * -1) : (a - b)) <= threshold;
+        }
+
         // [GUI]
         /// <summary>
         /// draws a gui of info about a game part. (use within an <see cref="AreaScope"/>).
@@ -1111,6 +1149,42 @@ namespace TommoJProductions.ModApi
             }
         }
         /// <summary>
+        /// [GUI] draws a property of type <see cref="int"/> that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property int name</param>
+        /// <param name="property">the reference int to draw/edit</param>
+        /// <param name="maxLength">max length of textfield (number of letters.)</param>
+        /// <returns><see langword="true"/> if <paramref name="property"/> has changed.</returns>
+        public static bool drawPropertyEdit(string propertyName, ref int property, int maxLength = 10)
+        {
+            // Written 13.11.2022
+
+            getInstance._propertyString = drawPropertyEdit(propertyName, property.ToString());
+
+            int.TryParse(getInstance._propertyString, out getInstance._propertyInt);
+
+            if (getInstance._propertyInt != property)
+            {
+                property = getInstance._propertyInt;
+                return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// [GUI] draws a int property that can be edited
+        /// </summary>
+        /// <param name="propertyName">The property int name</param>
+        /// <param name="property">the reference int to draw/edit</param>
+        /// <param name="maxLength">max length of textfield</param>
+        public static float drawPropertyEdit(string propertyName, int property, int maxLength = 10)
+        {
+            // Written, 13.11.2022
+
+            drawPropertyEdit(propertyName, ref property, maxLength);
+            return property;
+        }
+
+        /// <summary>
         /// [GUI] draws a property of type <see cref="float"/> that can be edited
         /// </summary>
         /// <param name="propertyName">The property float name</param>
@@ -1145,6 +1219,7 @@ namespace TommoJProductions.ModApi
             drawPropertyEdit(propertyName, ref property, maxLength);
             return property;
         }
+        
         /// <summary>
         /// [GUI] draws a property of type <see cref="double"/> that can be edited
         /// </summary>
@@ -1180,6 +1255,7 @@ namespace TommoJProductions.ModApi
             drawPropertyEdit(propertyName, ref property, maxLength);
             return property;
         }
+
         /// <summary>
         /// [GUI] draws a bool that can be edited
         /// </summary>
@@ -1201,6 +1277,7 @@ namespace TommoJProductions.ModApi
             drawPropertyBool(propertyName, ref property);
             return property;
         }
+
         /// <summary>
         /// [GUI] draws a property.
         /// </summary>
@@ -1389,9 +1466,8 @@ namespace TommoJProductions.ModApi
         internal static void invokeThrowEvent(GameObject gameObject)
         {
             onGameObjectThrow?.Invoke(gameObject);
-        }
+        }        
 
-        #endregion
-       
+        #endregion       
     }
 }

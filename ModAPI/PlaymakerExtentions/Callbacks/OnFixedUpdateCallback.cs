@@ -15,6 +15,12 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
         /// <param name="onFixedUpdate">fixedupdate action</param>
         public OnFixedUpdateCallback(Action onFixedUpdate, bool everyFrame) : base(onFixedUpdate, everyFrame) { }
 
+        public OnFixedUpdateCallback(Func<bool> func, bool everyFrame) : base(func, everyFrame) { }
+
+        public override CallbackTypeEnum callbackType => CallbackTypeEnum.onFixedUpdate;
+
+
+
         /// <summary>
         /// Invokes onfixed update action.
         /// </summary>

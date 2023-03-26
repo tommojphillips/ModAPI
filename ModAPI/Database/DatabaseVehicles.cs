@@ -37,7 +37,7 @@ namespace TommoJProductions.ModApi.Database
         /// <summary>
         /// Represents the jonnez
         /// </summary>
-        public GameObject jonnez
+        public DatabaseVehicle jonnez
         {
             get
             {
@@ -51,7 +51,7 @@ namespace TommoJProductions.ModApi.Database
         /// <summary>
         /// Represents the kekment.
         /// </summary>
-        public GameObject kekmet
+        public DatabaseVehicle kekmet
         {
             get
             {
@@ -65,7 +65,7 @@ namespace TommoJProductions.ModApi.Database
         /// <summary>
         /// Represents the hayosiko.
         /// </summary>
-        public GameObject hayosiko
+        public DatabaseVehicle hayosiko
         {
             get
             {
@@ -79,7 +79,7 @@ namespace TommoJProductions.ModApi.Database
         /// <summary>
         /// Represents the Ruscko
         /// </summary>
-        public GameObject ruscko
+        public DatabaseVehicle ruscko
         {
             get
             {
@@ -93,7 +93,7 @@ namespace TommoJProductions.ModApi.Database
         /// <summary>
         /// Represents the Ferndale.
         /// </summary>
-        public GameObject ferndale
+        public DatabaseVehicle ferndale
         {
             get
             {
@@ -107,7 +107,7 @@ namespace TommoJProductions.ModApi.Database
         /// <summary>
         /// Represents the Combine Harvester.
         /// </summary>
-        public GameObject combine
+        public DatabaseVehicle combine
         {
             get
             {
@@ -121,7 +121,7 @@ namespace TommoJProductions.ModApi.Database
         /// <summary>
         /// Represents the GIFU poop truck.
         /// </summary>
-        public GameObject gifu
+        public DatabaseVehicle gifu
         {
             get
             {

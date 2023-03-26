@@ -13,8 +13,7 @@
     <AssemblyName>ModApi</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
+    <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup>
     <ProjectGuid>{65DDDAC8-54EA-4116-A53D-05B126FD5A49}</ProjectGuid>
@@ -40,26 +39,26 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
     <Prefer32Bit>false</Prefer32Bit>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="MSCLoader">
-      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
     </Reference>
     <Reference Include="PlayMaker">
-      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEngine">
-      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Games\SteamApps\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
-    <Reference Include="UnityScript.Lang" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attachable\Bolt\AddNutSettings.cs" />
@@ -77,13 +76,21 @@
     <Compile Include="Attachable\Part\PartSettings.cs" />
     <Compile Include="ConsoleCommands.cs" />
     <Compile Include="CustomYieldInstructions.cs" />
+    <Compile Include="Database\GameParts\Block.cs" />
+    <Compile Include="Database\GameParts\CamshaftGear.cs" />
+    <Compile Include="Database\GameParts\Carburator.cs" />
     <Compile Include="Database\Database.cs" />
     <Compile Include="Database\DatabaseMechanics.cs" />
     <Compile Include="Database\DatabaseMotor.cs" />
     <Compile Include="Database\DatabaseOrders.cs" />
     <Compile Include="Database\DatabaseVehicles.cs" />
-    <Compile Include="Database\GamePart.cs" />
+    <Compile Include="Database\GameParts\Distributor.cs" />
+    <Compile Include="Database\GameParts\GamePart.cs" />
+    <Compile Include="Database\GameParts\GamePartTime.cs" />
+    <Compile Include="Database\GameParts\GamePartWear.cs" />
+    <Compile Include="Database\GameParts\OilPan.cs" />
     <Compile Include="Database\PartsStatus.cs" />
+    <Compile Include="Database\GameParts\RockerShaft.cs" />
     <Compile Include="DevMode.cs" />
     <Compile Include="ModApiBehaviour.cs" />
     <Compile Include="ModApiExtentions.cs" />
@@ -101,6 +108,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>AssemblyInfo.tt</DependentUpon>
     </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="Vector3Info.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -116,24 +128,17 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
+    <None Include="Resources\modapi.unity3d" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if "$(ConfigurationName)" == "Debug" (
-copy "$(TargetPath)" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods" /y
-copy "$(TargetDir)$(TargetName).pdb" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods" /y
-cd "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods"
-call "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\debug.bat"
-copy "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).dll.mdb" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
-copy "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).dll" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
-copy "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).pdb" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
-copy "$(TargetDir)$(TargetName).xml" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
-del "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\$(TargetName).dll" /q
-) 
-ELSE (
-copy "$(TargetPath)" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
-copy "$(TargetDir)$(TargetName).xml" "D:\Games\SteamApps\steamapps\common\My Summer Car\Mods\References" /y
-)</PostBuildEvent>
+    <PostBuildEvent>CALL "C:\Users\tommo\source\modRef_postbuildeventCMD.bat" "$(ConfigurationName)" "$(TargetDir)" "$(TargetName)"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>"$(DevEnvDir)TextTransform.exe" -a !!BuildConfiguration!$(Configuration) "$(ProjectDir)Properties\AssemblyInfo.tt"</PreBuildEvent>
