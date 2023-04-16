@@ -12,6 +12,8 @@ using UnityEngine;
 using static MSCLoader.ModConsole;
 using static TommoJProductions.ModApi.ModClient;
 
+using Resources = TommoJProductions.ModApi.Properties.Resources;
+
 namespace TommoJProductions.ModApi
 {
     /// <summary>
