@@ -6,11 +6,10 @@ using TommoJProductions.ModApi.Attachable;
 using TommoJProductions.ModApi.Database;
 using UnityEngine;
 using MSCLoader;
-using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
+using TommoJProductions.ModApi.PlaymakerExtentions;
 using System.Reflection;
 using System.Linq;
 using static UnityEngine.GUILayout;
-using TommoJProductions.ModApi.Attachable.CallBacks;
 using System.IO;
 using TommoJProductions.ModApi.Database.GameParts;
 
@@ -293,13 +292,17 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents the complied runtime version of the api.
         /// </summary>
-        public const string VERSION = VersionInfo.version;
+        public const string VERSION = ModApi.VersionInfo.version + "Build " + VersionInfo.build;
         
 #if DEBUG
         internal static bool devMode = true;
 #else
         internal static bool devMode = false;
 #endif
+
+        internal static bool displayLogsInConsole = false;
+
+        internal static string log;
 
         private static ModClient instance;
 
@@ -1079,18 +1082,48 @@ namespace TommoJProductions.ModApi
             // Written, 25.05.2022
 
             Type t = e.GetType();
-            Array a = Enum.GetNames(t);
-            string n = t.getDescription();
+            Array enumNames = Enum.GetNames(t);
+            string description = t.getDescription();
             using (new VerticalScope())
             {
-                drawProperty(n + ":");
+                drawProperty(description + ":");
                 using (new HorizontalScope())
                 {
-                    foreach (string i in a)
+                    foreach (string name in enumNames)
                     {
-                        n = t.GetField(i).getDescription();
-                        if (Toggle(e.ToString() == i, n))
-                            e = (T)Enum.Parse(t, i);
+                        description = t.GetField(name).getDescription();
+
+                        if (string.IsNullOrEmpty(description))
+                            description = name;
+
+                        if (Toggle(e.ToString() == name, description))
+                            e = (T)Enum.Parse(t, name);
+                    }
+                }
+            }
+        }/// <summary>
+         /// [GUI] draws an enum that can be edited as a list of toggles.
+         /// </summary>
+         /// <typeparam name="T">The type of enum</typeparam>
+         /// <param name="e">Reference enum (selected)</param>
+         /// <param name="name">The name of the member enum.</param>
+        public static void drawPropertyEnum<T>(ref T e, string name) where T : Enum
+        {
+            // Written, 25.05.2022
+
+            Type t = e.GetType();
+            Array enumNames = Enum.GetNames(t);
+            using (new VerticalScope())
+            {
+                drawProperty(name + ":");
+                using (new HorizontalScope())
+                {
+                    foreach (string _name in enumNames)
+                    {
+                        if (Toggle(e.ToString() == _name, _name))
+                        {
+                            e = (T)Enum.Parse(t, _name);
+                        }
                     }
                 }
             }
@@ -1105,6 +1138,19 @@ namespace TommoJProductions.ModApi
             // Written, 04.07.2022
 
             drawPropertyEnum(ref e);
+            return e;
+        }
+        /// <summary>
+        /// [GUI] draws an enum that can be edited as a list of toggles.
+        /// </summary>
+        /// <typeparam name="T">The type of enum</typeparam>
+        /// <param name="e">Reference enum (selected)</param>
+        /// <param name="name">The name of the member enum.</param>
+        public static T drawPropertyEnum<T>(T e, string name) where T : Enum
+        {
+            // Written, 04.07.2022
+
+            drawPropertyEnum(ref e, name);
             return e;
         }
         /// <summary>
@@ -1357,8 +1403,20 @@ namespace TommoJProductions.ModApi
         public static void print(string format, params object[] args)
         {
             // Written, 09.10.2021
+            // Modified, 30.04.2023
 
-            ModConsole.Log(string.Format("<color=grey>[ModAPI] " + format + "</color>", args));
+            if (displayLogsInConsole)
+            {
+                ModConsole.Log(string.Format("<color=grey>[ModAPI] " + format + "</color>", args));
+            }
+            else
+            {
+                if (log == null)
+                {
+                    log = string.Empty;
+                }
+                log += string.Format("\n" + format, args);
+            }
         }
 
         // [Raycast]

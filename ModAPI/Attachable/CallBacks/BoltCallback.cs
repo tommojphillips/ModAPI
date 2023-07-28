@@ -4,7 +4,7 @@ using static UnityEngine.GUILayout;
 using static TommoJProductions.ModApi.ModClient;
 using MSCLoader;
 
-namespace TommoJProductions.ModApi.Attachable.CallBacks
+namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
     /// Represents a callback for bolts.

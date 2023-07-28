@@ -2,7 +2,7 @@
 using System.Linq;
 using UnityEngine;
 
-namespace TommoJProductions.ModApi.Attachable.CallBacks
+namespace TommoJProductions.ModApi.Attachable
 {
     /// <summary>
     /// Represents call back for triggers.

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
+namespace TommoJProductions.ModApi.PlaymakerExtentions
 {
     /// <summary>
     /// Represents the on fixed update state action callback
