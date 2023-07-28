@@ -8,10 +8,8 @@ using System.Text;
 using MSCLoader;
 
 using TommoJProductions.ModApi.Attachable;
-using TommoJProductions.ModApi.Attachable.CallBacks;
 using TommoJProductions.ModApi.Database;
 using TommoJProductions.ModApi.Database.GameParts;
-
 using UnityEngine;
 
 using static TommoJProductions.ModApi.Attachable.Part;
@@ -42,14 +40,17 @@ namespace TommoJProductions.ModApi
 
         internal static bool listGameParts = false;
         internal static bool listModApiParts = false;
+        internal static bool showLog = false;
 
-        private readonly int top = 75;
-        private readonly int margin = 20;
-        private int height => Screen.height - top;
+        private readonly int top = 5;
+        private readonly int margin = 5;
+        private int height => Screen.height - (top  * 2);
         private readonly int width = 500;
+        private readonly int logWidth = 1000;
         private int left => Screen.width - width - margin;
         private Vector2 triggerScroll;
         private Vector2 gamePartsScroll;
+        private Vector2 logScroll;
         private ScrollViewScope scrollViewScope;
         private Color c1 = new Color32(0, 178, 230, 176);
         private readonly GUIStyle style = new GUIStyle();
@@ -64,7 +65,10 @@ namespace TommoJProductions.ModApi
         private bool showWearOnlyParts = false;
         private bool showBoltOnlyParts = false;
         private string searchString = string.Empty;
+
         private bool toggleBoltDetectionStats;
+        private bool toggleLoaderInfo;
+        private bool showDevGui = true;
 
         void Start()
         {
@@ -193,36 +197,81 @@ namespace TommoJProductions.ModApi
         {
             using (AreaScope area = new AreaScope(new Rect(margin, top, width, height)))
             {
-                using (new VerticalScope("box", Width(275)))
+                if (showDevGui)
                 {
-                    drawProperty($"ModAPI v{VersionInfo.version} | DEV MODE |\n- Use <b>Ctrl+P</b> while looking at a part to inspect it");
-                    drawToolStatsGui();
+                    using (new VerticalScope("box", Width(275)))
+                    {
+                        using (new HorizontalScope("box", Width(275)))
+                        {
 
-                    if (Button("List Mod Api Parts"))
-                    {
-                        listModApiParts = !listModApiParts;
-                        listGameParts = false;
+                            drawProperty($"ModAPI v{ModApi.VersionInfo.version} BUILD {ModApi.VersionInfo.build} | DEV MODE |");
+                            if (Button("-", new GUIStyle() { alignment = TextAnchor.UpperRight, }))
+                            {
+                                showDevGui = false;
+                            }
+                            Space(2);
+                            if (Button("X", new GUIStyle() { alignment = TextAnchor.UpperRight, }))
+                            {
+                                devMode = false;
+                            }
+                        }
+
+                        drawProperty($"- Use <b>Ctrl+P</b> while looking at a part to inspect it");
+                        drawToolStatsGui();
+
+                        if (Button((listModApiParts ? "Hide" : "List") + " Mod Api Parts"))
+                        {
+                            listModApiParts = !listModApiParts;
+                            listGameParts = false;
+                        }
+                        if (Button((listGameParts ? "Hide" : "List") + " Game Parts"))
+                        {
+                            listGameParts = !listGameParts;
+                            listModApiParts = false;
+                        }
+                        if (Button((showLog ? "Hide" : "Show") + " log"))
+                        {
+                            showLog = !showLog;
+                        }
+                        if (_inspectionPart)
+                        {
+                            if (Button("Close part inspection"))
+                            {
+                                _inspectionPart = null;
+                            }
+                        }
+
+                        Space(5);
+                        drawModApiLoaderInfo();
+                        drawBoltDetectionStats();
                     }
-                    if (Button("List Game Parts"))
+                    using (new VerticalScope("box"))
                     {
-                        listGameParts = !listGameParts;
-                        listModApiParts = false;
+                        drawGamePartsList();
+                        drawModApiList();
                     }
-                    //drawModApiLoaderInfo();
-                    drawBoltDetectionStats();
                 }
-
-                using (new VerticalScope("box"))
+                else
                 {
-                    drawGamePartsList();
-                    drawModApiList();
+                    using (new VerticalScope("box", Width(275)))
+                    {
+                        if (Button("+", new GUIStyle() { alignment = TextAnchor.UpperLeft, }))
+                        {
+                            showDevGui = true;
+                        }
+                    }
                 }
+            }
+
+            using (AreaScope area = new AreaScope(new Rect((margin * 2) + width, top, width * 2, height)))
+            {
+                drawLog();
             }
         }
 
         private void drawBoltDetectionStats()
         {
-            if (Button("Bolt detection stats"))
+            if (Button(toggleBoltDetectionStats ? "Hide" : "Show" + " Bolt detection stats"))
             {
                 toggleBoltDetectionStats = !toggleBoltDetectionStats;
             }
@@ -239,10 +288,17 @@ namespace TommoJProductions.ModApi
 
         private void drawModApiLoaderInfo()
         {
-            drawProperty("ModApi:", ModApiLoader.modapiGo?.ToString() ?? "null");
-            drawProperty("picked object:", ModApiLoader.pickedObject?.ToString() ?? "null");
-            drawProperty("picked part SET:", ModApiLoader.pickedPartSet);
-            drawProperty("inherenty picked part SET:", ModApiLoader.inherentyPickedPartsSet);
+            if (Button((toggleLoaderInfo ? "Hide" : "Show") + " loader info"))
+            {
+                toggleLoaderInfo = !toggleLoaderInfo;
+            }
+            if (toggleLoaderInfo)
+            {
+                drawProperty("ModApi:", ModApiLoader.modapiGo?.ToString() ?? "null");
+                drawProperty("picked object:", ModApiLoader.pickedObject?.ToString() ?? "null");
+                drawProperty("picked part SET:", ModApiLoader.pickedPartSet);
+                drawProperty("inherenty picked part SET:", ModApiLoader.inherentyPickedPartsSet);
+            }
         }
 
         private void drawModApiList()
@@ -347,10 +403,15 @@ namespace TommoJProductions.ModApi
             {
                 using (new VerticalScope("box"))
                 {
+                    if (Button("X", new GUIStyle() { alignment = TextAnchor.UpperRight, }))
+                    {
+                        _inspectionPart = null;
+                    }
                     using (new HorizontalScope())
                     {
                         using (new VerticalScope("box"))
                         {
+
                             drawProperty("Part Inspection", _inspectionPart.name);
                             Space(1);
                             drawProperty($"Trigger routine: {(_inspectionPart.triggerRoutine == null ? "in" : "")}active");
@@ -457,6 +518,8 @@ namespace TommoJProductions.ModApi
                         {
                             for (int i = 0; i < _inspectionPart.triggers.Length; i++)
                             {
+                                Trigger trigger = _inspectionPart.triggers[i];
+
                                 if (i.isEven())
                                 {
                                     GUI.skin.box.normal.background = primaryItemBackground;
@@ -469,20 +532,27 @@ namespace TommoJProductions.ModApi
                                 {
                                     using (new HorizontalScope())
                                     {
-                                        drawProperty(_inspectionPart.triggers[i].triggerName);
+                                        drawProperty(trigger.triggerName);
                                         if (Button("View"))
                                         {
-                                            _inspectionPart.triggers[i].triggerRenderer.enabled = !_inspectionPart.triggers[i].triggerRenderer.enabled;
+                                            trigger.triggerRenderer.enabled = !trigger.triggerRenderer.enabled;
                                         }
                                         if (Button("Teleport to trigger"))
                                         {
-                                            getPlayer.teleport(_inspectionPart.triggers[i].triggerGameObject.transform.position);
+                                            getPlayer.teleport(trigger.triggerGameObject.transform.position);
                                         }
                                         if (!_inspectionPart.installed)
                                         {
-                                            if (Button("Assemble"))
+                                            if (!trigger.triggerCallback.part)
                                             {
-                                                _inspectionPart.assemble(_inspectionPart.installPointColliders[i]);
+                                                if (Button("Assemble"))
+                                                {
+                                                    _inspectionPart.assemble(_inspectionPart.installPointColliders[i]);
+                                                }
+                                            }
+                                            else
+                                            {                                                
+                                                Label("(In Use)");
                                             }
                                         }
                                     }
@@ -564,6 +634,25 @@ namespace TommoJProductions.ModApi
                     drawPropertyVector3("rot direction", ref inspectionBolt.boltSettings.rotDirection);
                     drawPropertyEdit("pos step", ref inspectionBolt.boltSettings.posStep);
                     drawPropertyEdit("rot step", ref inspectionBolt.boltSettings.rotStep);
+                }
+            }
+        }
+
+        private void drawLog() 
+        {
+            // Written, 06.05.2023
+
+            if (showLog)
+            {
+                using (new VerticalScope("box"))
+                {
+                    using (scrollViewScope = new ScrollViewScope(logScroll, false, true))
+                    {
+                        logScroll = scrollViewScope.scrollPosition;
+                        scrollViewScope.handleScrollWheel = true;
+
+                        ModClient.log = TextArea(ModClient.log, ExpandWidth(true), ExpandHeight(true));
+                    }
                 }
             }
         }

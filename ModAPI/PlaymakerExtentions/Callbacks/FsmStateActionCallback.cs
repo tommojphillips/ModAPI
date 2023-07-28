@@ -1,7 +1,7 @@
 ﻿using HutongGames.PlayMaker;
 using System;
 
-namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
+namespace TommoJProductions.ModApi.PlaymakerExtentions
 {
     /// <summary>
     /// 
@@ -63,7 +63,7 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions.Callbacks
             // Written, 13.06.2022
 
             this.everyFrame = everyFrame;
-            Name = action.Method.Name;
+            Name = $"{action.Method.DeclaringType.Name}.{action.Method.Name}";
             debugActionName = Name;
             onInvokeAction += action;
             this.action = action;

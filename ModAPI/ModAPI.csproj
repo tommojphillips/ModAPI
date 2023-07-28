@@ -41,6 +41,10 @@
     <Prefer32Bit>false</Prefer32Bit>
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <SpecificVersion>False</SpecificVersion>
@@ -67,7 +71,7 @@
     <Compile Include="Attachable\Bolt\BoltSettings.cs" />
     <Compile Include="Attachable\Bolt\BoltSize.cs" />
     <Compile Include="Attachable\Bolt\BoltType.cs" />
-    <Compile Include="Attachable\CallBacks\BoltCallback.cs" />
+    <Compile Include="Attachable\Callbacks\BoltCallback.cs" />
     <Compile Include="Attachable\Part\AssembleType.cs" />
     <Compile Include="Attachable\Part\AssemblyTypeJointSettings.cs" />
     <Compile Include="Attachable\Part\CollisionSettings.cs" />
@@ -76,6 +80,7 @@
     <Compile Include="Attachable\Part\PartSettings.cs" />
     <Compile Include="ConsoleCommands.cs" />
     <Compile Include="CustomYieldInstructions.cs" />
+    <Compile Include="Database\DatabaseVehicle.cs" />
     <Compile Include="Database\GameParts\Block.cs" />
     <Compile Include="Database\GameParts\CamshaftGear.cs" />
     <Compile Include="Database\GameParts\Carburator.cs" />
@@ -91,6 +96,7 @@
     <Compile Include="Database\GameParts\OilPan.cs" />
     <Compile Include="Database\PartsStatus.cs" />
     <Compile Include="Database\GameParts\RockerShaft.cs" />
+    <Compile Include="Database\Vehicles\Satsuma.cs" />
     <Compile Include="DevMode.cs" />
     <Compile Include="ModApiBehaviour.cs" />
     <Compile Include="ModApiExtentions.cs" />
@@ -98,7 +104,7 @@
     <Compile Include="PlaymakerExtentions\Callbacks\FsmStateActionCallback.cs" />
     <Compile Include="ModClient.cs" />
     <Compile Include="Attachable\Trigger.cs" />
-    <Compile Include="Attachable\CallBacks\TriggerCallBack.cs" />
+    <Compile Include="Attachable\Callbacks\TriggerCallBack.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\OnEnterCallback.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\OnFixedUpdateCallback.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\OnGuiCallback.cs" />
@@ -138,7 +144,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>CALL "C:\Users\tommo\source\modRef_postbuildeventCMD.bat" "$(ConfigurationName)" "$(TargetDir)" "$(TargetName)"</PostBuildEvent>
+    <PostBuildEvent>CALL "C:\Users\tommo\source\modRef_postbuildeventCMD.bat" "$(ConfigurationName)" "$(TargetDir)" "$(TargetName)"
+</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>"$(DevEnvDir)TextTransform.exe" -a !!BuildConfiguration!$(Configuration) "$(ProjectDir)Properties\AssemblyInfo.tt"</PreBuildEvent>

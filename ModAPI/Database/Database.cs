@@ -13,8 +13,17 @@ namespace TommoJProductions.ModApi.Database
     /// </summary>
     public class Database
     {
+        /// <summary>
+        /// Represents the motor database.
+        /// </summary>
         private DatabaseMotor motor;
+        /// <summary>
+        /// Represents the mechanics database.
+        /// </summary>
         private DatabaseMechanics mechanics;
+        /// <summary>
+        /// Represents the part orders database.
+        /// </summary>
         private DatabaseOrders orders;
         private Status status;
         private DatabaseVehicles vehicles;

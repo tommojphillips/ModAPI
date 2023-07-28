@@ -1,8 +1,7 @@
-﻿// VERSION 1.1
-
+﻿// VERSION 1.4 | BUILD x.x.x with build excluded.
 <#@ template debug="true" hostspecific="true" language="C#" #>
 <#@ output extension=".cs" #>
-
+<#@ import namespace="System" #>
 <#@ import namespace="System.IO" #>
 <#@ import namespace="System.Text.RegularExpressions" #>
 <#@ import namespace="System.Reflection" #>
@@ -40,7 +39,7 @@
     if (assemblyInfoExists)
     {
         string output = File.ReadAllText(path);
-        Regex pattern = new Regex("AssemblyVersion\\(\"(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<revision>\\d+)\\.(?<build>\\d+)\"\\)");
+        Regex pattern = new Regex("AssemblyFileVersion\\(\"(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<revision>\\d+)\\.(?<build>\\d+)\"\\)");
         MatchCollection matches = pattern.Matches(output);
         if (matches.Count == 1)
         {
@@ -49,7 +48,11 @@
 
             if (autoRevisionUpdateDaily)
             {
-                revision = (int)(DateTime.UtcNow - new DateTime(2022, 1, 1)).TotalDays;
+                revision = (int)(DateTime.UtcNow - projectStartDate).TotalDays;            
+                if (historyRevision != revision)
+                {
+                    build = 0;
+                }
             }
             else
             {
@@ -57,14 +60,10 @@
             }
             build = Convert.ToInt32(matches[0].Groups["build"].Value) + 1;
 
-            if (historyRevision != revision)
-            {
-                build = 0;
-            }
         }
     }
 
-    Console.WriteLine($"[{assemblyTitle}] v{historyVersion} => v{major}.{minor}.{revision}.{build}");
+    Console.WriteLine($"[{assemblyTitle}] v{historyVersion} => v{major}.{minor}.{revision} BUILD {build}");
 
     File.WriteAllText(historyFile, $"{major}.{minor}.{revision}.{build}");
 }
@@ -74,7 +73,7 @@ using System.Resources;
 
 // General Information
 [assembly: AssemblyTitle("<#= this.assemblyTitle #>")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("<#= this.assemblyTitle #> v<#= this.major #>.<#= this.minor #>.<#= this.revision #> BUILD <#= this.build #>")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("<#= this.assemblyAuthor #>")]
 [assembly: AssemblyProduct("<#= this.assemblyTitle #>")]
@@ -82,52 +81,61 @@ using System.Resources;
 [assembly: NeutralResourcesLanguage("en-AU")]
 
 // Version information
-[assembly: AssemblyVersion("<#= this.major #>.<#= this.minor #>.<#= this.revision #>.<#= this.build #>")]
+[assembly: AssemblyVersion("<#= this.major #>.<#= this.minor #>.<#= this.revision #>")]
 [assembly: AssemblyFileVersion("<#= this.major #>.<#= this.minor #>.<#= this.revision #>.<#= this.build #>")]
 
 namespace <#= this.namespaceName #>.<#= this.assemblyTitle.Replace(" ", "") #>
 {
+    
     /// <summary>
-    /// Represents the version info
+    /// Represents the version info for <#= this.assemblyTitle #>
     /// </summary>
     public class VersionInfo
-{
-    /// <summary>
-    /// Rerpresents the latest release date
-    /// </summary>
-    public const string lastestRelease = "<#= DateTime.Now.ToString("dd.MM.yyyy hh:mm tt") #>";
-    /// <summary>
-    /// Represents the current version
-    /// </summary>
-    public const string version = "<#= $"{major}.{minor}.{revision}.{build}" #>";
+    {
+        /// <summary>
+        /// Represents latest release version date. Format: dd:MM:yyyy hh:mm tt
+        /// </summary>
+	    public static readonly string lastestRelease = "<#= DateTime.Now.ToString("dd.MM.yyyy hh:mm tt") #>";
+        /// <summary>
+        /// Represents current version. (Excluding build number)
+        /// </summary>
+	    public static readonly string version = "<#= $"{major}.{minor}.{revision}" #>";
+        /// <summary>
+        /// Represents current full version . (including build number)
+        /// </summary>
+	    public static readonly string fullVersion = "<#= $"{major}.{minor}.{revision}.{build}" #>";
+        /// <summary>
+        /// Represents current build number. (excludes major, minor and revision numbers)
+        /// </summary>
+	    public static readonly string build = "<#= $"{build}" #>";
 
-/// <summary>
-/// Represents if the mod has been complied for x64
-/// </summary>
-#if x64
-            internal const bool IS_64_BIT = true;
-#else
-internal const bool IS_64_BIT = false;
-#endif
-/// <summary>
-/// Represents if the mod has been complied in Debug mode
-/// </summary>
-#if DEBUG
-            internal const bool IS_DEBUG_CONFIG = true;
-#else
-internal const bool IS_DEBUG_CONFIG = false;
+        /// <summary>
+        /// Represents if the mod has been complied for x64
+        /// </summary>
+        #if x64
+            internal static readonly bool IS_64_BIT = true;
+        #else
+            internal static readonly bool IS_64_BIT = false;
+        #endif
+        /// <summary>
+        /// Represents if the mod has been complied in Debug mode
+        /// </summary>
+        #if DEBUG
+            internal static readonly bool IS_DEBUG_CONFIG = true;
+        #else
+            internal const bool IS_DEBUG_CONFIG = false;
         #endif
     }
 }
 <#+
-int major = 0;
-int minor = 0;
-int revision = 0;
-int build = 0;
-string assemblyTitle = "ModApi";
-string assemblyAuthor = "Tommo J. Productions";
-string namespaceName = "TommoJProductions";
-string ttFileName = "AssemblyInfo.tt";
-bool autoRevisionUpdateDaily = false;
-
+    int major = 1;
+    int minor = 0;
+    int revision = 0;
+    int build = 0;
+    string assemblyTitle = "ModApi";
+    string assemblyAuthor = "Tommo J. Productions";
+    string namespaceName = "TommoJProductions";
+    string ttFileName = "AssemblyInfo.tt";
+    bool autoRevisionUpdateDaily = false;
+    DateTime projectStartDate = new DateTime(2022, 1, 1);
 #>

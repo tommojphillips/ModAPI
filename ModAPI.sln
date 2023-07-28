@@ -32,7 +32,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurboMod", "..\TurboMod\Tur
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PushStartVehicle", "..\PushStartVehicle\PushStartVehicle.csproj", "{8F9419C0-80B8-434D-9768-DFB2DE80B22C}"
 	ProjectSection(ProjectDependencies) = postProject
-		{65DDDAC8-54EA-4116-A53D-05B126FD5A49} = {65DDDAC8-54EA-4116-A53D-05B126FD5A49}
+		{DD34738C-55C3-426E-B363-590B2040B8AF} = {DD34738C-55C3-426E-B363-590B2040B8AF}
 	EndProjectSection
 EndProject
 Global

@@ -1,19 +1,16 @@
 ﻿using HutongGames.PlayMaker;
 using MSCLoader;
+
 using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
 
 using TommoJProductions.ModApi.Attachable;
-using TommoJProductions.ModApi.Attachable.CallBacks;
-using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
+using TommoJProductions.ModApi.PlaymakerExtentions;
 using UnityEngine;
 using static MSCLoader.ModConsole;
 using static TommoJProductions.ModApi.ModClient;
-
-using Resources = TommoJProductions.ModApi.Properties.Resources;
-
 namespace TommoJProductions.ModApi
 {
     /// <summary>
@@ -33,10 +30,6 @@ namespace TommoJProductions.ModApi
         /// Represents the gameobject that holds the dev mode behaviour. gameobject is used to detect if game has been re-loaded/changed. used to inject mod api related stuff.
         /// </summary>
         public static GameObject modapiGo { get; private set; } = null;
-        /// <summary>
-        /// represents if the user is playing with a pirtated game copy (not through steam).
-        /// </summary>
-        public static bool piratedGameCopy { get; private set; } = false;
 
         // part related stuff
         private static Action m_partLeaveAction;
@@ -69,6 +62,7 @@ namespace TommoJProductions.ModApi
         /// represents the set bolt callback that the player is looking at.
         /// </summary>
         internal static BoltCallback lookingAtCallback;
+        private static string partSaveFolder;
 
         #region IEnumerators
 
@@ -107,37 +101,40 @@ namespace TommoJProductions.ModApi
 
         #region Methods
 
-        internal static void addDevMode() 
+        internal static void addDevMode()
         {
             // Written, 25.08.2022
 
-            devModeBehaviour = modapiGo.AddComponent<DevMode>();
+            if (devModeBehaviour == null)
+            {
+                devModeBehaviour = modapiGo.AddComponent<DevMode>();
+            }
         }
-        internal static void loadModApi()
+        
+        /// <summary>
+        /// Loads modapi.
+        /// </summary>
+        public static void loadModApi()
         {
             // Written, 11.07.2022
 
-            if (!m_activateGameStateInjected)
+            if (!modApiSetUp)
             {
-                if (!ModLoader.CheckSteam()) // pirate detection.
+                if (!m_activateGameStateInjected)
                 {
-                    piratedGameCopy = true;
-                    string error = "ModAPI: merirosvo. please report to mod developer!";
-                    ModConsole.Error(error);
-                    throw new Exception(error);
+                    if (!Camera.main) // game not set up yet.
+                    {
+                        m_activateGameStateInjected = true;
+                        m_activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
+                        m_actionCallback = m_activateGameState.appendNewAction(setUpModApi);
+                        print("modapi: Injected");
+                    }
+                    else
+                        setUpModApi();
                 }
-
-                if (!Camera.main) // game not set up yet.
-                {
-                    m_activateGameStateInjected = true;
-                    m_activateGameState = GameObject.Find("Setup Game").GetPlayMakerState("Activate game");
-                    m_actionCallback = m_activateGameState.appendNewAction(setUpModApi);
-                    Print("modapi: Injected");
-                }
-                else
-                    setUpModApi();
             }
         }
+
         private static void setUpModApi()
         {
             // Written, 11.07.2022
@@ -159,23 +156,22 @@ namespace TommoJProductions.ModApi
                 {
                     addDevMode();
                 }
-                Print($"modapi v{VersionInfo.version}: Loaded");
+                print($"[Loader] modapi v{ModApi.VersionInfo.version}: Loaded");
 
                 if (m_actionCallback != null)
                 {
                     int index = Array.IndexOf(m_activateGameState.Actions, m_actionCallback);
                     if (index == -1)
                     {
-                        Print("modapi.setup: action callback was not null but could not find index.");
                         return;
                     }
                     m_activateGameState.RemoveAction(index);
-                    Print("modapi: Cleaned up");
+                    print("[Loader] modapi: Cleaned up");
                 }
             }
             else
             {
-                ModConsole.Error("[ModAPI].[setUpModApi] - tried setting up modapi but its already setup!");
+                print("[Loader] tried setting up modapi but its already setup!");
             }
         }
         private static void setUpPart()
@@ -186,8 +182,24 @@ namespace TommoJProductions.ModApi
             getHandPickUpFsm.GetState("Drop part").prependNewAction(partDropped);
             getHandPickUpFsm.GetState("Throw part").prependNewAction(partThrown);
 
-            ModConsole.Print("[ModApiLoader] - part set up");
+            partSaveFolder = Path.Combine(ModClient.getModsFolder, @"\Config\ModApi Part Save Info");
+            if (!File.Exists(partSaveFolder))
+            {
+                Directory.CreateDirectory(partSaveFolder);
+            }
+            GameObject.Find("ITEMS").GetPlayMaker("SaveItems").GetState("Save game").prependNewAction(onSave);
+
+            print("[Loader] - part set up");
         }
+
+        private static void onSave() 
+        {
+            // Written, 02.07.2023
+
+            print("saving autosave parts");
+
+        }
+
         private static void setUpBolt()
         {
             // Written, 02.07.2022
@@ -195,7 +207,7 @@ namespace TommoJProductions.ModApi
             tryLoadBoltAssets();
             injectBoltChecks();
 
-            ModConsole.Print("[ModApiLoader] - bolt set up");
+            print("[Loader] - bolt set up");
         }
 
         private static void partPickedUp()
@@ -298,25 +310,25 @@ namespace TommoJProductions.ModApi
 
             if (!boltAssetsLoaded)
             {
-                AssetBundle ab = AssetBundle.CreateFromMemoryImmediate(Properties.Resources.modapi);
+                AssetBundle ab = AssetBundle.CreateFromMemoryImmediate(ModApi.Properties.Resources.modapi);
                 nutPrefab = ab.LoadAsset("nut.prefab") as GameObject;
                 shortBoltPrefab = ab.LoadAsset("short bolt.prefab") as GameObject;
                 longBoltPrefab = ab.LoadAsset("long bolt.prefab") as GameObject;
                 screwPrefab = ab.LoadAsset("screw.prefab") as GameObject;
                 ab.Unload(false);
 
-                Print("[ModApiLoader] bolt assets loaded");
+                print("[Loader] bolt assets loaded");
                 boltAssetsLoaded = true;
             }
             else
             {
-                Print("[ModApiLoader] bolt assets already loaded. :)");
+                print("[Loader] bolt assets already loaded. :)");
             }
 
-            Print($"nut         prefab: {nutPrefab}");
-            Print($"screw       prefab:  {screwPrefab}");
-            Print($"short bolt  prefab: {shortBoltPrefab}");
-            Print($"long bolt   prefab:  {longBoltPrefab}");
+            print($"[Loader] nut         prefab: {nutPrefab}");
+            print($"[Loader] screw       prefab:  {screwPrefab}");
+            print($"[Loader] short bolt  prefab: {shortBoltPrefab}");
+            print($"[Loader] long bolt   prefab:  {longBoltPrefab}");
         }
         private static void boltCheck(GameObject raycastGameObject)
         {

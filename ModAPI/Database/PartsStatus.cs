@@ -19,9 +19,7 @@ namespace TommoJProductions.ModApi.Database
             }
         }
     }
-}
-namespace TommoJProductions.ModApi.Database.PartsStatus
-{
+    
     public class Battery
     {
         private readonly FsmFloat _positiveBoltTightness;

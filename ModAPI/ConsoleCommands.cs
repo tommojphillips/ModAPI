@@ -2,7 +2,6 @@
 using System;
 using System.Collections;
 using TommoJProductions.ModApi.Attachable;
-using TommoJProductions.ModApi.Attachable.CallBacks;
 using UnityEngine;
 using static TommoJProductions.ModApi.ModClient;
 
@@ -35,7 +34,8 @@ namespace TommoJProductions.ModApi
         const string HELP_LIST_GENERAL = "<color=yellow>modapi help</color> - shows this list\n" +
             "<color=yellow>modapi help [db]/[debug]</color> - shows debug help list\n " +
             "<color=yellow>modapi help [dv]/[developer]</color> - shows developer help list\n " +
-            "<color=yellow>modapi [v]/[ver]/[version]</color> - reports modapi version\n";
+            "<color=yellow>modapi [fv]/[fver]/[fileversion]</color> - reports modapi file version\n " +
+            "<color=yellow>modapi [v]/[ver]/[version]</color> - reports modapi assembly version + Build number.\n";
         /// <summary>
         /// Represents the debug help list.
         /// </summary>
@@ -94,7 +94,11 @@ namespace TommoJProductions.ModApi
 
         #endregion
 
-        public void run(params string[] args)
+        /// <summary>
+        /// invokes the <see cref="ConsoleCommand.Run(string[])"/> method.
+        /// </summary>
+        /// <param name="args"></param>
+        public void invokeRun(params string[] args)
         {
             Run(args);
         }
@@ -178,10 +182,17 @@ namespace TommoJProductions.ModApi
                             print(HELP_LIST_GENERAL);
                         }
                         break;
+                    case "assemblyversion":
                     case "version":
                     case "ver":
                     case "v":
-                        print("version:{0}\nplatform:{1}\nconfiguration:{2}\nLatest Release: {3}", VERSION, VersionInfo.IS_64_BIT ? "x64" : "x86", VersionInfo.IS_DEBUG_CONFIG ? "debug" : "release", VersionInfo.lastestRelease);
+                        print("Assembly Version:{0}\nplatform:{1}\nconfiguration:{2}\nLatest Release: {3}", VERSION, ModApi.VersionInfo.IS_64_BIT ? "x64" : "x86", ModApi.VersionInfo.IS_DEBUG_CONFIG ? "debug" : "release", ModApi.VersionInfo.lastestRelease);
+                        break;
+                    case "fileversion":
+                    case "fullversion":
+                    case "fver":
+                    case "fv":
+                        print("File Version:{0}\nplatform:{1}\nconfiguration:{2}\nLatest Release: {3}", VersionInfo.fullVersion, ModApi.VersionInfo.IS_64_BIT ? "x64" : "x86", ModApi.VersionInfo.IS_DEBUG_CONFIG ? "debug" : "release", ModApi.VersionInfo.lastestRelease);
                         break;
                     case "debug":
                     case "db":
@@ -298,9 +309,9 @@ namespace TommoJProductions.ModApi
                                                 break;
                                             case "-s":
                                                 if (!_startedInspectingPart)
-                                                    run("developer", "editpart", "start");
+                                                    invokeRun("developer", "editpart", "start");
                                                 else
-                                                    run("developer", "editpart", "stop" );
+                                                    invokeRun("developer", "editpart", "stop" );
                                                 break;
                                             case "start":
                                                 if (!_inspectingPart)
@@ -404,9 +415,9 @@ namespace TommoJProductions.ModApi
                                                 break;
                                             case "-s":
                                                 if (!_startedInspectingBolt)
-                                                    run("developer", "editbolt", "start");
+                                                    invokeRun("developer", "editbolt", "start");
                                                 else
-                                                    run("developer", "editbolt", "stop");
+                                                    invokeRun("developer", "editbolt", "stop");
                                                 break;
                                             case "start":
                                                 if (!_inspectingBolt)
@@ -540,6 +551,11 @@ namespace TommoJProductions.ModApi
             else
                 print("Could not find the bolt by name: {0}", inBoltName);
             return bolt;
+        }
+
+        private void print(string format, params object[] args) 
+        {
+            ModConsole.Print(string.Format(format, args));
         }
 
         #endregion

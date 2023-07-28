@@ -9,9 +9,7 @@ using HutongGames.PlayMaker;
 using MSCLoader;
 
 using TommoJProductions.ModApi.Attachable;
-
-using TommoJProductions.ModApi.PlaymakerExtentions.Callbacks;
-
+using TommoJProductions.ModApi.PlaymakerExtentions;
 using UnityEngine;
 
 using static UnityEngine.GUILayout;
@@ -248,12 +246,12 @@ namespace TommoJProductions.ModApi
             if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
             {
                 data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
-                ModConsole.Print($"{mod.ID}: loaded save data (Exists).");
+                print($"{mod.ID}: loaded save data (Exists).");
             }
             else
             {
                 string error = $"{mod.ID}: save file didn't exist.. throwing saveDataNotFoundException.";
-                ModConsole.Print(error);
+                print(error);
                 throw new saveDataNotFoundException(error);
             }
         }
@@ -270,7 +268,7 @@ namespace TommoJProductions.ModApi
             // Written, 12.06.2022
 
             SaveLoad.SerializeSaveFile(mod, data, saveFileName);
-            ModConsole.Print($"{mod.ID}: saved data.");
+            print($"{mod.ID}: saved data.");
         }
         /// <summary>
         /// Loads data from a file. if data doesn't exist, creates new data.
@@ -287,12 +285,12 @@ namespace TommoJProductions.ModApi
             if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
             {
                 data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
-                ModConsole.Print($"{mod.ID}: loaded save data (Exists).");
+                print($"{mod.ID}: loaded save data (Exists).");
                 return true;
             }
             else
             {
-                ModConsole.Print($"{mod.ID}: save file didn't exist.. creating a save file.");
+                print($"{mod.ID}: save file didn't exist.. creating a save file.");
                 data = new T();
                 return false;
             }
@@ -853,7 +851,7 @@ namespace TommoJProductions.ModApi
             };
             temp.Add(ft);
             fsm.Fsm.GlobalTransitions = temp.ToArray();
-            ModConsole.Print($"Adding new global transition, to fsm, {fsm.gameObject.name}.{fsm.name}. {_event.Name} transitions this fsm state to {toStateName}");
+            print($"Adding new global transition, to fsm, {fsm.gameObject.name}.{fsm.name}. {_event.Name} transitions this fsm state to {toStateName}");
             return ft;
         }
         /// <summary>
@@ -876,7 +874,7 @@ namespace TommoJProductions.ModApi
             };
             temp.Add(ft);
             state.Transitions = temp.ToArray();
-            ModConsole.Print($"Adding new local transition, to state, {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. {eventName} transitions this fsm from {state.Name} to {toStateName}");
+            print($"Adding new local transition, to state, {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. {eventName} transitions this fsm from {state.Name} to {toStateName}");
             return ft;
         }
 
@@ -928,7 +926,7 @@ namespace TommoJProductions.ModApi
             }
             temp.Add(callback);
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Appending new action {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {callback.callbackType} {(callback.everyFrame ? "every frame" : "once")}.");
+            print($"[{callback.action.Method.DeclaringType.Name}] Appending new action {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {callback.callbackType} {(callback.everyFrame ? "every frame" : "once")}.");
             return callback;
         }
 
@@ -981,7 +979,7 @@ namespace TommoJProductions.ModApi
                 temp.Add(v);
             }
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Prepending new {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {(callback.everyFrame ? "every frame" : "once")}.");
+            print($"[{callback.action.Method.DeclaringType.Name}] Prepending new {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} to {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name}. Called {(callback.everyFrame ? "every frame" : "once")}.");
             return callback;
         }
 
@@ -1036,7 +1034,7 @@ namespace TommoJProductions.ModApi
             }
             temp.Insert(index, callback);
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Inserting new {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} into {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(callback.everyFrame ? "every frame" : "once")}.");
+            print($"[{callback.action.Method.DeclaringType.Name}] Inserting new {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} into {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(callback.everyFrame ? "every frame" : "once")}.");
             return callback;
         }
 
@@ -1093,7 +1091,7 @@ namespace TommoJProductions.ModApi
                     temp.Add(state.Actions[i]);
             }
             state.Actions = temp.ToArray();
-            ModConsole.Print($"[{callback.action.Method.DeclaringType.Name}] Replacing {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} with {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(callback.everyFrame ? "every frame" : "once")}.");
+            print($"[{callback.action.Method.DeclaringType.Name}] Replacing {callback.action.Method.DeclaringType.Name}.{callback.action.Method.Name} with {state.Fsm.GameObject.name}.{state.Fsm.Name}.{state.Name} at index:{index}. Called {(callback.everyFrame ? "every frame" : "once")}.");
             return callback;
         }
 
