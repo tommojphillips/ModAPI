@@ -26,6 +26,7 @@ namespace TommoJProductions.ModApi.Attachable
         private SaveManager _partSaveManager;
         private Action _partLeaveAction;
         private FsmGameObject _pickedUpObject;
+        private PlayMakerFSM _handPickup;
 
         #endregion
 
@@ -104,12 +105,18 @@ namespace TommoJProductions.ModApi.Attachable
 
             _partSaveManager = new SaveManager();
             _pickedUpObject = ModClient.getPickedUpGameObject;
-            PlayMakerFSM handPickup = ModClient.getHandPickUpFsm;
+            _handPickup = ModClient.getHandPickUpFsm;
 
             // injecting part picked, drop and throw functions.
-            handPickup.GetState("Part picked").insertNewAction(onPickedUp, 5);
-            handPickup.GetState("Drop part").prependNewAction(onPartDropped);
-            handPickup.GetState("Throw part").prependNewAction(onPartThrown);
+            _handPickup.GetState("Part picked").insertNewAction(onPickedUp, 5);
+
+            FsmState dropState = _handPickup.GetState("Drop part");
+            dropState.prependNewAction(onPartDropped);
+            dropState.addNewTransitionToState("LOOP", "Part picked");
+
+            FsmState throwState = _handPickup.GetState("Throw part");
+            throwState.prependNewAction(onPartThrown);
+            throwState.addNewTransitionToState("LOOP", "Part picked");
 
             // inject save function (For Auto Save)
             GameObject.Find("ITEMS").GetPlayMaker("SaveItems").GetState("Save game").prependNewAction(onSave);
@@ -186,6 +193,11 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 11.06.2022
 
+            if (ModClient.playerInMenu)
+            {
+                _handPickup.SendEvent("LOOP");
+                return;
+            }
             if (_pickedPart)
                 _partLeaveAction = _pickedPart.invokeDroppedEvent;
             else
@@ -195,6 +207,12 @@ namespace TommoJProductions.ModApi.Attachable
         private void onPartThrown()
         {
             // Written, 11.06.2022
+
+            if (ModClient.playerInMenu)
+            {
+                _handPickup.SendEvent("LOOP");
+                return;
+            }
 
             if (_pickedPart)
                 _partLeaveAction = _pickedPart.invokeThrownEvent;
