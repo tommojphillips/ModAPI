@@ -4,7 +4,7 @@ using System.Resources;
 
 // General Information
 [assembly: AssemblyTitle("ModApi")]
-[assembly: AssemblyDescription("ModApi v0.1.4 BUILD 531")]
+[assembly: AssemblyDescription("ModApi v0.1.4 BUILD 532")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Tommo J. Productions")]
 [assembly: AssemblyProduct("ModApi")]
@@ -13,7 +13,7 @@ using System.Resources;
 
 // Version information
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("0.1.4.531")]
+[assembly: AssemblyFileVersion("0.1.4.532")]
 
 namespace TommoJProductions.ModApi
 {
@@ -26,7 +26,7 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents latest release version date. Format: dd:MM:yyyy hh:mm tt
         /// </summary>
-	    public static readonly string lastestRelease = "30.09.2023 09:39 AM";
+	    public static readonly string lastestRelease = "30.09.2023 10:39 AM";
 
         /// <summary>
         /// Represents current version. (Excluding build number)
@@ -40,20 +40,20 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Represents current full version . (including build number)
         /// </summary>
-	    public static readonly string fullVersion = "0.1.4.531";
+	    public static readonly string fullVersion = "0.1.4.532";
         /// <summary>
         /// Represents current (constant) full version . (including build number)
         /// </summary>
-	    public const string FULL_VERSION = "0.1.4.531";
+	    public const string FULL_VERSION = "0.1.4.532";
         
         /// <summary>
         /// Represents current build number. (excludes major, minor and revision numbers)
         /// </summary>
-	    public static readonly string build = "531";
+	    public static readonly string build = "532";
         /// <summary>
         /// Represents current (const) build number. (excludes major, minor and revision numbers)
         /// </summary>
-	    public const string BUILD = "531";
+	    public const string BUILD = "532";
         
         /// <summary>
         /// Represents if the mod has been complied for x64

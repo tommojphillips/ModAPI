@@ -58,7 +58,6 @@
     <Compile Include="Attachable\Bolt\BaseBoltSettings.cs" />
     <Compile Include="Attachable\Bolt\Bolt.cs" />
     <Compile Include="Attachable\Bolt\BoltSettings.cs" />
-    <Compile Include="Attachable\Bolt\OldBolt.cs" />
     <Compile Include="Attachable\Bolt\BoltManager.cs" />
     <Compile Include="Attachable\Bolt\BoltSaveInfo.cs" />
     <Compile Include="Attachable\Bolt\BoltWithNutSettings.cs" />
