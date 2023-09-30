@@ -6,12 +6,12 @@
     public class BoltSaveInfo
         {
             /// <summary>
-            /// Represents the tightness of this bolt. range: 0 - <see cref="BoltSettings.maxTightness"/>.
+            /// Represents the tightness of this bolt. range: 0 - 8.
             /// </summary>
-            public float boltTightness { get; set; } = 0;
+            public int boltTightness { get; set; } = 0;
             /// <summary>
-            /// Represents the tightness of the nut if addnut setting is true.. range: 0 - <see cref="BoltSettings.maxTightness"/>.
+            /// Represents the tightness of the nut if <see cref="BoltWithNutSettings.addNut"/> is true. range: 0 - 8
             /// </summary>
-            public float addNutTightness { get; set; } = 0;
+            public int addNutTightness { get; set; } = 0;
         }
 }

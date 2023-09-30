@@ -7,6 +7,10 @@ namespace TommoJProductions.ModApi.Attachable
     public enum BoltSize
     {
         /// <summary>
+        /// Represents none. USAGE: for add nuts.
+        /// </summary>
+        none  = -1,
+        /// <summary>
         /// Represents hand
         /// </summary>
         hand = 0,

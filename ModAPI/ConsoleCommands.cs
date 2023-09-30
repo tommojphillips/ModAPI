@@ -205,14 +205,14 @@ namespace TommoJProductions.ModApi
                                 case "listparts":
                                     print("Count {0}", loadedParts.Count);
                                     foreach (var item in loadedParts)
-                                        print("{0} | {1}", item.gameObject.name, item.PartID);
+                                        print("{0} | {1}", item.gameObject.name, item.partID);
                                     break;
                                 case "lb":
                                 case "lbolts":
                                 case "listbolts":
                                     print("Count {0}", loadedBolts.Count);
                                     foreach (var item in loadedBolts)
-                                        print("{0} | {1}", item.boltCallback.gameObject.name, item.boltID);
+                                        print("{0} | {1}", item.callback.gameObject.name, item.boltID);
                                     break;
                                 case "tpp":
                                 case "teleportpart":
@@ -526,7 +526,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 10.09.2021
 
-            Part part = loadedParts.Find(_part => _part.name == inPartName || _part.PartID == inPartName);
+            Part part = loadedParts.Find(_part => _part.name == inPartName || _part.partID == inPartName);
             if (!part)
                 part = loadedParts.Find(_part => _part.name.Contains(inPartName));
             if (part)
@@ -543,9 +543,9 @@ namespace TommoJProductions.ModApi
         {
             // Written, 10.09.2021
 
-            BoltCallback bolt = loadedBolts.Find(_b => _b.boltCallback.name == inBoltName || _b.boltID == inBoltName).boltCallback;
+            BoltCallback bolt = loadedBolts.Find(_b => _b.callback.name == inBoltName || _b.boltID == inBoltName).callback;
             if (!bolt)
-                bolt = loadedBolts.Find(_b => _b.boltCallback.name.Contains(inBoltName)).boltCallback;
+                bolt = loadedBolts.Find(_b => _b.callback.name.Contains(inBoltName)).callback;
             if (bolt)
                 print("Found bolt: {0}", bolt.name);
             else

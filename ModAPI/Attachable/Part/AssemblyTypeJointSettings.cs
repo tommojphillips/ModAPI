@@ -8,48 +8,46 @@ namespace TommoJProductions.ModApi.Attachable
     public class AssemblyTypeJointSettings
     {
         /// <summary>
-        /// Represents a list of install point rigidbodies for when using assemblyType:Joint
+        /// Represents the breakforce min limit. Relevant only to boltable parts.
         /// </summary>
-        public Rigidbody[] installPointRigidbodies;
+        private float m_breakForceMin = 0;
         /// <summary>
         /// Represents the break force to break this joint. NOTE: unbreakable joints are <see cref="float.PositiveInfinity"/>.
         /// </summary>
         public float breakForce = float.PositiveInfinity;
-        /// <summary>
-        /// Represents the breakforce min limit. Relevant only to boltable parts.
-        /// </summary>
-        public float breakForceMin = 0;
         /// <summary>
         /// represents if the bolts tightness effects the joints breakforce.
         /// </summary>
         public bool boltTightnessEffectsBreakforce = false;
 
         /// <summary>
+        /// Represents the breakforce min limit. Relevant only to boltable parts that have the <see cref="AssemblyTypeJointSettings.boltTightnessEffectsBreakforce"/> setting set to <see langword="true"/>.
+        /// Used as an inital <see cref="Joint.breakForce"/> value so that the part being installed doesn't fall off before the player can tighten bolts. 
+        /// This value must be high enough to support the part's weight but lower then <see cref="breakForce"/>.
+        /// </summary>
+        public float breakForceMin 
+        {
+            get => m_breakForceMin;
+            set => m_breakForceMin = Mathf.Clamp(value, 0, breakForce);
+        }
+
+        /// <summary>
         /// Inits new joint settings class with default values
         /// </summary>
         public AssemblyTypeJointSettings() { }
         /// <summary>
-        /// Inits new joint settings class and assigns rigidbodies.
-        /// </summary>
-        public AssemblyTypeJointSettings(params Rigidbody[] rigidbodies)
-        {
-            installPointRigidbodies = rigidbodies;
-        }
-        /// <summary>
         /// Inits new joint settings class and assigns class variables.
         /// </summary>
-        public AssemblyTypeJointSettings(float breakForce, params Rigidbody[] rigidbodies)
+        public AssemblyTypeJointSettings(float breakForce)
         {
             this.breakForce = breakForce;
-            installPointRigidbodies = rigidbodies;
         }
         /// <summary>
         /// Inits new joint settings class and assigns all class variables.
         /// </summary>
-        public AssemblyTypeJointSettings(float breakForce, float breakForceMin, bool boltTightnessEffectsBreakForce, params Rigidbody[] rigidbodies)
+        public AssemblyTypeJointSettings(float breakForce, float breakForceMin, bool boltTightnessEffectsBreakForce)
         {
             this.breakForce = breakForce;
-            installPointRigidbodies = rigidbodies;
             this.breakForceMin = breakForceMin;
             boltTightnessEffectsBreakforce = boltTightnessEffectsBreakForce;
         }
@@ -61,7 +59,6 @@ namespace TommoJProductions.ModApi.Attachable
         {
             if (atjs != null)
             {
-                installPointRigidbodies = atjs.installPointRigidbodies;
                 breakForce = atjs.breakForce;
                 breakForceMin = atjs.breakForceMin;
                 boltTightnessEffectsBreakforce = atjs.boltTightnessEffectsBreakforce;

@@ -18,12 +18,11 @@ using HutongGames.PlayMaker.Actions;
 
 namespace TommoJProductions.ModApi
 {
+    /// <summary>
+    /// Represents common extention methods. 
+    /// </summary>
     public static class ModApiExtentions
     {
-        private static string temp_descriptionString;
-        private static MemberInfo temp_descriptionMember;
-        private static string temp_descriptionKey;
-
         #region Coroutine stuff
 
         /// <summary>
@@ -107,40 +106,7 @@ namespace TommoJProductions.ModApi
         }
 
         /// <summary>
-        /// Gets <see cref="DescriptionAttribute.Description"/> on provided object type. if attribute doesn't exist, returns <see cref="MemberInfo.Name"/>
-        /// </summary>
-        /// <param name="mi">the member info to get info from.</param>
-        public static string getDescription(this MemberInfo mi)
-        {
-            // Written, 06.08.2022
-
-            temp_descriptionKey = mi.DeclaringType?.Name + mi.Name;
-            if (getInstance.descriptionCache.ContainsKey(temp_descriptionKey))
-            {
-                return getInstance.descriptionCache[temp_descriptionKey] ?? mi.Name;
-            }
-            return temp_descriptionString;
-        }
-        /// <summary>
-        /// gets a description on the type by member name.
-        /// </summary>
-        /// <param name="type">the type to get a member on.</param>
-        /// <param name="memberName">the members name.</param>
-        public static string getDescription(this Type type, string memberName)
-        {
-            // Written, 06.08.2022
-
-            temp_descriptionKey = type.Name + memberName;
-            if (getInstance.descriptionCache.ContainsKey(temp_descriptionKey))
-            {
-                return getInstance.descriptionCache[temp_descriptionKey] ?? memberName;
-            }
-            temp_descriptionMember = type.GetMember(memberName)?[0];
-            return temp_descriptionString;
-        }
-
-        /// <summary>
-        /// [GUI] draws a property. eg => <see cref="Part.partSettings"/>.drawProperty("assembleType") would draw a property as such: "assembleType: joint". if member has <see cref="DescriptionAttribute"/> will use the description as the property title. Works with fields, properties and enums
+        /// [GUI] draws a property. eg => <see cref="Part.partSettings"/>.drawProperty("assembleType") would draw a property as such: "assembleType: joint".
         /// </summary>
         /// <param name="t">The class instance get value from.</param>
         /// <param name="memberName">The class member name to get a field/property instance from.</param>
@@ -157,31 +123,19 @@ namespace TommoJProductions.ModApi
             object value = "null";
             if (_t.IsEnum)
             {
-                title = _t.getDescription();
-                value = _t.GetField(memberName).getDescription();
+                title = _t.Name;
+                value = _t.GetField(memberName).GetValue(t);
             }
             if (fi != null)
             {
-                title = fi.getDescription();
-
-                if (fi.FieldType.IsEnum)
-                {
-                    value = fi.getDescription();
-                }
-                else
-                {
-                    value = fi.GetValue(t);
-                }
+                title = fi.Name;
+                value = fi.GetValue(t);
             }
             else if (pi != null)
             {
-                title = pi.getDescription();
+                title = pi.Name;
 
-                if (pi.PropertyType.IsEnum)
-                {
-                    value = fi.getDescription();
-                }
-                else if (pi.CanRead)
+                if (pi.CanRead)
                 {
                     value = pi.GetValue(t, null);
                 }
@@ -197,9 +151,9 @@ namespace TommoJProductions.ModApi
             // Written, 08.07.2022
 
             Type _t = t.GetType();
-            string title = _t.getDescription();
+            string title = _t.Name;
             string valueName = t.ToString();
-            string value = _t.GetField(valueName)?.getDescription();
+            string value = _t.GetField(valueName)?.GetValue(t).ToString();
             Label($"{title}: {value ?? valueName}");
         }
 
@@ -245,7 +199,7 @@ namespace TommoJProductions.ModApi
 
             if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
             {
-                data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
+                data = MSCLoader.SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
                 print($"{mod.ID}: loaded save data (Exists).");
             }
             else
@@ -267,7 +221,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 12.06.2022
 
-            SaveLoad.SerializeSaveFile(mod, data, saveFileName);
+            MSCLoader.SaveLoad.SerializeSaveFile(mod, data, saveFileName);
             print($"{mod.ID}: saved data.");
         }
         /// <summary>
@@ -284,7 +238,7 @@ namespace TommoJProductions.ModApi
 
             if (File.Exists(Path.Combine(ModLoader.GetModSettingsFolder(mod), saveFileName)))
             {
-                data = SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
+                data = MSCLoader.SaveLoad.DeserializeSaveFile<T>(mod, saveFileName);
                 print($"{mod.ID}: loaded save data (Exists).");
                 return true;
             }
@@ -312,6 +266,12 @@ namespace TommoJProductions.ModApi
                 func.Invoke(objects[i]);
             }
         }
+        /// <summary>
+        /// Gets the first object in array that meets <paramref name="func"/>
+        /// </summary>
+        /// <typeparam name="T">The Class to find</typeparam>
+        /// <param name="objects">The array to find an object in.</param>
+        /// <param name="func">A function of type T.</param>
         public static T first<T>(this T[] objects, Func<T, bool> func) where T : class
         {
             // Written, 11.07.2022
@@ -324,6 +284,92 @@ namespace TommoJProductions.ModApi
                 }
             }
             return null;
+        }
+        /// <summary>
+        /// Gets the first object in array that meets <paramref name="func"/>
+        /// </summary>
+        /// <typeparam name="T">The Class to find</typeparam>
+        /// <param name="objects">The array to find an object in.</param>
+        /// <param name="func">A function of type T.</param>
+        public static T first<T>(this IEnumerable<T> objects, Func<T, bool> func) where T : class
+        {
+            // Written, 23.09.2023
+
+            IEnumerator<T> e = objects.GetEnumerator();
+
+            while (e.MoveNext())
+            {
+                if (func.Invoke((T)e.Current))
+                    return e.Current as T;
+            }
+            return null;
+        }
+        /// <summary>
+        /// Gets the first object in array that meets <paramref name="func"/>
+        /// </summary>
+        /// <typeparam name="T">The Class to find</typeparam>
+        /// <param name="objects">The array to find an object in.</param>
+        /// <param name="func">A function of type T.</param>
+        public static T first<T>(this IEnumerable<T> objects, Func<T, bool> func, out int index) where T : class
+        {
+            // Written, 23.09.2023
+
+            IEnumerator<T> e = objects.GetEnumerator();
+            int i = 0;
+            while (e.MoveNext())
+            {
+                if (func.Invoke((T)e.Current))
+                {
+                    index = i;
+                    return e.Current as T;
+                }
+                i++;
+            }
+            index = -1;
+            return null;
+        }
+        /// <summary>
+        /// Gets the index of the first object in array that meets <paramref name="func"/> if a match isn't found, returns -1.
+        /// </summary>
+        /// <typeparam name="T">The Class to find</typeparam>
+        /// <param name="objects">The array to find an object index in.</param>
+        /// <param name="func">A function of type T.</param>
+        /// <returns>The index of the first found object in the array</returns>
+        public static int indexOf<T>(this T[] objects, Func<T, bool> func) where T : class
+        {
+            // Written, 11.07.2022
+
+            for (int i = 0; i < objects.Length; i++)
+            {
+                if (func.Invoke(objects[i]))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+        /// <summary>
+        /// Gets the index of the first object in array that meets <paramref name="func"/> if a match isn't found, returns -1.
+        /// </summary>
+        /// <typeparam name="T">The Class to find</typeparam>
+        /// <param name="objects">The array to find an object index in.</param>
+        /// <param name="func">A function of type T.</param>
+        /// <returns>The index of the first found object in the array</returns>
+        public static int indexOf<T>(this IEnumerable<T> objects, Func<T, bool> func) where T : class
+        {
+            // Written, 23.09.2023
+
+            IEnumerator<T> e = objects.GetEnumerator();
+            int index = 0;
+            while (e.MoveNext())
+            {
+                if (func.Invoke((T)e.Current))
+                {
+                    return index;
+                }
+                index++;
+            }
+            return -1;
         }
 
         /// <summary>
@@ -420,7 +466,11 @@ namespace TommoJProductions.ModApi
                 {
                     return t;
                 }
-                return child.gameObject.getBehaviourInChildren<T>(func);
+                T tc = child.gameObject.getBehaviourInChildren(func);
+                if (tc != null)
+                {
+                    return tc;
+                }             
             }
             return null;
         }
@@ -435,6 +485,7 @@ namespace TommoJProductions.ModApi
 
             return getBehaviourInChildren<T>(gameObject, func => true);
         }
+
         /// <summary>
         /// Gets all behaviours found in all children. where <paramref name="func"/> action returns true.
         /// </summary>
@@ -468,6 +519,36 @@ namespace TommoJProductions.ModApi
             return null;
         }
         /// <summary>
+        /// Gets all behaviours found in all children. where <paramref name="func"/> action returns true.
+        /// </summary>
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        /// <param name="func">the function to check with.</param>
+        /// <returns></returns>
+        public static IEnumerator<T> getBehavioursInChildrenAsync<T>(this GameObject gameObject, Func<T, bool> func) where T : MonoBehaviour
+        {
+            // Written, 02.07.2022 
+
+            if (gameObject.transform.childCount > 0)
+            {
+                List<T> values = new List<T>();
+                for (int i = 0; i < gameObject.transform.childCount; i++)
+                {
+                    Transform child = gameObject.transform.GetChild(i);
+                    T t = child.GetComponent<T>();
+                    if (t && func.Invoke(t))
+                    {
+                        yield return t;
+                        values.Add(t);
+                    }
+                    IEnumerator<T> s = child.gameObject.getBehavioursInChildrenAsync(func);
+                    while (s.MoveNext())
+                        yield return s.Current;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets all behaviours found in all children.
         /// </summary>
         /// <typeparam name="T">The type of behaviour to get</typeparam>
@@ -478,50 +559,20 @@ namespace TommoJProductions.ModApi
 
             return getBehavioursInChildren<T>(gameObject, func => true);
         }
-
         /// <summary>
-        /// returns whether the player is currently looking at a part. By raycast.
+        /// Gets all behaviours found in all children.
         /// </summary>
-        /// <param name="part">The part to detect againist.</param>
-        /// <param name="maxDistance">raycast within distance from main camera.</param>
-        public static bool isPlayerLookingAt(this Part part, float maxDistance = 1)
+        /// <typeparam name="T">The type of behaviour to get</typeparam>
+        /// <param name="gameObject">The gameobject to get the behaviour on.</param>
+        public static IEnumerator<T> getBehavioursInChildrenAsync<T>(this GameObject gameObject) where T : MonoBehaviour
         {
-            if (raycast(out RaycastHit hit, maxDistance, false, (LayerMasksEnum)part.gameObject.layer))
+            // Written, 02.07.2022
+
+            IEnumerator<T> s = getBehavioursInChildrenAsync<T>(gameObject, func => true);
+            while (s.MoveNext())
             {
-                if (hit.collider?.gameObject == part.gameObject)
-                    return true;
+                yield return s.Current;
             }
-            return false;
-        }
-        /// <summary>
-        /// Checks if player is holding the Part, <paramref name="part"/>. by checking if <paramref name="part"/>'s <see cref="GameObject.layer"/> equals <see cref="LayerMasksEnum.Wheel"/>
-        /// </summary>
-        /// <param name="part">The gameObject to check on.</param>
-        public static bool isPlayerHolding(this Part part)
-        {
-            // Written, 02.10.2018
-
-            if (part.gameObject.isOnLayer(LayerMasksEnum.Wheel))
-                return true;
-            return false;
-        }
-        /// <summary>
-        /// checks if the player is holding this part. returns false if player is holding nothing. by checking Players pickedupgameobject FSM
-        /// </summary>
-        public static bool isPlayerHoldingByPickup(this Part part)
-        {
-            // Written, 08.05.2022
-
-            return getPickedUpGameObject?.Value == part.gameObject;
-        }
-        /// <summary>
-        /// Checks if the player is looking at this part. returns false if player is looking at nothing. by checking Players raycasthitgameobject FSM
-        /// </summary>
-        public static bool isPlayerLookingAtByPickUp(this Part part)
-        {
-            // Written, 08.05.2022
-
-            return getRaycastHitGameObject?.Value == part.gameObject;
         }
 
         /// <summary>
@@ -539,7 +590,39 @@ namespace TommoJProductions.ModApi
             return false;
         }
         /// <summary>
-        /// Checks if player is holding the GameObject, <paramref name="inGameObject"/>. by checking if <paramref name="inGameObject"/>'s <see cref="GameObject.layer"/> equals <see cref="LayerMasksEnum.Wheel"/>
+        /// returns whether the player is currently looking at a part. By raycasting on <paramref name="part"/>.gameobject.layer. Does not abid by stock game logic. 
+        /// Returns true when looking at a <see cref="Part"/> even if the player is in "ToolMode" or any other situation that prevents the player from being able to pickup objects.
+        /// </summary>
+        /// <param name="part">The part to detect againist.</param>
+        /// <param name="maxDistance">raycast within distance from main camera.</param>
+        public static bool isPlayerLookingAt(this Part part, float maxDistance = 1)
+        {
+            return part.gameObject.isPlayerLookingAt(maxDistance);
+        }
+        /// <summary>
+        /// Checks if the player is looking at this gameobject. returns false if player is looking at nothing. by checking Players raycasthitgameobject FSM. Abids by stock game logic.
+        /// Returns false if the player is in toolmode or any other situation that prevents the player from being able to pickup objects even if looking at a <see cref="Part"/>
+        /// </summary>
+        public static bool isPlayerLookingAtByPickUp(this GameObject go)
+        {
+            // Written, 08.05.2022
+
+            return getRaycastHitGameObject?.Value == go;
+        }
+        /// <summary>
+        /// Checks if the player is looking at this part. returns false if player is looking at nothing. by checking Players raycasthitgameobject FSM. Abids by stock game logic.
+        /// Returns false if the player is in toolmode or any other situation that prevents the player from being able to pickup objects even if looking at a <see cref="Part"/>
+        /// </summary>
+        public static bool isPlayerLookingAtByPickUp(this Part part)
+        {
+            // Written, 08.05.2022
+
+            return getRaycastHitGameObject?.Value == part.gameObject;
+        }
+
+        /// <summary>
+        /// Checks if player is holding the GameObject, <paramref name="inGameObject"/>. by checking if <paramref name="inGameObject"/>'s <see cref="GameObject.layer"/> 
+        /// equals <see cref="LayerMasksEnum.Wheel"/>.
         /// </summary>
         /// <param name="inGameObject">The gameObject to check on.</param>
         public static bool isPlayerHolding(this GameObject inGameObject)
@@ -551,6 +634,16 @@ namespace TommoJProductions.ModApi
             return false;
         }
         /// <summary>
+        /// Checks if player is holding the Part, <paramref name="part"/>. by checking if <paramref name="part"/>'s <see cref="GameObject.layer"/> equals <see cref="LayerMasksEnum.Wheel"/>
+        /// </summary>
+        /// <param name="part">The gameObject to check on.</param>
+        public static bool isPlayerHolding(this Part part)
+        {
+            // Written, 26.08.2023
+
+            return part.pickedUp;
+        }
+        /// <summary>
         /// checks if the player is holding this gameobject. returns false if player is holding nothing. by checking Players pickedupgameobject FSM
         /// </summary>
         public static bool isPlayerHoldingByPickup(this GameObject go)
@@ -559,15 +652,7 @@ namespace TommoJProductions.ModApi
 
             return getPickedUpGameObject?.Value == go;
         }
-        /// <summary>
-        /// Checks if the player is looking at this gameobject. returns false if player is looking at nothing. by checking Players raycasthitgameobject FSM
-        /// </summary>
-        public static bool isPlayerLookingAtByPickUp(this GameObject go)
-        {
-            // Written, 08.05.2022
 
-            return getRaycastHitGameObject?.Value == go;
-        }
         /// <summary>
         /// Checks if the gameobject is on the layer, <paramref name="inLayer"/>.
         /// </summary>
@@ -1178,7 +1263,7 @@ namespace TommoJProductions.ModApi
         /// <returns>the vector3 info as a vector3.</returns>
         public static Vector3 toVector3(this Vector3Info i)
         {
-            return new Vector3(i.x, i.y, i.z);
+            return i.vector3;
         }
         /// <summary>
         /// converts a vector3.
@@ -1194,9 +1279,65 @@ namespace TommoJProductions.ModApi
         /// </summary>
         /// <param name="v"></param>
         /// <returns></returns>
-        public static Vector3 clone(this Vector3 v)
+        public static Vector3 copy(this Vector3 v)
         {
             return new Vector3(v.x, v.y, v.z);
+        }
+
+        /// <summary>
+        /// De/Activates all bolts in an array.
+        /// </summary>
+        /// <param name="bolts">the bolt array</param>
+        /// <param name="active">De/Activate?</param>
+        public static void activateBolts(this Bolt[] bolts, bool active)
+        {
+            // Written, 28.10.2022
+
+            bolts.activateBolts(bolt => active);
+        }
+        /// <summary>
+        /// De/Activates all bolts in an array.
+        /// </summary>
+        /// <param name="bolts">the bolt array</param>
+        /// <param name="func">the func that returns De/Activate</param>
+        public static void activateBolts(this Bolt[] bolts, Func<Bolt, bool> func)
+        {
+            // Written, 28.10.2022
+
+            bool active;
+
+            if (bolts != null)
+            {
+                for (int i = 0; i < bolts.Length; i++)
+                {
+                    active = func.Invoke(bolts[i]);
+                    if (!bolts[i].settings.activeWhenUninstalled || active)
+                    {
+                        bolts[i].activateBolt(active);
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// Handles ID creation.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="collection"></param>
+        /// <param name="id"></param>
+        /// <param name="func"></param>
+        public static void setID<T>(this IEnumerable<T> collection, ref string id, Func<T, bool> func)
+        {
+            // Written, 03.09.2023
+
+            T[] clones = collection.Where(func)?.ToArray();
+            if (clones != null && clones.Length > 0)
+            {
+                id += clones.Length.ToString("000");
+            }
+            else
+            {
+                id += "000";
+            }
         }
 
         #endregion    

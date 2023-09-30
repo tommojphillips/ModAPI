@@ -26,6 +26,8 @@ namespace TommoJProductions.ModApi.Attachable
 
         #endregion
 
+        private bool _highlighted = false;
+
         #region Properties
 
         /// <summary>
@@ -49,7 +51,30 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public BoltSize boltSize { get; internal set; }
         /// <summary>
-        /// Represents the bolt check. checks if in the correct mode based on <see cref="boltSize"/> (if <see cref="Bolt.BoltSize.hand"/> player would need to be in HandMode otherwise tool mode would be required) and that the player is holding the correct tool for the fastener.
+        /// 
+        /// </summary>
+        public bool highlighted
+        { 
+            get 
+            {
+                return _highlighted; 
+            }
+            set
+            {
+                if (value)
+                {
+                    boltRenderer.material = getActiveBoltMaterial;
+                    _highlighted = true;
+                }
+                else
+                {
+                    boltRenderer.material = boltMaterial;
+                    _highlighted = false;
+                }
+            }
+        }
+        /// <summary>
+        /// Represents the bolt check. checks if in the correct mode based on <see cref="boltSize"/> (if <see cref="BoltSize.hand"/> player would need to be in HandMode otherwise tool mode would be required) and that the player is holding the correct tool for the fastener.
         /// </summary>
         public virtual bool boltCheck => doBoltCheck();
 
@@ -81,9 +106,9 @@ namespace TommoJProductions.ModApi.Attachable
 
             if (boltCheck)
             {
-                if (bolt.boltSettings.highlightBoltWhenActive)
+                if (bolt.settings.highlightWhenActive)
                 {
-                    boltRenderer.material = getActiveBoltMaterial;
+                    highlight(true);
                 }
                 bolt.bcb_mouseEnter(this);
                 onMouseEnter?.Invoke(this);
@@ -96,9 +121,9 @@ namespace TommoJProductions.ModApi.Attachable
         {
             // Written, 24.08.2022
 
-            if (bolt.boltSettings.highlightBoltWhenActive)
+            if (bolt.settings.highlightWhenActive)
             {
-                boltRenderer.material = boltMaterial;
+                highlight(false);
             }
             bolt.bcb_mouseExit(this);
             onMouseExit?.Invoke(this);
@@ -135,7 +160,8 @@ namespace TommoJProductions.ModApi.Attachable
             }
             if (!boltCollider)
             {
-                error += $"# could not find a collider on the bolt model. player will not be able to detect this bolt. <u>required</u>: <i>Collider:isTrigger:<b>false</b></i> | {gameObject.name} ({bolt?.boltID ?? "null"})\n";
+                error += $"# could not find a collider on the bolt model. player will not be able to detect this bolt." +
+                    $" <u>required</u>: <i>Collider:isTrigger:<b>false</b></i> | {gameObject.name} ({bolt?.boltID ?? "null"})\n";
             }
 
             if (!string.IsNullOrEmpty(error))
@@ -143,6 +169,10 @@ namespace TommoJProductions.ModApi.Attachable
                 ModClient.print("[BoltCallback]\n" + error);
                 throw new Exception(error);
             }
+        }
+        public void highlight(bool highlight)
+        {
+            highlighted = highlight;
         }
     }
 }

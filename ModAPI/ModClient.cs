@@ -1,17 +1,14 @@
-﻿using HutongGames.PlayMaker;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using TommoJProductions.ModApi.Attachable;
-using TommoJProductions.ModApi.Database;
-using UnityEngine;
-using MSCLoader;
-using TommoJProductions.ModApi.PlaymakerExtentions;
-using System.Reflection;
-using System.Linq;
-using static UnityEngine.GUILayout;
 using System.IO;
+using System.Linq;
+using System.Reflection;
+using HutongGames.PlayMaker;
+using MSCLoader;
+using TommoJProductions.ModApi.Attachable;
 using TommoJProductions.ModApi.Database.GameParts;
+using UnityEngine;
+using static UnityEngine.GUILayout;
 
 namespace TommoJProductions.ModApi
 {
@@ -287,24 +284,41 @@ namespace TommoJProductions.ModApi
     {
         // Written, 10.08.2018 | Modified 25.09.2021
 
-        #region fields
+        #region Events
 
         /// <summary>
-        /// Represents the complied runtime version of the api.
+        /// Occurs when the player picks up a gameobject.
         /// </summary>
-        public static readonly string VERSION = ModApi.VersionInfo.version + "Build " + VersionInfo.build;
-        
+        ///
+        public static event Action<GameObject> onGameObjectPickUp;
+        /// <summary>
+        /// Occurs when the player drops a gameobject.
+        /// </summary>
+        public static event Action<GameObject> onGameObjectDrop;
+        /// <summary>
+        /// Occurs when the player throws a gameobject.
+        /// </summary>
+        public static event Action<GameObject> onGameObjectThrow;
+
+        #endregion
+
+        #region Fields
+
 #if DEBUG
         internal static bool devMode = true;
 #else
         internal static bool devMode = false;
 #endif
 
-        internal static bool displayLogsInConsole = false;
+        /// <summary>
+        /// Represents the complied runtime version of the api.
+        /// </summary>
+        public static readonly string VERSION = ModApi.VersionInfo.version + "Build " + VersionInfo.build;
 
+        internal static bool displayLogsInConsole = false;
         internal static string log;
 
-        private static ModClient instance;
+        private static ModClient _instance;
 
         private GameObject _masterAudioGameObject;
         private GameObject _player;
@@ -338,43 +352,21 @@ namespace TommoJProductions.ModApi
 
         private FsmFloat _toolWrenchSize;
 
-        private FieldInfo _modsFolderFieldInfo;
+        private string _gameDirectoryPath;
+        private FieldInfo _modsFolderPathFieldInfo;
 
-        private string[] _maskNames;
         private string _propertyString = "";
-        private string _gameDirectory;
-
         private int _propertyInt = 0;
         private float _propertyFloat = 0;
         private double _propertyDouble = 0;
+        private bool _propertyBool = false;
 
-        private readonly Dictionary<string, AudioSource> masterAudioDictionary = new Dictionary<string, AudioSource>();
-        internal readonly Dictionary<string, string> descriptionCache = new Dictionary<string, string>();
+        private readonly Dictionary<string, AudioSource> _masterAudioDictionary = new Dictionary<string, AudioSource>();
 
-        internal static bool boltAssetsLoaded { get; set; } = false;
+        private BoltManager _boltManager;
+        private PartManager _partManager;
 
-        internal static GameObject shortBoltPrefab;
-        internal static GameObject longBoltPrefab;
-        internal static GameObject screwPrefab;
-        internal static GameObject nutPrefab;
-
-        #endregion
-
-        #region Events
-
-        /// <summary>
-        /// Occurs when the player picks up a gameobject.
-        /// </summary>
-        ///
-        public static event Action<GameObject> onGameObjectPickUp;
-        /// <summary>
-        /// Occurs when the player drops a gameobject.
-        /// </summary>
-        public static event Action<GameObject> onGameObjectDrop;
-        /// <summary>
-        /// Occurs when the player throws a gameobject.
-        /// </summary>
-        public static event Action<GameObject> onGameObjectThrow;
+        private static GameObject _modapiGo;
 
         #endregion
 
@@ -383,40 +375,30 @@ namespace TommoJProductions.ModApi
         /// <summary>
         /// Gets the current <see cref="ModClient"/> instance.
         /// </summary>
-        public static ModClient getInstance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    instance = new ModClient();
-                }
-                return instance;
-            }
-        }
+        public static ModClient instance => _instance;
 
         /// <summary>
-        /// Represents the assemble assemble audio source.
+        /// Cache. Represents the assemble assemble audio source.
         /// </summary>
         public static AudioSource assembleAudio
         {
             get
             {
-                if (getInstance._assembleAudio == null)
-                    getInstance._assembleAudio = GameObject.Find("MasterAudio/CarBuilding/assemble").GetComponent<AudioSource>();
-                return getInstance._assembleAudio;
+                if (_instance._assembleAudio == null)
+                    _instance._assembleAudio = getMasterAudio("CarBuilding", "assemble");
+                return _instance._assembleAudio;
             }
         }
         /// <summary>
-        /// Represents the disassemble audio source.
+        /// Cache. Represents the disassemble audio source.
         /// </summary>
         public static AudioSource disassembleAudio
         {
             get
             {
-                if (getInstance._disassembleAudio == null)
-                    getInstance._disassembleAudio = GameObject.Find("MasterAudio/CarBuilding/disassemble").GetComponent<AudioSource>();
-                return getInstance._disassembleAudio;
+                if (_instance._disassembleAudio == null)
+                    _instance._disassembleAudio = getMasterAudio("CarBuilding", "disassemble");
+                return _instance._disassembleAudio;
             }
         }
         /// <summary>
@@ -426,9 +408,9 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (getInstance._screwAudio == null)
-                    getInstance._screwAudio = GameObject.Find("MasterAudio/CarBuilding/bolt_screw").GetComponent<AudioSource>();
-                return getInstance._screwAudio;
+                if (_instance._screwAudio == null)
+                    _instance._screwAudio = getMasterAudio("CarBuilding", "bolt_screw");
+                return _instance._screwAudio;
             }
         }
         /// <summary>
@@ -438,15 +420,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (getInstance._guiDisassemble == null)
-                    getInstance._guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
-                return getInstance._guiDisassemble.Value;
+                if (_instance._guiDisassemble == null)
+                    _instance._guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
+                return _instance._guiDisassemble.Value;
             }
             set
             {
-                if (getInstance._guiDisassemble == null)
-                    getInstance._guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
-                getInstance._guiDisassemble.Value = value;
+                if (_instance._guiDisassemble == null)
+                    _instance._guiDisassemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdisassemble");
+                _instance._guiDisassemble.Value = value;
             }
         }
         /// <summary>
@@ -456,15 +438,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (getInstance._guiAssemble == null)
-                    getInstance._guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
-                return getInstance._guiAssemble.Value;
+                if (_instance._guiAssemble == null)
+                    _instance._guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
+                return _instance._guiAssemble.Value;
             }
             set
             {
-                if (getInstance._guiAssemble == null)
-                    getInstance._guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
-                getInstance._guiAssemble.Value = value;
+                if (_instance._guiAssemble == null)
+                    _instance._guiAssemble = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIassemble");
+                _instance._guiAssemble.Value = value;
             }
         }
         /// <summary>
@@ -474,15 +456,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (getInstance._guiUse == null)
-                    getInstance._guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
-                return getInstance._guiUse.Value;
+                if (_instance._guiUse == null)
+                    _instance._guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
+                return _instance._guiUse.Value;
             }
             set
             {
-                if (getInstance._guiUse == null)
-                    getInstance._guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
-                getInstance._guiUse.Value = value;
+                if (_instance._guiUse == null)
+                    _instance._guiUse = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIuse");
+                _instance._guiUse.Value = value;
             }
         }
         /// <summary>
@@ -492,15 +474,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (getInstance._guiInteraction == null)
-                    getInstance._guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
-                return getInstance._guiInteraction.Value;
+                if (_instance._guiInteraction == null)
+                    _instance._guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
+                return _instance._guiInteraction.Value;
             }
             set
             {
-                if (getInstance._guiInteraction == null)
-                    getInstance._guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
-                getInstance._guiInteraction.Value = value;
+                if (_instance._guiInteraction == null)
+                    _instance._guiInteraction = PlayMakerGlobals.Instance.Variables.FindFsmString("GUIinteraction");
+                _instance._guiInteraction.Value = value;
             }
         }
         /// <summary>
@@ -510,15 +492,15 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (getInstance._guiDrive == null)
-                    getInstance._guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
-                return getInstance._guiDrive.Value;
+                if (_instance._guiDrive == null)
+                    _instance._guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
+                return _instance._guiDrive.Value;
             }
             set
             {
-                if (getInstance._guiDrive == null)
-                    getInstance._guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
-                getInstance._guiDrive.Value = value;
+                if (_instance._guiDrive == null)
+                    _instance._guiDrive = PlayMakerGlobals.Instance.Variables.FindFsmBool("GUIdrive");
+                _instance._guiDrive.Value = value;
             }
         }
         /// <summary>
@@ -528,33 +510,27 @@ namespace TommoJProductions.ModApi
         {
             get
             {
-                if (getInstance._playerInMenu == null)
-                    getInstance._playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
-                return getInstance._playerInMenu.Value;
+                if (_instance._playerInMenu == null)
+                    _instance._playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
+                return _instance._playerInMenu.Value;
             }
             set
             {
-                if (getInstance._playerInMenu == null)
-                    getInstance._playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
-                getInstance._playerInMenu.Value = value;
+                if (_instance._playerInMenu == null)
+                    _instance._playerInMenu = PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu");
+                _instance._playerInMenu.Value = value;
             }
         }
         /// <summary>
         /// Represents the player current vehicle state.
         /// </summary>
-        public static string playerCurrentVehicle
+        public static FsmString playerCurrentVehicle
         {
             get
             {
-                if (getInstance._playerCurrentVehicle == null)
-                    getInstance._playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
-                return getInstance._playerCurrentVehicle.Value;
-            }
-            set
-            {
-                if (getInstance._playerCurrentVehicle == null)
-                    getInstance._playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle").Value;
-                getInstance._playerCurrentVehicle.Value = value;
+                if (_instance._playerCurrentVehicle == null)
+                    _instance._playerCurrentVehicle = PlayMakerGlobals.Instance.Variables.FindFsmString("PlayerCurrentVehicle");
+                return _instance._playerCurrentVehicle;
             }
         }
         /// <summary>
@@ -565,7 +541,7 @@ namespace TommoJProductions.ModApi
             get
             {
                 PlayerModeEnum pme;
-                switch (playerCurrentVehicle)
+                switch (playerCurrentVehicle.Value)
                 {
                     case "":
                         pme = PlayerModeEnum.OnFoot;
@@ -591,59 +567,59 @@ namespace TommoJProductions.ModApi
         public static List<Bolt> loadedBolts { get; } = new List<Bolt>();
 
         /// <summary>
-        /// Gets the pickup playmakerfsm from the hand gameobject.
+        /// Cache. Gets the pickup playmakerfsm from the hand gameobject.
         /// </summary>
         public static PlayMakerFSM getHandPickUpFsm
         {
             get
             {
-                if (getInstance._pickUp == null)
-                    getInstance._pickUp = getFPS.transform.Find("1Hand_Assemble/Hand").GetPlayMaker("PickUp");
-                return getInstance._pickUp;
+                if (_instance._pickUp == null)
+                    _instance._pickUp = getFPS.transform.Find("1Hand_Assemble/Hand").GetPlayMaker("PickUp");
+                return _instance._pickUp;
             }
         }
         /// <summary>
-        /// Gets the gameobject that the player is holding.
+        /// Cache. Gets the gameobject that the player is holding.
         /// </summary>
         public static FsmGameObject getPickedUpGameObject
         {
             get
             {
-                if (getInstance._pickedUpGameObject == null)
-                    getInstance._pickedUpGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("PickedObject");
-                return getInstance._pickedUpGameObject;
+                if (_instance._pickedUpGameObject == null)
+                    _instance._pickedUpGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("PickedObject");
+                return _instance._pickedUpGameObject;
             }
         }
         /// <summary>
-        /// Gets the gameobject that the player is looking at.
+        /// Cache. Gets the gameobject that the player is looking at.
         /// </summary>
         public static FsmGameObject getRaycastHitGameObject
         {
             get
             {
-                if (getInstance._raycastHitGameObject == null)
-                    getInstance._raycastHitGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("RaycastHitObject");
-                return getInstance._raycastHitGameObject;
+                if (_instance._raycastHitGameObject == null)
+                    _instance._raycastHitGameObject = getHandPickUpFsm?.FsmVariables.GetFsmGameObject("RaycastHitObject");
+                return _instance._raycastHitGameObject;
             }
         }
         /// <summary>
-        /// Returns true if in hand mode. determines state by <see cref="getHandPickUpFsm"/>.Active.
+        /// Cache. Returns true if in hand mode. determines state by <see cref="getHandPickUpFsm"/>.Active.
         /// </summary>
         public static bool isInHandMode => getHandPickUpFsm.Active;
         /// <summary>
-        /// Returns true if player is not holding anything
+        /// Cache. Returns true if player is not holding anything
         /// </summary>
         public static bool isHandEmpty
         {
             get
             {
-                if (getInstance._handEmpty == null)
-                    getInstance._handEmpty = getHandPickUpFsm?.FsmVariables.FindFsmBool("HandEmpty");
-                return getInstance._handEmpty.Value;
+                if (_instance._handEmpty == null)
+                    _instance._handEmpty = getHandPickUpFsm?.FsmVariables.FindFsmBool("HandEmpty");
+                return _instance._handEmpty.Value;
             }
         }
         /// <summary>
-        /// Gets modloaer mods folder field info.
+        /// Cache. Gets modloaer mods folder field info.
         /// </summary>
         public static FieldInfo getModsFolderFi
         {
@@ -651,38 +627,34 @@ namespace TommoJProductions.ModApi
 
             get
             {
-                if (getInstance._modsFolderFieldInfo == null)
-                    getInstance._modsFolderFieldInfo = typeof(ModLoader).GetField("ModsFolder", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.GetField);
-                return getInstance._modsFolderFieldInfo;
+                if (_instance._modsFolderPathFieldInfo == null)
+                    _instance._modsFolderPathFieldInfo = typeof(ModLoader).GetField("ModsFolder", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.GetField);
+                return _instance._modsFolderPathFieldInfo;
             }
         }
         /// <summary>
-        /// Gets the currently used mods folder path.
+        /// Cache. Gets the currently used mods folder path.
         /// </summary>
         public static string getModsFolder => (string)getModsFolderFi.GetValue(null);
         /// <summary>
-        /// gets the currently used wrench size casted to a <see cref="Bolt.BoltSize"/>
+        /// Cache. gets the currently used wrench size casted to a <see cref="BoltSize"/>
         /// </summary>
         public static BoltSize getToolWrenchSize_boltSize
         {
             get => (BoltSize)(getToolWrenchSize_float * 100f);
         }
         /// <summary>
-        /// gets the currently used wrench size
+        /// Cache. gets the currently used wrench size
         /// </summary>
         public static float getToolWrenchSize_float
         {
             get
             {
-                if (getInstance._toolWrenchSize == null)
-                    getInstance._toolWrenchSize = PlayMakerGlobals.Instance.Variables.FindFsmFloat("ToolWrenchSize");
-                return getInstance._toolWrenchSize.Value;
+                if (_instance._toolWrenchSize == null)
+                    _instance._toolWrenchSize = PlayMakerGlobals.Instance.Variables.FindFsmFloat("ToolWrenchSize");
+                return _instance._toolWrenchSize.Value;
             }
         }
-        /// <summary>
-        /// Represents if mod api is set up.
-        /// </summary>
-        public static bool modApiSetUp => ModApiLoader.modapiGo;
         /// <summary>
         /// Gets the spanner bolting speed wait time.
         /// </summary>
@@ -692,74 +664,72 @@ namespace TommoJProductions.ModApi
         /// </summary>
         public static float getRachetBoltingSpeed => 0.08f;
         /// <summary>
-        /// Gets the active bolt material. (green bolt texture)
+        /// Cache. Gets the active bolt material. (green bolt texture)
         /// </summary>
         public static Material getActiveBoltMaterial
         {
             get
             {
-                if (getInstance._activeBoltMaterial == null)
+                if (_instance._activeBoltMaterial == null)
                 {
                     Material[] gameMaterials = Resources.FindObjectsOfTypeAll<Material>();
-                    getInstance._activeBoltMaterial = gameMaterials.First(m => m.name == "activebolt");
+                    _instance._activeBoltMaterial = gameMaterials.First(m => m.name == "activebolt");
                 }
-                return getInstance._activeBoltMaterial;
+                return _instance._activeBoltMaterial;
             }
         }
-
         /// <summary>
-        /// gets the master audio gameobject and caches a reference.
+        /// Cache. gets the master audio gameobject and caches a reference.
         /// </summary>
         public static GameObject getMasterAudioGameObject
         {
             get
             {
-                if (!getInstance._masterAudioGameObject)
-                    getInstance._masterAudioGameObject = GameObject.Find("MasterAudio");
-                return getInstance._masterAudioGameObject;
+                if (!_instance._masterAudioGameObject)
+                    _instance._masterAudioGameObject = GameObject.Find("MasterAudio");
+                return _instance._masterAudioGameObject;
             }
         }
-
         /// <summary>
-        /// cache. gets and stores a reference to the player camera gameobject (parent of player camera). PATH: "PLAYER/Pivot/AnimPivot/Camera/FPSCamera/FPSCamera"
+        /// Cache. gets and stores a reference to the player camera gameobject (parent of player camera). PATH: "PLAYER/Pivot/AnimPivot/Camera/FPSCamera/FPSCamera"
         /// </summary>
         public static GameObject getPOV
         {
             get
             {
-                if (getInstance._POV == null)
+                if (_instance._POV == null)
                 {
-                    getInstance._POV = PlayMakerGlobals.Instance.Variables.FindFsmGameObject("POV");
+                    _instance._POV = PlayMakerGlobals.Instance.Variables.FindFsmGameObject("POV");
                 }
-                return getInstance._POV.Value;
+                return _instance._POV.Value;
             }
         }
         /// <summary>
-        /// cache. gets and stores a reference to the player gameobject. PATH: "PLAYER"
+        /// Cache. gets and stores a reference to the player gameobject. PATH: "PLAYER"
         /// </summary>
         public static GameObject getPlayer
         {
             get
             {
-                if (getInstance._player == null)
+                if (_instance._player == null)
                 {
-                    getInstance._player = getPOV.transform.root.gameObject;
+                    _instance._player = getPOV.transform.root.gameObject;
                 }
-                return getInstance._player;
+                return _instance._player;
             }
         }
         /// <summary>
-        /// cache. gets and stores a reference to the player fps gameobject. PATH: "PLAYER/Pivot/AnimPivot/Camera/FPSCamera"
+        /// Cache. gets and stores a reference to the player fps gameobject. PATH: "PLAYER/Pivot/AnimPivot/Camera/FPSCamera"
         /// </summary>
         public static GameObject getFPS
         {
             get
             {
-                if (getInstance._fps == null)
+                if (_instance._fps == null)
                 {
-                    getInstance._fps = getPOV.transform.parent.gameObject;
+                    _instance._fps = getPOV.transform.parent.gameObject;
                 }
-                return getInstance._fps;
+                return _instance._fps;
             }
         }
         /// <summary>
@@ -769,71 +739,117 @@ namespace TommoJProductions.ModApi
         {
             get 
             {
-                if (getInstance._playerCamera == null)
+                if (_instance._playerCamera == null)
                 {
-                    getInstance._playerCamera = getPOV.GetComponent<Camera>();
+                    _instance._playerCamera = getPOV.GetComponent<Camera>();
                 }
-                return getInstance._playerCamera;
+                return _instance._playerCamera;
             }
         }
         /// <summary>
-        /// Gets the full game directory path on the user system.
+        /// Cache. Gets the full game directory path on the user system.
         /// </summary>
         public static string getGameFolder 
         {
             get
             {
-                if (getInstance._gameDirectory == null)
+                if (_instance._gameDirectoryPath == null)
                 {
-                    getInstance._gameDirectory = Path.GetFullPath(".");
+                    _instance._gameDirectoryPath = Path.GetFullPath(".");
                 }
-                return getInstance._gameDirectory;
+                return _instance._gameDirectoryPath;
             }
         }
         /// <summary>
-        /// Represents if the player is using the ratchet.
+        /// Cache. Represents if the player is using the ratchet.
         /// </summary>
-        public static bool playerHasRatchet
+        public static FsmBool getPlayerHasRatchet
         {
             get
             {
-                if (getInstance._playerHasRatchet == null)
+                if (_instance._playerHasRatchet == null)
                 {
-                    getInstance._playerHasRatchet = PlayMakerGlobals.Instance.Variables.GetFsmBool("PlayerHasRatchet");
+                    _instance._playerHasRatchet = PlayMakerGlobals.Instance.Variables.GetFsmBool("PlayerHasRatchet");
                 }
-                return getInstance._playerHasRatchet.Value;
+                return _instance._playerHasRatchet;
             }
         }
         /// <summary>
-        /// Represents if the ratchet is switched. (direction)
+        /// Cache. Represents if the ratchet is switched. (direction)
         /// </summary>
-        public static bool ratchetSwitch
+        public static FsmBool getRatchetSwitch
         {
             get
             {
-                if (getInstance._ratchetSwitch == null)
+                if (_instance._ratchetSwitch == null)
                 {
-                    getInstance._ratchetSwitch = getFPS.transform.FindChild("2Spanner/Pivot/Ratchet").gameObject.GetPlayMaker("Switch").FsmVariables.GetFsmBool("Switch");
+                    _instance._ratchetSwitch = getFPS.transform.FindChild("2Spanner/Pivot/Ratchet").gameObject.GetPlayMaker("Switch").FsmVariables.GetFsmBool("Switch");
                 }
-                return getInstance._ratchetSwitch.Value;
+                return _instance._ratchetSwitch;
             }
         }
         /// <summary>
         /// Represents the dev mode behaviour instance. null if <see cref="devMode"/> is <see langword="false"/>.
         /// </summary>
         public static DevMode devModeBehaviour { get; internal set; }
+        /// <summary>
+        /// Represents modapi behaviour
+        /// </summary>
+        public static LevelManager levelManager { get; internal set; }
+        /// <summary>
+        /// Cache. Gets The Bolt Manager.
+        /// </summary>
+        public static BoltManager getBoltManager
+        {
+            get
+            {
+                if (_instance._boltManager == null)
+                {
+                    _instance._boltManager = new BoltManager();
+                }
+                return _instance._boltManager;
+            }
+        }
+        /// <summary>
+        /// Cache. Gets The Part Manager.
+        /// </summary>
+        public static PartManager getPartManager
+        {
+            get
+            {
+                if (_instance._partManager == null)
+                {
+                    _instance._partManager = new PartManager();
+                }
+                return _instance._partManager;
+            }
+        }
+        /// <summary>
+        /// Represents the gameobject that holds the dev mode behaviour. gameobject is used to detect if game has been re-loaded/changed. used to inject mod api related stuff.
+        /// </summary>
+        public static GameObject modapiGo => _modapiGo;
+        /// <summary>
+        /// Represents if ModAPI is Loaded or not.
+        /// </summary>
+        public static bool loaded => ModApiLoader.initialized && _modapiGo != null;
 
         #endregion
 
         #region Methods
 
+        internal static void setModApiGo(GameObject gameObject) => _modapiGo = gameObject;
+
         /// <summary>
-        /// sets <see cref="instance"/> to null. thus next call to <see cref="getInstance"/> will create a new instance.
+        /// sets <see cref="_instance"/> to null. thus next call to <see cref="instance"/> will create a new instance.
         /// </summary>
-        internal static void deleteCache() 
+        internal static void refreshCache() 
         {
-            instance = null;
-            Database.Database.deleteCache();
+            _instance = new ModClient();
+            loadedParts.Clear();
+            loadedBolts.Clear();
+            Trigger.loadedTriggers.Clear();
+            Trigger.triggerDictionary.Clear();
+            Database.Database.refreshCache();
         }
         /// <summary>
         /// finds child object of name <paramref name="childName"/> and gets playmaker called, "Data".
@@ -881,7 +897,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 16.07.2022
 
-            AudioSource source = getSourceFromMasterAudio(soundType, variantName);
+            AudioSource source = getMasterAudio(soundType, variantName);
             if (source)
             {
                 source.transform.position = transform.position;
@@ -898,7 +914,7 @@ namespace TommoJProductions.ModApi
         {
             // Written, 16.07.2022
 
-            AudioSource source = getSourceFromMasterAudio(soundType, variantName);
+            AudioSource source = getMasterAudio(soundType, variantName);
             if (source)
             {
                 source.transform.position = transform.position;
@@ -912,17 +928,17 @@ namespace TommoJProductions.ModApi
         /// </summary>
         /// <param name="soundType">The sound type group. eg => CarBuilding</param>
         /// <param name="variantName">The sound variant in the soundType group. eg => assemble</param>
-        public static AudioSource getSourceFromMasterAudio(string soundType, string variantName)
+        public static AudioSource getMasterAudio(string soundType, string variantName)
         {
             // Written, 16.07.2022
 
             string search = $"{soundType}/{variantName}";
             AudioSource source;
-            if (!getInstance.masterAudioDictionary.TryGetValue(search, out source))
+            if (!_instance._masterAudioDictionary.TryGetValue(search, out source))
             {
                 source = getMasterAudioGameObject.transform.Find(search)?.gameObject.GetComponent<AudioSource>();
                 if (source)
-                    getInstance.masterAudioDictionary.Add(search, source);
+                    _instance._masterAudioDictionary.Add(search, source);
                 else
                     print($"Error: Could not find audio path: MasterAudio/{search}.");
             }
@@ -1083,30 +1099,46 @@ namespace TommoJProductions.ModApi
 
             Type t = e.GetType();
             Array enumNames = Enum.GetNames(t);
-            string description = t.getDescription();
             using (new VerticalScope())
             {
-                drawProperty(description + ":");
+                drawProperty(t.Name + ":");
                 using (new HorizontalScope())
                 {
                     foreach (string name in enumNames)
                     {
-                        description = t.GetField(name).getDescription();
-
-                        if (string.IsNullOrEmpty(description))
-                            description = name;
-
-                        if (Toggle(e.ToString() == name, description))
+                        if (Toggle(e.ToString() == name, name))
                             e = (T)Enum.Parse(t, name);
                     }
                 }
             }
-        }/// <summary>
-         /// [GUI] draws an enum that can be edited as a list of toggles.
-         /// </summary>
-         /// <typeparam name="T">The type of enum</typeparam>
-         /// <param name="e">Reference enum (selected)</param>
-         /// <param name="name">The name of the member enum.</param>
+        }
+        /// <summary>
+        /// [GUI] draws an enum that can be edited as a list of toggles.
+        /// </summary>
+        /// <typeparam name="T">The type of enum</typeparam>
+        /// <param name="e">Reference enum (selected)</param>
+        public static void drawPropertyEnumVertical<T>(ref T e) where T : Enum
+        {
+            // Written, 25.05.2022
+
+            Type t = e.GetType();
+            Array enumNames = Enum.GetNames(t);
+            using (new VerticalScope())
+            {
+                drawProperty(t.Name + ":");
+                foreach (string name in enumNames)
+                {
+                    if (Toggle(e.ToString() == name, name))
+                        e = (T)Enum.Parse(t, name);
+                }
+            }
+        }
+        /// <summary>
+        /// [GUI] draws an enum that can be edited as a list of toggles.
+        /// </summary>
+        /// <typeparam name="T">The type of enum</typeparam>
+        /// <param name="e">Reference enum (selected)</param>
+        /// <param name="name">The name of the member enum.</param>
         public static void drawPropertyEnum<T>(ref T e, string name) where T : Enum
         {
             // Written, 25.05.2022
@@ -1167,12 +1199,12 @@ namespace TommoJProductions.ModApi
             using (new HorizontalScope())
             {
                 Label(propertyName);
-                getInstance._propertyString = TextField(property, maxLength);
+                _instance._propertyString = TextField(property, maxLength);
             }
 
-            if (getInstance._propertyString != property)
+            if (_instance._propertyString != property)
             {
-                property = getInstance._propertyString;
+                property = _instance._propertyString;
                 return true;
             }
             return false;
@@ -1183,7 +1215,7 @@ namespace TommoJProductions.ModApi
         /// <param name="propertyName">The property name</param>
         /// <param name="property">the reference string to draw/edit</param>
         /// <param name="maxLength">max length of textfield (number of letters.)</param>
-        /// <returns><see langword="true"/> returns the property</returns>
+        /// <returns>returns the property</returns>
         public static string drawPropertyEdit(string propertyName, string property, int maxLength = 10)
         {
             // Written 19.08.2022
@@ -1191,6 +1223,7 @@ namespace TommoJProductions.ModApi
             using (new HorizontalScope())
             {
                 Label(propertyName);
+                
                 return TextField(property, maxLength);
             }
         }
@@ -1205,13 +1238,13 @@ namespace TommoJProductions.ModApi
         {
             // Written 13.11.2022
 
-            getInstance._propertyString = drawPropertyEdit(propertyName, property.ToString());
+            _instance._propertyString = drawPropertyEdit(propertyName, property.ToString());
 
-            int.TryParse(getInstance._propertyString, out getInstance._propertyInt);
+            int.TryParse(_instance._propertyString, out _instance._propertyInt);
 
-            if (getInstance._propertyInt != property)
+            if (_instance._propertyInt != property)
             {
-                property = getInstance._propertyInt;
+                property = _instance._propertyInt;
                 return true;
             }
             return false;
@@ -1241,13 +1274,13 @@ namespace TommoJProductions.ModApi
         {
             // Written 28.08.2022
 
-            getInstance._propertyString = drawPropertyEdit(propertyName, property.ToString());
+            _instance._propertyString = drawPropertyEdit(propertyName, property.ToString());
 
-            float.TryParse(getInstance._propertyString, out getInstance._propertyFloat);
+            float.TryParse(_instance._propertyString, out _instance._propertyFloat);
 
-            if (getInstance._propertyFloat != property)
+            if (_instance._propertyFloat != property)
             {
-                property = getInstance._propertyFloat;
+                property = _instance._propertyFloat;
                 return true;
             }
             return false;
@@ -1277,13 +1310,13 @@ namespace TommoJProductions.ModApi
         {
             // Written 03.10.2022
 
-            getInstance._propertyString = drawPropertyEdit(propertyName, property.ToString());
+            _instance._propertyString = drawPropertyEdit(propertyName, property.ToString());
 
-            double.TryParse(getInstance._propertyString, out getInstance._propertyDouble);
+            double.TryParse(_instance._propertyString, out _instance._propertyDouble);
 
-            if (getInstance._propertyDouble != property)
+            if (_instance._propertyDouble != property)
             {
-                property = getInstance._propertyDouble;
+                property = _instance._propertyDouble;
                 return true;
             }
             return false;
@@ -1307,9 +1340,17 @@ namespace TommoJProductions.ModApi
         /// </summary>
         /// <param name="propertyName">the property bool name</param>
         /// <param name="property">the reference bool to draw/edit</param>
-        public static void drawPropertyBool(string propertyName, ref bool property)
+        /// <returns><see langword="true"/> if <paramref name="property"/> has changed.</returns>
+        public static bool drawPropertyBool(string propertyName, ref bool property)
         {
-            property = Toggle(property, " " + propertyName);
+            _instance._propertyBool = Toggle(property, " " + propertyName);
+
+            if (_instance._propertyBool != property)
+            {
+                property = _instance._propertyBool;
+                return true;
+            }
+            return false;
         }
         /// <summary>
         /// [GUI] draws a bool that can be edited
@@ -1430,12 +1471,12 @@ namespace TommoJProductions.ModApi
 
             if (masks != null && masks.Length > 0)
             {
-                getInstance._maskNames = new string[masks.Length];
+                string[] maskNames = new string[masks.Length];
                 for (int i = 0; i < masks.Length; i++)
                 {
-                    getInstance._maskNames[i] = masks[i].ToString();
+                    maskNames[i] = masks[i].ToString();
                 }
-                return LayerMask.GetMask(getInstance._maskNames);
+                return LayerMask.GetMask(maskNames);
             }
             return ~0;
         }
@@ -1524,7 +1565,35 @@ namespace TommoJProductions.ModApi
         internal static void invokeThrowEvent(GameObject gameObject)
         {
             onGameObjectThrow?.Invoke(gameObject);
-        }        
+        }
+
+        /// <summary>
+        /// Assigns ES2 types to a type. 
+        /// </summary>
+        /// <typeparam name="T">The type to link to a ES2 type</typeparam>
+        /// <typeparam name="_ES2Type">The ES2 Type to link to (<typeparamref name="T"/>)</typeparam>
+        public static void addES2Type<T, _ES2Type>() where _ES2Type : ES2Type, new() where T : new()
+        {
+            // Written, 02.09.2023
+
+            ES2.Init();
+
+            Type saveType = typeof(T);
+            if (!ES2TypeManager.types.TryGetValue(saveType, out ES2Type eTypeOut))
+            {
+                _ES2Type eType = new _ES2Type();
+                eType.type = saveType;
+                eType.hash = ES2Type.GetHash(saveType);
+
+                ES2TypeManager.AddES2Type(eType);
+
+                Debug.Log($"[ModApiLoader] Added SaveType ({saveType.Name}) to ES2Type ({eType.GetType().Name})");
+            }
+            else
+            {
+                Debug.Log($"Checked Save Type ({saveType.Name}) to ({eTypeOut.GetType().Name})");
+            }
+        }
 
         #endregion       
     }

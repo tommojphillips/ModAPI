@@ -1,28 +1,28 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEngine;
 
 namespace TommoJProductions.ModApi.Attachable
 {
-    // Written, 11.05.2022
-
-
     /// <summary>
-    /// Represents all settings for a bolt.
+    /// Represents bolt settings eg => the size of ther bolt.
     /// </summary>
-    public class BoltSettings
+    public class BoltSettings : BaseBoltSettings
     {
         /// <summary>
         /// for initializing a new instance of bolt with custom name.
         /// </summary>
         public string name = null;
-
         /// <summary>
         /// Represents the bolts type.
         /// </summary>
-        public BoltType boltType = BoltType.shortBolt;
+        public BoltType type = BoltType.shortBolt;
         /// <summary>
-        /// Represents the tool size required to un/tighten this bolt
+        /// If <see langword="true"/>, the rachet can be used to tighten and loosen the fastener.
         /// </summary>
-        public BoltSize boltSize = BoltSize._7mm;
+        public bool canUseRachet = true;
         /// <summary>
         /// Represents the position step. (how quick the position of the bolt moves in <see cref="posDirection"/>. when un/tightening)
         /// </summary>
@@ -32,14 +32,6 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public float rotStep = 30;
         /// <summary>
-        /// Represents the tightness step.
-        /// </summary>
-        public float tightnessStep = 1;
-        /// <summary>
-        /// Represents the max tightness.
-        /// </summary>
-        public float maxTightness = 8;
-        /// <summary>
         /// Represents positional direction of bolt.
         /// </summary>
         public Vector3 posDirection = Vector3.forward;
@@ -48,41 +40,13 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public Vector3 rotDirection = Vector3.forward;
         /// <summary>
-        /// Represents the custom bolt prefab to use. NOTE: Set <see cref="boltType"/> to <see cref="BoltType.custom"/>.
-        /// </summary>
-        public GameObject customBoltPrefab = null;
-        /// <summary>
-        /// if true, <see cref="Bolt.boltFunction"/> does not check if tightness has changed (tightness is either completely tight or loose). therefore invokes bolt event/s anyway. eg => if bolt is already tight and user tries to tighten more. it will call <see cref="Bolt.onTight"/> anyway.
-        /// </summary>
-        public bool ignoreTightnessChangedCheck = false;
-        /// <summary>
-        /// if true adds a nut to the other side of the bolt. note both bolt and nut will need to be tightened.
-        /// </summary>
-        public bool addNut = false;
-        /// <summary>
-        /// Settings for <see cref="addNut"/> setting. 
-        /// </summary>
-        public AddNutSettings addNutSettings = default;
-        /// <summary>
         /// if true, highlights the bolt green when the bolt is activated.
         /// </summary>
-        public bool highlightBoltWhenActive = true;
+        public bool highlightWhenActive = true;
         /// <summary>
-        /// If true, Bolt is visible and logic is active when uninstalled. only relevant when <see cref="visibleWhenUninstalled"/> is <see langword="true"/>.
+        /// If true, Bolt is visible and logic is active when uninstalled.
         /// </summary>
         public bool activeWhenUninstalled = false;
-        /// <summary>
-        /// if not null. the bolt will be parented to this transform instead of the boltParent gameObject on the bolt's part.
-        /// </summary>
-        public Transform customParent = null;
-        /// <summary>
-        /// If true, parents the bolt to the trigger at the specified index, <see cref="parentBoltToTriggerIndex"/>.
-        /// </summary>
-        public bool parentBoltToTrigger = false;
-        /// <summary>
-        /// Represents the trigger index to parent the bolt on.
-        /// </summary>
-        public int parentBoltToTriggerIndex = 0;
 
         /// <summary>
         /// Initializes new instance of b settings with default values.
@@ -92,29 +56,29 @@ namespace TommoJProductions.ModApi.Attachable
         /// inits new instance of bolt settings and copies instance values.
         /// </summary>
         /// <param name="s">the instance of bolt settings to copy.</param>
-        public BoltSettings(BoltSettings s)
+        public BoltSettings(BoltSettings s) : base(s)
         {
             if (s != null)
             {
                 name = s.name;
-                boltType = s.boltType;
-                boltSize = s.boltSize;
+                type = s.type;
                 posStep = s.posStep;
                 rotStep = s.rotStep;
-                tightnessStep = s.tightnessStep;
-                maxTightness = s.maxTightness;
                 posDirection = s.posDirection;
                 rotDirection = s.rotDirection;
-                customBoltPrefab = s.customBoltPrefab;
-                ignoreTightnessChangedCheck = s.ignoreTightnessChangedCheck;
-                addNut = s.addNut;
-                addNutSettings = new AddNutSettings(s.addNutSettings);
-                highlightBoltWhenActive = s.highlightBoltWhenActive;
+                highlightWhenActive = s.highlightWhenActive;
                 activeWhenUninstalled = s.activeWhenUninstalled;
-                customParent = s.customParent;
-                parentBoltToTrigger = s.parentBoltToTrigger;
-                parentBoltToTriggerIndex = s.parentBoltToTriggerIndex;
+                canUseRachet = s.canUseRachet;
             }
+        }
+
+        /// <summary>
+        /// Copies field values to a new instance and returns.
+        /// </summary>
+        /// <returns>A new instance with the same values</returns>
+        public new BoltSettings copy() 
+        {
+            return new BoltSettings(this);
         }
     }
 }

@@ -28,23 +28,13 @@ namespace TommoJProductions.ModApi.Database
         private Status status;
         private DatabaseVehicles vehicles;
 
-        private static Database instance;
+        private static Database _instance;
 
-        private static Database getInstance 
-        {
-            get 
-            {
-                if (instance == null)
-                {
-                    instance = new Database();
-                }
-                return instance;
-            }
-        }
+        private static Database instance => _instance;
 
-        internal static void deleteCache() 
+        internal static void refreshCache() 
         {
-            instance = null;
+            _instance = new Database();
         }
 
         /// <summary>
@@ -54,9 +44,9 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (getInstance.motor == null)
-                    getInstance.motor = new DatabaseMotor();
-                return getInstance.motor;
+                if (_instance.motor == null)
+                    _instance.motor = new DatabaseMotor();
+                return _instance.motor;
             }
         }
         /// <summary>
@@ -66,9 +56,9 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (getInstance.mechanics == null)
-                    getInstance.mechanics = new DatabaseMechanics();
-                return getInstance.mechanics;
+                if (_instance.mechanics == null)
+                    _instance.mechanics = new DatabaseMechanics();
+                return _instance.mechanics;
             }
         }
         /// <summary>
@@ -78,9 +68,9 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (getInstance.orders == null)
-                    getInstance.orders = new DatabaseOrders();
-                return getInstance.orders;
+                if (_instance.orders == null)
+                    _instance.orders = new DatabaseOrders();
+                return _instance.orders;
             }
         }
         /// <summary>
@@ -90,9 +80,9 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (getInstance.status == null)
-                    getInstance.status = new Status();
-                return getInstance.status;
+                if (_instance.status == null)
+                    _instance.status = new Status();
+                return _instance.status;
             }
         }
         /// <summary>
@@ -102,9 +92,9 @@ namespace TommoJProductions.ModApi.Database
         {
             get
             {
-                if (getInstance.vehicles == null)
-                    getInstance.vehicles = new DatabaseVehicles();
-                return getInstance.vehicles;
+                if (_instance.vehicles == null)
+                    _instance.vehicles = new DatabaseVehicles();
+                return _instance.vehicles;
             }
         }
 

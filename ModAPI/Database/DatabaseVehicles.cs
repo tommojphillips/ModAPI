@@ -132,7 +132,9 @@ namespace TommoJProductions.ModApi.Database
                 return _gifu;
             }
         }
-
+        /// <summary>
+        /// Represents the all vehicles in game as an array. (includes mod vehicles)
+        /// </summary>
         public DatabaseVehicle[] databaseVehicles 
         {
             get
@@ -148,6 +150,15 @@ namespace TommoJProductions.ModApi.Database
                 }
                 return _databaseVehicles;
             }
+        }
+        /// <summary>
+        /// Refreshes data base vehicles. next call to <see cref="databaseVehicles"/> will refresh array.
+        /// </summary>
+        public void refreshVehicles()
+        {
+            // Written, 20.08.2023
+
+            _databaseVehicles = null;
         }
     }
 }

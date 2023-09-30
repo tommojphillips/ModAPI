@@ -10,6 +10,9 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions
     {
         // Written, 13.06.2022
 
+        /// <summary>
+        /// The callback type.
+        /// </summary>
         public abstract CallbackTypeEnum callbackType { get; }
 
         /// <summary>
@@ -20,7 +23,9 @@ namespace TommoJProductions.ModApi.PlaymakerExtentions
         /// The func to invoke.
         /// </summary>
         public event Func<bool> inInvokeAction;
-
+        /// <summary>
+        /// The current delegate.
+        /// </summary>
         public Delegate action;
 
         private bool? invokedFinish;

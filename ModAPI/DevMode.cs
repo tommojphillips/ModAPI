@@ -24,65 +24,91 @@ namespace TommoJProductions.ModApi
     public class DevMode : MonoBehaviour
     {
         private static Part _inspectionPart;
-        private bool inspectionPartSet = false;
-        private Vector3[] inspectionPartPivotPosition;
-        private Vector3[] inspectionPartPivotEuler;
-        private Vector3[] inspectionPartTriggerPosition;
-        private Vector3[] inspectionPartTriggerEuler;
-        private Vector3[] inspectionPartTriggerSize;
-        private bool inspectingBolt = false;
-        private bool inspectionBoltSet = false;
+        private bool _inspectionPartSet = false;
+        private Vector3[] _inspectionPartPivotPosition;
+        private Vector3[] _inspectionPartPivotEuler;
+        private Vector3[] _inspectionPartTriggerPosition;
+        private Vector3[] _inspectionPartTriggerEuler;
+        private float[] _inspectionPartTriggerRadius;
+        private float _tightnessThresholdPercent;
+        private bool _inspectingBolt = false;
+        private bool _inspectionBoltSet = false;
 
         internal static Bolt inspectionBolt;
         internal static Vector3 inspectionPosition;
         internal static Vector3 inspectionEuler;
+        internal static Vector3 inspectionPosDir;
+        internal static Vector3 inspectionRotDir;
+        internal static float inspectionPosStep;
+        internal static float inspectionRotStep;
+        private BoltWithNut inspectionBoltWithNut;
         internal static float inspectionOffset;
 
         internal static bool listGameParts = false;
         internal static bool listModApiParts = false;
         internal static bool showLog = false;
 
-        private readonly int top = 5;
-        private readonly int margin = 5;
-        private int height => Screen.height - (top  * 2);
-        private readonly int width = 500;
-        private readonly int logWidth = 1000;
-        private int left => Screen.width - width - margin;
-        private Vector2 triggerScroll;
-        private Vector2 gamePartsScroll;
-        private Vector2 logScroll;
-        private ScrollViewScope scrollViewScope;
-        private Color c1 = new Color32(0, 178, 230, 176);
-        private readonly GUIStyle style = new GUIStyle();
-        private Texture2D defaultBackground;
-        private Texture2D primaryItemBackground;
-        private Texture2D secondaryItemBackground;
+        private readonly int _top = 5;
+        private readonly int _margin = 5;
+        private int _height => Screen.height - (_top  * 2);
+        private readonly int _width = 500;
+        private int _left => Screen.width - _width - _margin;
+        private Vector2 _triggerScroll;
+        private Vector2 _gamePartsScroll;
+        private Vector2 _logScroll;
+        private ScrollViewScope _scrollViewScope;
+        private Color _c1 = new Color32(0, 180, 230, 176);
+        private Color _c2 = new Color32(0, 180, 120, 176);
+        private readonly GUIStyle _style = new GUIStyle();
+        private readonly GUIStyle _borderStyle = new GUIStyle();
+        private Texture2D _defaultBackground;
+        private Texture2D _primaryItemBackground;
+        private Texture2D _secondaryItemBackground;
 
-        private GamePart[] allGameParts;
-        private GamePart[] listedGameParts;
-        private Part[] listedModApiParts;
+        private GamePart[] _allGameParts;
+        private GamePart[] _listedGameParts;
+        private Part[] _listedModApiParts;
 
-        private bool showWearOnlyParts = false;
-        private bool showBoltOnlyParts = false;
-        private string searchString = string.Empty;
+        private bool _showWearOnlyParts = false;
+        private bool _showBoltOnlyParts = false;
+        private string _searchString = string.Empty;
 
-        private bool toggleBoltDetectionStats;
-        private bool toggleLoaderInfo;
-        private bool showDevGui = true;
+        private bool _toggleBoltDetectionStats;
+        private bool _toggleLoaderInfo;
+        private bool _showDevGui = true;
+
+        private Bolt[] _selectedBolts;
+        private bool _showPartBolts;
+        private Trigger _selectedBoltTrigger;
+        private Trigger[] _inspectionPartTriggers;
+        private bool _inspectionTriggersHasBolts;
+        private bool _showAllBolts;
+        private bool _inspectTriggers;
+        private BoltManager _boltManager;
+        private PartManager _partManager;
 
         void Start()
         {
-            defaultBackground = createTextureFromColor(1, 1, new Color32(125, 125, 125, 255));
-            primaryItemBackground = createTextureFromColor(1, 1, new Color32(75, 140, 200, 255));
-            secondaryItemBackground = createTextureFromColor(1, 1, new Color32(24, 120, 130, 255));
+            _defaultBackground = createTextureFromColor(1, 1, new Color32(125, 125, 125, 255));
+            _primaryItemBackground = createTextureFromColor(1, 1, new Color32(75, 140, 200, 255));
+            _secondaryItemBackground = createTextureFromColor(1, 1, new Color32(24, 120, 130, 255));
 
-            allGameParts = (Database.Database.databaseMotor.getProperties().Select(p => (GamePart)p.GetValue(Database.Database.databaseMotor, null))).ToArray();
+            _allGameParts = (Database.Database.databaseMotor.getProperties().Select(p => (GamePart)p.GetValue(Database.Database.databaseMotor, null))).ToArray();
+
+            _style.border = new RectOffset(1, 1, top: 1, 2);
+            _style.alignment = TextAnchor.MiddleCenter;
+            _style.fontSize = 14;
+
+            _borderStyle.border = new RectOffset(5, 5, 5, 5);
+
+            _boltManager = getBoltManager;
+            _partManager = getPartManager;
         }
         void OnGUI() 
         {
             // Written, 03.07.2022
 
-            GUI.skin.box.normal.background = defaultBackground;
+            GUI.skin.box.normal.background = _defaultBackground;
 
             if (devMode)
             {
@@ -91,76 +117,211 @@ namespace TommoJProductions.ModApi
 
             if (_inspectionPart)
             {
-                Trigger t;
-                int tl;
-                
-                tl = _inspectionPart.triggers.Length;
-
-                if (!inspectionPartSet)
+                if (!_inspectionPartSet)
                 {
-                    inspectionPartPivotPosition = new Vector3[tl];
-                    inspectionPartPivotEuler = new Vector3[tl];
-                    inspectionPartTriggerPosition = new Vector3[tl];
-                    inspectionPartTriggerEuler = new Vector3[tl];
-                    inspectionPartTriggerSize = new Vector3[tl];
+                    Trigger t;
+                    int tl;
+                    _inspectionPartTriggers = Trigger.loadedTriggers.Where(_t => _t.callback.triggerData == _inspectionPart.triggerData).ToArray();
+                    _inspectionTriggersHasBolts = _inspectionPartTriggers.Any(_t => _t.hasBolts);
+                    _tightnessThresholdPercent = _inspectionPart.partSettings.tightnessThreshold * 100;
+
+                    tl = _inspectionPartTriggers.Length;
+                    _inspectionPartPivotPosition = new Vector3[tl];
+                    _inspectionPartPivotEuler = new Vector3[tl];
+                    _inspectionPartTriggerPosition = new Vector3[tl];
+                    _inspectionPartTriggerEuler = new Vector3[tl];
+                    _inspectionPartTriggerRadius = new float[tl];
 
                     for (int i = 0; i < tl; i++)
                     {
-                        t = _inspectionPart.triggers[i];
+                        t = _inspectionPartTriggers[i];
 
-                        inspectionPartPivotPosition[i] = t.partPivot.transform.localPosition;
-                        inspectionPartPivotEuler[i] = t.partPivot.transform.localEulerAngles;
-
-                        inspectionPartTriggerPosition[i] = t.triggerGameObject.transform.localPosition;
-                        inspectionPartTriggerEuler[i] = t.triggerGameObject.transform.localEulerAngles;
-                        inspectionPartTriggerSize[i] = t.triggerGameObject.transform.localScale;
+                        if (!t.settings.useTriggerTransformData)
+                        {
+                            _inspectionPartPivotPosition[i] = t.partPivot.transform.localPosition;
+                            _inspectionPartPivotEuler[i] = t.partPivot.transform.localEulerAngles;
+                        }
+                        _inspectionPartTriggerPosition[i] = t.gameObject.transform.localPosition;
+                        _inspectionPartTriggerEuler[i] = t.gameObject.transform.localEulerAngles;
+                        _inspectionPartTriggerRadius[i] = t.collider.radius;
                     }
 
-                    inspectionPartSet = true;
+                    _selectedBoltTrigger = _inspectionPartTriggers[0];
+                    if (_showPartBolts)
+                    {
+                        _selectedBolts = _inspectionPart.bolts;
+                    }
+                    else if (_showAllBolts)
+                    {
+                        getAllBolts();
+                    }
+                    else
+                    {
+                        updateSelectedBolts(_selectedBoltTrigger);
+                    }
+
+                    _inspectionPartSet = true;
                 }
                 drawPartGui();
-                if (_inspectionPart.hasBolts)
+                if (_inspectionPart.hasBolts || _inspectionTriggersHasBolts)
                 {
-                    if (inspectingBolt)
+                    if (_inspectingBolt)
                     {
-                        if (!inspectionBoltSet)
+                        if (!_inspectionBoltSet)
                         {
                             if (inspectionBolt == null)
-                                inspectionBolt = _inspectionPart.bolts[0];
+                            {
+                                if (_inspectionPart.hasBolts)
+                                {
+                                    inspectionBolt = _inspectionPart.bolts[0];
+                                }
+                                else if (_selectedBoltTrigger.hasBolts)
+                                {
+                                    inspectionBolt = _inspectionPartTriggers[0].bolts[0];
+                                }
+                            }
                             inspectionPosition = inspectionBolt.startPosition;
                             inspectionEuler = inspectionBolt.startEulerAngles;
-                            if (inspectionBolt.boltSettings.addNut)
-                                inspectionOffset = inspectionBolt.boltSettings.addNutSettings.nutOffset;
-                            inspectionBoltSet = true;
+                            inspectionPosDir = inspectionBolt.settings.posDirection;
+                            inspectionRotDir = inspectionBolt.settings.rotDirection;
+                            inspectionPosStep = inspectionBolt.settings.posStep;
+                            inspectionRotStep = inspectionBolt.settings.rotStep;
+
+                            inspectionBoltWithNut = inspectionBolt as BoltWithNut;
+
+                            if (inspectionBoltWithNut != null)
+                            {
+                                inspectionOffset = inspectionBoltWithNut.boltWithNutSettings.offset;
+                            }
+
+                            _inspectionBoltSet = true;
                         }
-                        using (AreaScope area = new AreaScope(new Rect(left - width - margin, top, width, height)))
+                        using (AreaScope area = new AreaScope(new Rect(_left - _width - _margin, _top, _width, _height)))
                         {
                             using (new HorizontalScope("box"))
-                            { 
-                                style.border = new RectOffset(1, 1, top: 1, 2);
-                                style.alignment = TextAnchor.MiddleCenter;
-                                style.fontSize = 14;
-                                for (int i = 0; i < _inspectionPart.bolts.Length; i++)
+                            {
+                                if (_showPartBolts)
                                 {
-                                    if (_inspectionPart.bolts[i] == inspectionBolt)
+                                    _style.normal.textColor = _c1;
+                                    GUI.skin.box.normal.background = _primaryItemBackground;
+                                }
+                                else
+                                {
+                                    _style.normal.textColor = Color.white;
+                                    GUI.skin.box.normal.background = _secondaryItemBackground;
+                                }
+                                if (Button("Part bolts", _style))
+                                {
+                                    _showPartBolts = !_showPartBolts;
+
+                                    if (_showPartBolts)
                                     {
-                                        style.normal.textColor = c1;
-                                        GUI.skin.box.normal.background = primaryItemBackground;
+                                        _showAllBolts = false;
+                                        _selectedBolts = _inspectionPart.bolts;
                                     }
                                     else
                                     {
-                                        style.normal.textColor = Color.white;
-                                        GUI.skin.box.normal.background = secondaryItemBackground;
-                                    }
-
-                                    if (Button(_inspectionPart.bolts[i].boltModel.name, style))
-                                    {
-                                        setInspectionBolt(_inspectionPart.bolts[i]);
+                                        updateSelectedBolts(_selectedBoltTrigger);
+                                        setInspectionBolt(_selectedBolts[0]);
                                     }
                                 }
-                                GUI.skin.box.normal.background = defaultBackground;
+                                if (_showAllBolts)
+                                {
+                                    _style.normal.textColor = _c1;
+                                    GUI.skin.box.normal.background = _primaryItemBackground;
+                                }
+                                else
+                                {
+                                    _style.normal.textColor = Color.white;
+                                    GUI.skin.box.normal.background = _secondaryItemBackground;
+                                }
+                                if (Button("All bolts", _style))
+                                {
+                                    _showAllBolts = !_showAllBolts;
+
+                                    if (_showAllBolts)
+                                    {
+                                        _showPartBolts = false;
+                                        getAllBolts();
+                                    }
+                                    else
+                                    {
+                                        updateSelectedBolts(_selectedBoltTrigger);
+                                        setInspectionBolt(_selectedBolts[0]);
+                                    }
+                                }
+
+                                if (!_showPartBolts && !_showAllBolts)
+                                {
+                                    for (int i = 0; i < _inspectionPartTriggers.Length; i++)
+                                    {
+                                        if (_inspectionPartTriggers[i] == _selectedBoltTrigger)
+                                        {
+                                            _style.normal.textColor = _c1;
+                                            GUI.skin.box.normal.background = _primaryItemBackground;
+                                        }
+                                        else
+                                        {
+                                            _style.normal.textColor = Color.white;
+                                            GUI.skin.box.normal.background = _secondaryItemBackground;
+                                        }
+                                        if (Button(_inspectionPartTriggers[i].triggerID, _style))
+                                        {
+                                            if (_inspectionPartTriggers[i].triggerID == _selectedBoltTrigger.triggerID)
+                                                continue;
+
+                                            _selectedBoltTrigger = _inspectionPartTriggers[i];
+                                            updateSelectedBolts(_inspectionPartTriggers[i]);
+                                            setInspectionBolt(_selectedBolts[0]);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (_inspectionTriggersHasBolts)
+                                    {
+                                        if (Button("Triggers ->"))
+                                        {
+                                            _showAllBolts = false;
+                                            _showPartBolts = false;
+                                        }
+                                    }
+                                }
+                                GUI.skin.box.normal.background = _defaultBackground;
                             }
-                            drawBoltGui();
+
+                            if (_selectedBolts != null && _selectedBolts.Length > 0)
+                            {
+                                using (new HorizontalScope("box"))
+                                {
+                                    for (int i = 0; i < _selectedBolts.Length; i++)
+                                    {
+                                        if (_selectedBolts[i].model == _boltManager.bolt.Value)
+                                        {
+                                            _style.normal.textColor = _c2;
+                                        }                                        
+                                        else if (_selectedBolts[i] == inspectionBolt)
+                                        {
+                                            _style.normal.textColor = _c1;
+                                        }
+                                        else
+                                        {
+                                            _style.normal.textColor = Color.white;
+                                        }
+
+                                        if (Button(_selectedBolts[i].model.name, _style))
+                                        {
+                                            setInspectionBolt(_selectedBolts[i]);
+                                        }
+                                    }
+                                }
+                                drawBoltGui();
+                            }
+                            else
+                            {
+                                using (new HorizontalScope("box"))
+                                    Label("No Bolts");
+                            }
                         }
                     }
                 }
@@ -174,16 +335,37 @@ namespace TommoJProductions.ModApi
             }
         }
 
+        private void getAllBolts()
+        {
+            // Written, 25.08.2023
+
+            List<Bolt> bolts = new List<Bolt>();
+            if (_inspectionPart.hasBolts)
+                bolts.AddRange(_selectedBoltTrigger.bolts);
+
+            for (int i = 0; i < _inspectionPartTriggers.Length; i++)
+            {
+                if (_inspectionPartTriggers[i].hasBolts)
+                    bolts.AddRange(_inspectionPartTriggers[i].bolts);
+            }
+            _selectedBolts = bolts.ToArray();
+        }
+        private void updateSelectedBolts(Trigger trigger)
+        {
+            // Written, 19.08.2023
+
+            _selectedBolts = trigger.bolts;
+        }
         internal void setInspectionPart(Part part)
         {
             _inspectionPart = part;
-            inspectionPartSet = false;
+            _inspectionPartSet = false;
             setInspectionBolt(null);
         }
         internal void setInspectionBolt(Bolt bolt)
         {
             inspectionBolt = bolt;
-            inspectionBoltSet = false;
+            _inspectionBoltSet = false;
         }
 
         private void drawToolStatsGui()
@@ -195,9 +377,9 @@ namespace TommoJProductions.ModApi
         }
         private void drawDevGui()
         {
-            using (AreaScope area = new AreaScope(new Rect(margin, top, width, height)))
+            using (AreaScope area = new AreaScope(new Rect(_margin, _top, _width, _height)))
             {
-                if (showDevGui)
+                if (_showDevGui)
                 {
                     using (new VerticalScope("box", Width(275)))
                     {
@@ -205,12 +387,12 @@ namespace TommoJProductions.ModApi
                         {
 
                             drawProperty($"ModAPI v{ModApi.VersionInfo.version} BUILD {ModApi.VersionInfo.build} | DEV MODE |");
-                            if (Button("-", new GUIStyle() { alignment = TextAnchor.UpperRight, }))
+                            if (Button("-", new GUIStyle() { alignment = TextAnchor.MiddleCenter, }))
                             {
-                                showDevGui = false;
+                                _showDevGui = false;
                             }
-                            Space(2);
-                            if (Button("X", new GUIStyle() { alignment = TextAnchor.UpperRight, }))
+                            Space(5);
+                            if (Button("X", new GUIStyle() { alignment = TextAnchor.MiddleCenter, }))
                             {
                                 devMode = false;
                             }
@@ -237,7 +419,14 @@ namespace TommoJProductions.ModApi
                         {
                             if (Button("Close part inspection"))
                             {
-                                _inspectionPart = null;
+                                setInspectionPart(null);
+                            }
+                        }
+                        else
+                        {
+                            if (Button((_inspectTriggers ? "Close" : "Open") + " Trigger inspection"))
+                            {
+                                _inspectTriggers = !_inspectTriggers;
                             }
                         }
 
@@ -253,100 +442,136 @@ namespace TommoJProductions.ModApi
                 }
                 else
                 {
-                    using (new VerticalScope("box", Width(275)))
+                    using (new VerticalScope("box", Width(25)))
                     {
-                        if (Button("+", new GUIStyle() { alignment = TextAnchor.UpperLeft, }))
+                        if (Button("+", new GUIStyle() { alignment = TextAnchor.MiddleCenter, }, ExpandWidth(false)))
                         {
-                            showDevGui = true;
+                            _showDevGui = true;
                         }
                     }
                 }
             }
 
-            using (AreaScope area = new AreaScope(new Rect((margin * 2) + width, top, width * 2, height)))
+            if (showLog)
             {
-                drawLog();
+                using (AreaScope area = new AreaScope(new Rect((_margin * 2) + _width, _top, _width * 2, _height)))
+                {
+                    drawLog();
+                }
             }
         }
 
         private void drawBoltDetectionStats()
         {
-            if (Button(toggleBoltDetectionStats ? "Hide" : "Show" + " Bolt detection stats"))
+            if (Button(_toggleBoltDetectionStats ? "Hide" : "Show" + " Bolt detection stats"))
             {
-                toggleBoltDetectionStats = !toggleBoltDetectionStats;
+                _toggleBoltDetectionStats = !_toggleBoltDetectionStats;
             }
-            if (toggleBoltDetectionStats)
+            if (_toggleBoltDetectionStats)
             {
-                drawProperty("Detected bolt (toolmode)", ModApiLoader.bolt.Value?.ToString() ?? "null");
-                drawProperty("current callback", ModApiLoader.currentCallback?.ToString() ?? "null");
-                if (ModApiLoader.currentCallback)
+                drawProperty("Detected bolt (toolmode)", _boltManager.bolt.Value?.ToString() ?? "null");
+                drawProperty("current callback", _boltManager.currentCallback?.ToString() ?? "null");
+                if (_boltManager.currentCallback)
                 {
-                    drawProperty("bolt check", ModApiLoader.currentCallback.boltCheck);
+                    drawProperty("bolt check", _boltManager.currentCallback.boltCheck);
                 }
             }
         }
 
         private void drawModApiLoaderInfo()
         {
-            if (Button((toggleLoaderInfo ? "Hide" : "Show") + " loader info"))
+            if (Button((_toggleLoaderInfo ? "Hide" : "Show") + " loader info"))
             {
-                toggleLoaderInfo = !toggleLoaderInfo;
+                _toggleLoaderInfo = !_toggleLoaderInfo;
             }
-            if (toggleLoaderInfo)
+            if (_toggleLoaderInfo)
             {
-                drawProperty("ModApi:", ModApiLoader.modapiGo?.ToString() ?? "null");
-                drawProperty("picked object:", ModApiLoader.pickedObject?.ToString() ?? "null");
-                drawProperty("picked part SET:", ModApiLoader.pickedPartSet);
-                drawProperty("inherenty picked part SET:", ModApiLoader.inherentyPickedPartsSet);
+                drawProperty("ModApi:", modapiGo?.ToString() ?? "null");
+                drawProperty("picked object:", _partManager.pickedObject?.ToString() ?? "null");
+                drawProperty("picked part SET:", _partManager.pickedPartSet);
+                drawProperty("inherenty picked part SET:", _partManager.inherentlyPickedPartsSet);
             }
         }
 
         private void drawModApiList()
         {
+            void updateParts()
+            {
+                _listedModApiParts = loadedParts.ToArray();
+
+                if (!string.IsNullOrEmpty(_searchString))
+                {
+                    _listedModApiParts = loadedParts.Where(p => p.partID.ToLower().Contains(_searchString.ToLower())).ToArray();
+                }
+
+                if (_showBoltOnlyParts)
+                {
+                    _listedModApiParts = loadedParts.Where(p => p.hasBolts || Trigger.triggerDictionary[p.triggerData].Any(t => t.Value.hasBolts)).ToArray();
+                }
+            }
+
             if (listModApiParts)
             {
                 using (new HorizontalScope())
                 {
-                    drawPropertyEdit("Search", ref searchString);
-                    drawPropertyBool("Show only bolt modapi-parts", ref showBoltOnlyParts);
+                    if (drawPropertyEdit("Search", ref _searchString))
+                    {
+                        updateParts();
+                    }
+                    if (drawPropertyBool("Show only boltable modapi-parts", ref _showBoltOnlyParts))
+                    {
+                        updateParts();
+                    }
+                    if (_listedGameParts == null)
+                    {
+                        updateParts();
+                    }
                 }
-                using (scrollViewScope = new ScrollViewScope(gamePartsScroll, false, false))
+                using (_scrollViewScope = new ScrollViewScope(_gamePartsScroll, false, false))
                 {
-                    gamePartsScroll = scrollViewScope.scrollPosition;
-                    scrollViewScope.handleScrollWheel = true;
-
-                    listedModApiParts = loadedParts.ToArray();
-
-                    if (!string.IsNullOrEmpty(searchString))
+                    _gamePartsScroll = _scrollViewScope.scrollPosition;
+                    _scrollViewScope.handleScrollWheel = true;
+                    
+                    for (int i = 0; i < _listedModApiParts.Length; i++)
                     {
-                        listedModApiParts = loadedParts.Where(p => p.name.ToLower().Contains(searchString)).ToArray();
-                    }
-
-                    if (showBoltOnlyParts)
-                    {
-                        listedModApiParts = loadedParts.Where(p => p.hasBolts).ToArray();
-                    }
-
-                    for (int i = 0; i < listedModApiParts.Length; i++)
-                    {
-                        if (i.isEven())
+                        if (_listedModApiParts[i].isPlayerLookingAtByPickUp())
                         {
-                            GUI.skin.box.normal.background = primaryItemBackground;
+                            _style.normal.textColor = _c2;
                         }
                         else
                         {
-                            GUI.skin.box.normal.background = secondaryItemBackground;
+                            _style.normal.textColor = Color.white;
+                        }
+                        
+                        if (i.isEven())
+                        {
+                            GUI.skin.box.normal.background = _primaryItemBackground;
+                        }
+                        else
+                        {
+                            GUI.skin.box.normal.background = _secondaryItemBackground;
                         }
                         using (new VerticalScope("box"))
                         {
-                            drawProperty(listedModApiParts[i].name);
-                            if (Button("Inspect"))
+                            Label(_listedModApiParts[i].partID, _style);
+
+                            if (_inspectionPart != _listedModApiParts[i])
                             {
-                                setInspectionPart(listedModApiParts[i]);
+                                if (Button("Inspect"))
+                                {
+                                    setInspectionPart(_listedModApiParts[i]);
+                                }
+                            }
+                            else
+                            {
+                                if (Button("Close"))
+                                {
+                                    setInspectionPart(null);
+                                }
                             }
                         }
                     }
-                    GUI.skin.box.normal.background = defaultBackground;
+                    GUI.skin.box.normal.background = _defaultBackground;
                 }
             }
         }
@@ -357,119 +582,132 @@ namespace TommoJProductions.ModApi
             {
                 using (new HorizontalScope())
                 {
-                    drawPropertyEdit("Search", ref searchString);
-                    drawPropertyBool("Show only wear-able game-parts", ref showWearOnlyParts);
+                    drawPropertyEdit("Search", ref _searchString);
+                    drawPropertyBool("Show only wear-able game-parts", ref _showWearOnlyParts);
                 }
 
 
-                listedGameParts = allGameParts;
+                _listedGameParts = _allGameParts;
 
-                if (!string.IsNullOrEmpty(searchString))
+                if (!string.IsNullOrEmpty(_searchString))
                 {
-                    listedGameParts = listedGameParts.Where(p => p.thisPart.Value.name.ToLower().Contains(searchString)).ToArray();
+                    _listedGameParts = _listedGameParts.Where(p => p.thisPart.Value.name.ToLower().Contains(_searchString)).ToArray();
                 }
 
-                if (showWearOnlyParts)
+                if (_showWearOnlyParts)
                 {
-                    listedGameParts = allGameParts.Where(p => p is GamePartWear).ToArray();
+                    _listedGameParts = _allGameParts.Where(p => p is GamePartWear).ToArray();
                 }
-                using (scrollViewScope = new ScrollViewScope(gamePartsScroll, false, false))
+                using (_scrollViewScope = new ScrollViewScope(_gamePartsScroll, false, false))
                 {
-                    gamePartsScroll = scrollViewScope.scrollPosition;
-                    scrollViewScope.handleScrollWheel = true;
-                    for (int i = 0; i < listedGameParts.Length; i++)
+                    _gamePartsScroll = _scrollViewScope.scrollPosition;
+                    _scrollViewScope.handleScrollWheel = true;
+                    for (int i = 0; i < _listedGameParts.Length; i++)
                     {
                         if (i.isEven())
                         {
-                            GUI.skin.box.normal.background = primaryItemBackground;
+                            GUI.skin.box.normal.background = _primaryItemBackground;
                         }
                         else
                         {
-                            GUI.skin.box.normal.background = secondaryItemBackground;
+                            GUI.skin.box.normal.background = _secondaryItemBackground;
                         }
                         using (new VerticalScope("box"))
                         {
-                            drawGamePartInfo(listedGameParts[i]);
+                            drawGamePartInfo(_listedGameParts[i]);
                         }
                     }
-                    GUI.skin.box.normal.background = defaultBackground;
+                    GUI.skin.box.normal.background = _defaultBackground;
                 }
             }
         }
 
         private void drawPartGui() 
         {
-            using (AreaScope area = new AreaScope(new Rect(left, top, width, height - top)))
+            using (AreaScope area = new AreaScope(new Rect(_left, _top, _width, _height - _top)))
             {
                 using (new VerticalScope("box"))
                 {
-                    if (Button("X", new GUIStyle() { alignment = TextAnchor.UpperRight, }))
-                    {
-                        _inspectionPart = null;
-                    }
                     using (new HorizontalScope())
                     {
-                        using (new VerticalScope("box"))
+                        using (new VerticalScope("box", MaxWidth(_width / 2)))
                         {
 
-                            drawProperty("Part Inspection", _inspectionPart.name);
+                            drawProperty($"Name: {_inspectionPart.name}");
                             Space(1);
-                            drawProperty($"Trigger routine: {(_inspectionPart.triggerRoutine == null ? "in" : "")}active");
+                            drawProperty("Routine", $"{(_inspectionPart.triggerRoutine == null ? "In" : "A")}ctive");
                             drawProperty("Position", _inspectionPart.transform.position);
                             drawProperty("Euler", _inspectionPart.transform.eulerAngles);
                             drawProperty("Installed", _inspectionPart.installed);
-                            drawProperty($"Picked up: {_inspectionPart.pickedUp} | {(_inspectionPart.inherentlyPickedUp ? "inherently" : "")}");
-                            drawProperty("InTrigger", _inspectionPart.inTrigger);
-                            drawProperty("Install point index", _inspectionPart.installPointIndex);
-                            _inspectionPart.partSettings.assembleType.drawProperty();
+                            drawPartPickedUp();
+                            drawProperty("In trigger", _inspectionPart.inTrigger);
+                            if (!_inspectionPart.installed)
+                            {
+                                drawPropertyEnumVertical(ref _inspectionPart.partSettings.assembleType);
+                            }
+                            else
+                            {
+                                _inspectionPart.partSettings.assembleType.drawProperty();
+                            }
                         }
-                        using (new VerticalScope())
+                        using (new VerticalScope("box", MaxWidth(_width / 2)))
                         {
+                            if (Button("X", new GUIStyle() { alignment = TextAnchor.MiddleRight, }))
+                            {
+                                setInspectionPart(null);
+                            }
+
                             if (_inspectionPart.partSettings.assembleType == AssembleType.joint)
                             {
                                 using (new VerticalScope("box"))
                                 {
                                     drawProperty("Joint settings");
-                                    if (_inspectionPart.hasBolts)
+                                    if (_inspectionPart.hasBolts || _inspectionTriggersHasBolts)
                                     {
                                         drawPropertyBool("bolt tightness effects breakforce", ref _inspectionPart.partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce);
                                         if (_inspectionPart.partSettings.assemblyTypeJointSettings.boltTightnessEffectsBreakforce)
                                         {
-                                            drawProperty($"Tightness Step: {_inspectionPart.tightnessStep}");
-                                            drawPropertyEdit("breakforce min", ref _inspectionPart.partSettings.assemblyTypeJointSettings.breakForceMin);
+                                            drawProperty($"Tightness Step: {_inspectionPart.tightnessStep} (Nm per bolt turn)");
+                                            _inspectionPart.partSettings.assemblyTypeJointSettings.breakForceMin = drawPropertyEdit("Initial breakforce", _inspectionPart.partSettings.assemblyTypeJointSettings.breakForceMin);
                                         }
-                                        drawPropertyEdit("tightness threshold", ref _inspectionPart.partSettings.tightnessThreshold);
+                                        if (drawPropertyEdit("tightness threshold (%)", ref _tightnessThresholdPercent))//_inspectionPart.partSettings.tightnessThreshold);
+                                        {
+                                            _inspectionPart.partSettings.tightnessThreshold = _tightnessThresholdPercent / 100;
+                                        }
                                     }
                                     drawPropertyEdit("breakforce", ref _inspectionPart.partSettings.assemblyTypeJointSettings.breakForce);
+                                }
+                                
+                            }
+                            if (_inspectionPart.hasBolts || _inspectionTriggersHasBolts)
+                            {
+                                using (new VerticalScope("box"))
+                                {
+                                    drawProperty($"{(_inspectionPart.bolted ? "" : "Not")} Bolted");
+                                    drawProperty($"Total tightness: {_inspectionPart.tightnessTotal} / {_inspectionPart.maxTightnessTotal} ({_inspectionPart.tightnessTotal / _inspectionPart.maxTightnessTotal * 100}%)");
+                                    drawProperty($"Tightness threshold: {_inspectionPart.maxTightnessTotal * _inspectionPart.partSettings.tightnessThreshold} / {_inspectionPart.maxTightnessTotal} ({_inspectionPart.maxTightnessTotal * _inspectionPart.partSettings.tightnessThreshold / _inspectionPart.maxTightnessTotal * 100}%)");
+                                    drawProperty("At what percent of total bolt tightness does the part disassemble logic disable.");
+                                    Space(5);
+                                    drawPropertyBool("Inspect Bolts", ref _inspectingBolt);
                                 }
                             }
                             if (_inspectionPart.joint)
                             {
-                                using (new VerticalScope("box"))
+                                using (new VerticalScope("", _borderStyle))
                                 {
+                                    drawProperty("Joint <b>Active</b>");
                                     if (_inspectionPart.joint.breakForce == float.PositiveInfinity)
                                     {
-                                        drawProperty($"breakforce: unbreakable (infinity)");
+                                        drawProperty($"Joint.breakforce: unbreakable (infinity)");
                                     }
                                     else
                                     {
-                                        drawProperty($"breakforce: {_inspectionPart.joint.breakForce}Nm");
+                                        drawProperty($"Joint.breakforce: {_inspectionPart.joint.breakForce}Nm");
                                     }
                                     if (Button("Update joint breakforce"))
                                     {
                                         _inspectionPart.updateJointBreakForce();
                                     }
-                                }
-                            }
-                            if (_inspectionPart.hasBolts)
-                            {
-                                using (new VerticalScope("box"))
-                                {
-                                    drawProperty($"{(_inspectionPart.bolted ? "" : "Not")} Bolted");
-                                    drawProperty($"Tightness: {_inspectionPart.tightnessTotal} / {_inspectionPart.maxTightnessTotal} ({_inspectionPart.tightnessTotal / _inspectionPart.maxTightnessTotal * 100}%)");
-                                    drawProperty($"\t- Threshold: {_inspectionPart.maxTightnessTotal * Mathf.Clamp(_inspectionPart.partSettings.tightnessThreshold, 0.25f, 1)}");                                    
-                                    Space(5);
-                                    drawPropertyBool("Inspect Bolts", ref inspectingBolt);
                                 }
                             }
                         }
@@ -493,10 +731,6 @@ namespace TommoJProductions.ModApi
                                     _inspectionPart.resetBoltTightness();
                                 }
                             }
-                            if (Button("Disassemble"))
-                            {
-                                _inspectionPart.disassemble();
-                            }
                         }
                         if (Button("Teleport to player"))
                         {
@@ -509,82 +743,105 @@ namespace TommoJProductions.ModApi
                     }
                     Space(1);
                     drawProperty("Triggers");
-                    using (scrollViewScope = new ScrollViewScope(triggerScroll, false, false))
+                    using (_scrollViewScope = new ScrollViewScope(_triggerScroll, false, false))
                     {
-                        triggerScroll = scrollViewScope.scrollPosition;
-                        scrollViewScope.handleScrollWheel = true;
+                        _triggerScroll = _scrollViewScope.scrollPosition;
+                        _scrollViewScope.handleScrollWheel = true;
 
-                        if (_inspectionPart.triggers != null && _inspectionPart.triggers.Length > 0)
+                        
+                        if (_inspectionPartTriggers != null && _inspectionPartTriggers.Length > 0)
                         {
-                            for (int i = 0; i < _inspectionPart.triggers.Length; i++)
+                            for (int i = 0; i < _inspectionPartTriggers.Length; i++)
                             {
-                                Trigger trigger = _inspectionPart.triggers[i];
+                                Trigger trigger = _inspectionPartTriggers[i];
 
                                 if (i.isEven())
                                 {
-                                    GUI.skin.box.normal.background = primaryItemBackground;
+                                    GUI.skin.box.normal.background = _primaryItemBackground;
                                 }
                                 else
                                 {
-                                    GUI.skin.box.normal.background = secondaryItemBackground;
+                                    GUI.skin.box.normal.background = _secondaryItemBackground;
                                 }
                                 using (new VerticalScope("box"))
                                 {
                                     using (new HorizontalScope())
                                     {
-                                        drawProperty(trigger.triggerName);
-                                        if (Button("View"))
-                                        {
-                                            trigger.triggerRenderer.enabled = !trigger.triggerRenderer.enabled;
-                                        }
+                                        drawProperty(trigger.triggerID);
+
                                         if (Button("Teleport to trigger"))
                                         {
-                                            getPlayer.teleport(trigger.triggerGameObject.transform.position);
+                                            getPlayer.teleport(trigger.gameObject.transform.position);
                                         }
-                                        if (!_inspectionPart.installed)
+
+                                        if (!trigger.callback.part)
                                         {
-                                            if (!trigger.triggerCallback.part)
+                                            if (!_inspectionPart.installed)
                                             {
                                                 if (Button("Assemble"))
                                                 {
-                                                    _inspectionPart.assemble(_inspectionPart.installPointColliders[i]);
+                                                    _inspectionPart.assemble(trigger);
                                                 }
                                             }
-                                            else
-                                            {                                                
-                                                Label("(In Use)");
+                                        }
+                                        else
+                                        {
+                                            Label("(In Use)");
+                                        }
+
+                                        if (_inspectionPart.installed && _inspectionPart == _inspectionPartTriggers[i].callback.part)
+                                        {
+                                            if (Button("Disassemble"))
+                                            {
+                                                _inspectionPart.disassemble();
                                             }
                                         }
                                     }
                                     using (new HorizontalScope())
                                     {
-                                        using (new VerticalScope())
+                                        if (!_inspectionPartTriggers[i].settings.useTriggerTransformData)
                                         {
-                                            drawProperty("Pivot transform");
-                                            drawPropertyVector3("Pivot position", ref inspectionPartPivotPosition[i]);
-                                            drawPropertyVector3("Pivot euler", ref inspectionPartPivotEuler[i]);
+                                            using (new VerticalScope())
+                                            {
+                                                drawProperty("Pivot transform");
+                                                drawPropertyVector3("Pivot position", ref _inspectionPartPivotPosition[i]);
+                                                drawPropertyVector3("Pivot euler", ref _inspectionPartPivotEuler[i]);
+                                            }
+                                            Space(5);
                                         }
-                                        Space(5);
                                         using (new VerticalScope())
                                         {
                                             drawProperty("Trigger transform");
-                                            drawPropertyVector3("Trigger position", ref inspectionPartTriggerPosition[i]);
-                                            drawPropertyVector3("Trigger euler", ref inspectionPartTriggerEuler[i]);
-                                            drawPropertyVector3("Trigger Size", ref inspectionPartTriggerSize[i]);
+                                            drawPropertyVector3("Trigger position", ref _inspectionPartTriggerPosition[i]);
+                                            drawPropertyVector3("Trigger euler", ref _inspectionPartTriggerEuler[i]);
+                                            drawPropertyEdit("Trigger Radius", ref _inspectionPartTriggerRadius[i]);
                                         }
+                                    }
+
+                                    if (_inspectionPartTriggers[i].callback.part && _inspectionPartTriggers[i].callback.part.partSettings.assembleType == AssembleType.joint)
+                                    {
+                                        drawProperty("Change assemble type (temp) or uninstall part to apply trigger transform.");
+                                        continue;
                                     }
                                     if (Button("apply"))
                                     {
-                                        _inspectionPart.triggers[i].partPivot.transform.localPosition = inspectionPartPivotPosition[i];
-                                        _inspectionPart.triggers[i].partPivot.transform.localEulerAngles = inspectionPartPivotEuler[i];
-
-                                        _inspectionPart.triggers[i].triggerGameObject.transform.localPosition = inspectionPartTriggerPosition[i];
-                                        _inspectionPart.triggers[i].triggerGameObject.transform.localEulerAngles = inspectionPartTriggerEuler[i];
-                                        _inspectionPart.triggers[i].triggerGameObject.transform.localScale = inspectionPartTriggerSize[i];
+                                        if (!_inspectionPartTriggers[i].settings.useTriggerTransformData)
+                                        {
+                                            _inspectionPartTriggers[i].partPivot.transform.localPosition = _inspectionPartPivotPosition[i];
+                                            _inspectionPartTriggers[i].partPivot.transform.localEulerAngles = _inspectionPartPivotEuler[i];
+                                        }
+                                        else
+                                        {
+                                            _inspectionPartTriggers[i].partPivot.transform.localPosition = _inspectionPartTriggerPosition[i];
+                                            _inspectionPartTriggers[i].partPivot.transform.localEulerAngles = _inspectionPartTriggerEuler[i];
+                                        }
+                                        _inspectionPartTriggers[i].gameObject.transform.localPosition = _inspectionPartTriggerPosition[i];
+                                        _inspectionPartTriggers[i].gameObject.transform.localEulerAngles = _inspectionPartTriggerEuler[i];
+                                        _inspectionPartTriggers[i].collider.radius = _inspectionPartTriggerRadius[i];
                                     }
                                 }
                             }
-                            GUI.skin.box.normal.background = defaultBackground;
+                            GUI.skin.box.normal.background = _defaultBackground;
                         }
                         else
                         {
@@ -594,65 +851,110 @@ namespace TommoJProductions.ModApi
                 }
             }
         }
+
+        private void drawPartPickedUp() 
+        {
+
+            drawProperty($"{(_inspectionPart.inherentlyPickedUp ? "Inherently p" : "P")}icked up{_inspectionPart.pickedUp} ");
+
+            if (_inspectionPart.pickedUp)
+            {
+                drawProperty("Picked up");
+            }
+            else if (_inspectionPart.inherentlyPickedUp)
+            {
+                drawProperty("Inherently picked up");
+            }
+            else
+            {
+                drawProperty("Not picked up");
+            }
+
+        }
+
         private void drawBoltGui()
         {
             using (new VerticalScope("box"))
             {
-                using (new VerticalScope("box"))
+                using (new HorizontalScope("box"))
                 {
-                    drawProperty("Bolt Inspection", inspectionBolt.boltCallback.name);
-                    Space(1);
-                    drawProperty($"routine: {(inspectionBolt.boltRoutine == null ? "in" : "")}active");
-                    inspectionBolt.boltSettings.boltType.drawProperty();
-                    drawProperty("Bolt tightness", inspectionBolt.loadedSaveInfo.boltTightness);
-                    inspectionBolt.boltSettings.boltSize.drawProperty();
-                    if (inspectionBolt.boltSettings.addNut)
+                    using (new VerticalScope("box"))
                     {
-                        drawProperty("Nut tightness", inspectionBolt.loadedSaveInfo.addNutTightness);
-                        (inspectionBolt.boltSettings.addNutSettings.nutSize ?? inspectionBolt.boltSettings.boltSize).drawProperty();
+                        string type;
+                        if (inspectionBoltWithNut != null)
+                        {
+                            type = "BoltWithNut";
+                        }
+                        else
+                        {
+                            type = "Bolt";
+                        }
+                        drawProperty($"Bolt name: {inspectionBolt.callback.name} ({type})");
+                        inspectionBolt.settings.type.drawProperty();
+                        inspectionBolt.settings.size.drawProperty();
+                        if (inspectionBoltWithNut != null)
+                        {
+                            drawProperty("Nut");
+                            inspectionBoltWithNut.nut.settings.type.drawProperty();
+                            inspectionBoltWithNut.nut.settings.size.drawProperty();
+                        }
+                    }
+                    using (new VerticalScope("box"))
+                    {
+                        drawProperty($"Routine: {(inspectionBolt.routine == null ? "in" : "")}active");
+                        drawProperty("Bolt tightness", inspectionBolt.tightness);
+                        bool h = inspectionBolt.callback.highlighted;
+                        if (Button((h ? "Stop h" : "H") + "ighlight"))
+                        {
+                            inspectionBolt.callback.highlight(!h);
+                        }
                     }
                 }
                 Space(1);
                 using (new VerticalScope("box"))
                 {
-                    drawPropertyVector3("start position", ref inspectionPosition);
-                    drawPropertyVector3("start euler", ref inspectionEuler);
-                    if (inspectionBolt.boltSettings.addNut)
+                    drawPropertyVector3("start pos", ref inspectionPosition);
+                    drawPropertyVector3("start rot", ref inspectionEuler);
+                    drawPropertyVector3("pos dir", ref inspectionPosDir);
+                    drawPropertyVector3("rot dir", ref inspectionRotDir);
+                    drawPropertyEdit("pos step", ref inspectionPosStep);
+                    drawPropertyEdit("rot step", ref inspectionRotStep);
+                    if (inspectionBoltWithNut != null)
+                    {
                         drawPropertyEdit("Nut offset", ref inspectionOffset);
+                    }
                     if (Button("apply"))
                     {
                         inspectionBolt.startPosition = inspectionPosition;
                         inspectionBolt.startEulerAngles = inspectionEuler;
-                        inspectionBolt.boltSettings.addNutSettings.nutOffset = inspectionOffset;
+                        inspectionBolt.settings.posDirection = inspectionPosDir;
+                        inspectionBolt.settings.rotDirection = inspectionRotDir;
+                        inspectionBolt.settings.posStep = inspectionPosStep;
+                        inspectionBolt.settings.rotStep = inspectionRotStep;
+
+                        if (inspectionBoltWithNut != null)
+                        {
+                            inspectionBoltWithNut.boltWithNutSettings.offset = inspectionOffset;
+                        }
+
                         inspectionBolt.updateModelPosition();
                     }
-                }
-                Space(1);
-                using (new VerticalScope("box"))
-                {
-                    drawPropertyVector3("pos direction", ref inspectionBolt.boltSettings.posDirection);
-                    drawPropertyVector3("rot direction", ref inspectionBolt.boltSettings.rotDirection);
-                    drawPropertyEdit("pos step", ref inspectionBolt.boltSettings.posStep);
-                    drawPropertyEdit("rot step", ref inspectionBolt.boltSettings.rotStep);
                 }
             }
         }
 
-        private void drawLog() 
+        private void drawLog()
         {
             // Written, 06.05.2023
 
-            if (showLog)
+            using (new VerticalScope("box"))
             {
-                using (new VerticalScope("box"))
+                using (_scrollViewScope = new ScrollViewScope(_logScroll, false, true))
                 {
-                    using (scrollViewScope = new ScrollViewScope(logScroll, false, true))
-                    {
-                        logScroll = scrollViewScope.scrollPosition;
-                        scrollViewScope.handleScrollWheel = true;
+                    _logScroll = _scrollViewScope.scrollPosition;
+                    _scrollViewScope.handleScrollWheel = true;
 
-                        ModClient.log = TextArea(ModClient.log, ExpandWidth(true), ExpandHeight(true));
-                    }
+                    ModClient.log = TextArea(ModClient.log, ExpandWidth(true), ExpandHeight(true));
                 }
             }
         }

@@ -7,7 +7,7 @@
     <Platform Condition=" '$(Platform)' == 'x64'">
     </Platform>
     <ProjectGuid>{2CEAE666-CBA5-4FA6-AEE3-D6C5CFB2DE20}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TommoJProductions.ModApi</RootNamespace>
     <AssemblyName>ModApi</AssemblyName>
@@ -42,44 +42,43 @@
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject />
+    <StartupObject>Entrypoint</StartupObject>
+  </PropertyGroup>
+  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\Release\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\Debug\</OutputPath>
   </PropertyGroup>
   <PropertyGroup />
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="MSCLoader">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
-    </Reference>
-    <Reference Include="PlayMaker">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="UnityEngine">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Attachable\Bolt\AddNutSettings.cs" />
+    <Compile Include="Attachable\Bolt\BaseBoltSettings.cs" />
     <Compile Include="Attachable\Bolt\Bolt.cs" />
-    <Compile Include="Attachable\Bolt\BoltSaveInfo.cs" />
     <Compile Include="Attachable\Bolt\BoltSettings.cs" />
+    <Compile Include="Attachable\Bolt\OldBolt.cs" />
+    <Compile Include="Attachable\Bolt\BoltManager.cs" />
+    <Compile Include="Attachable\Bolt\BoltSaveInfo.cs" />
+    <Compile Include="Attachable\Bolt\BoltWithNutSettings.cs" />
     <Compile Include="Attachable\Bolt\BoltSize.cs" />
     <Compile Include="Attachable\Bolt\BoltType.cs" />
+    <Compile Include="Attachable\Bolt\BoltWithNut.cs" />
+    <Compile Include="Attachable\Bolt\IHasBolts.cs" />
     <Compile Include="Attachable\Callbacks\BoltCallback.cs" />
     <Compile Include="Attachable\Part\AssembleType.cs" />
     <Compile Include="Attachable\Part\AssemblyTypeJointSettings.cs" />
     <Compile Include="Attachable\Part\CollisionSettings.cs" />
     <Compile Include="Attachable\Part\Part.cs" />
+    <Compile Include="Attachable\Part\PartManager.cs" />
     <Compile Include="Attachable\Part\PartSaveInfo.cs" />
     <Compile Include="Attachable\Part\PartSettings.cs" />
+    <Compile Include="Attachable\Trigger\TriggerData.cs" />
+    <Compile Include="Attachable\Trigger\TriggerSaveInfo.cs" />
+    <Compile Include="Attachable\Trigger\TriggerSettings.cs" />
     <Compile Include="ConsoleCommands.cs" />
-    <Compile Include="CustomYieldInstructions.cs" />
+    <Compile Include="YieldInstructions\CustomYieldInstructions.cs" />
     <Compile Include="Database\DatabaseVehicle.cs" />
     <Compile Include="Database\GameParts\Block.cs" />
     <Compile Include="Database\GameParts\CamshaftGear.cs" />
@@ -98,12 +97,13 @@
     <Compile Include="Database\GameParts\RockerShaft.cs" />
     <Compile Include="Database\Vehicles\Satsuma.cs" />
     <Compile Include="DevMode.cs" />
+    <Compile Include="EntryPoint.cs" />
     <Compile Include="ModApiBehaviour.cs" />
     <Compile Include="ModApiExtentions.cs" />
     <Compile Include="ModApiLoader.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\FsmStateActionCallback.cs" />
     <Compile Include="ModClient.cs" />
-    <Compile Include="Attachable\Trigger.cs" />
+    <Compile Include="Attachable\Trigger\Trigger.cs" />
     <Compile Include="Attachable\Callbacks\TriggerCallBack.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\OnEnterCallback.cs" />
     <Compile Include="PlaymakerExtentions\Callbacks\OnFixedUpdateCallback.cs" />
@@ -119,7 +119,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="SaveManager.cs" />
     <Compile Include="Vector3Info.cs" />
+    <Compile Include="YieldInstructions\WaitForSecondsRealTime.cs" />
+    <Compile Include="YieldInstructions\WaitWhile.cs" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -142,9 +145,42 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>F:\SteamLibrary\steamapps\common\My Summer Car\mysummercar_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ES2, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>F:\SteamLibrary\steamapps\common\My Summer Car\mysummercar_Data\Managed\ES2.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MSCLoader, Version=1.2.10.282, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>F:\SteamLibrary\steamapps\common\My Summer Car\mysummercar_Data\Managed\MSCLoader.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="PlayMaker">
+      <HintPath>F:\SteamLibrary\steamapps\common\My Summer Car\mysummercar_Data\Managed\PlayMaker.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>F:\SteamLibrary\steamapps\common\My Summer Car\mysummercar_Data\Managed\System.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>F:\SteamLibrary\steamapps\common\My Summer Car\mysummercar_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>CALL "C:\Users\tommo\source\modRef_postbuildeventCMD.bat" "$(ConfigurationName)" "$(TargetDir)" "$(TargetName)"
+    <PostBuildEvent>IF EXIST "$(TargetDir)$(TargetName).dll" (
+DEL "$(TargetDir)$(TargetName).dll"
+)
+COPY "$(TargetPath)" "$(TargetName).dll"
+CALL "C:\Users\tommo\source\modRef_postbuildeventCMD.bat" "$(ConfigurationName)" "$(TargetDir)" "$(TargetName)"
 </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>

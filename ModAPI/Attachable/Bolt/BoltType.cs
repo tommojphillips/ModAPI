@@ -21,9 +21,5 @@
             /// Represents a screw.
             /// </summary>
             screw,
-            /// <summary>
-            /// Represents the usage of a custom bolt.
-            /// </summary>
-            custom,
         }
 }

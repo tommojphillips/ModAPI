@@ -7,34 +7,31 @@ namespace TommoJProductions.ModApi.Attachable
     /// </summary>
     public class PartSaveInfo
     {
+
         // Written, 04.10.2018
 
         #region Properties
 
         /// <summary>
+        /// Represents the parts world position.
+        /// </summary>
+        public Vector3 position { get; set; }
+        /// <summary>
+        /// Represents the parts world rotation (euler angles)
+        /// </summary>
+        public Vector3 rotation { get; set; }
+        /// <summary>
         /// Represents whether or not the part is installed.
         /// </summary>
         public bool installed { get; set; } = false;
         /// <summary>
-        /// Represents whether or not the part is bolted.
+        /// Represents the install point id 
         /// </summary>
-        public bool bolted { get; set; } = false;
-        /// <summary>
-        /// The install point index that the part is installed to located in <see cref="Part.triggers" />.
-        /// </summary>
-        public int installedPointIndex { get; set; } = 0;
-        /// <summary>
-        /// Represents the parts world position.
-        /// </summary>
-        public Vector3Info position { get; set; } = Vector3.zero;
-        /// <summary>
-        /// Represents the parts world rotation (euler angles)
-        /// </summary>
-        public Vector3Info rotation { get; set; } = Vector3.zero;
+        public string installPointId { get; set; } = null;
         /// <summary>
         /// Represents all bolt save infos. <see langword="null"/> if part has no bolts.
         /// </summary>
-        public BoltSaveInfo[] boltSaveInfos { get; set; } = null;
+        public int[] boltTightness { get; set; } = null;
 
         #endregion
 
@@ -44,25 +41,36 @@ namespace TommoJProductions.ModApi.Attachable
         /// Initializes a new part save info with default values..
         /// </summary>
         public PartSaveInfo() { }
+
+        #endregion
+
         /// <summary>
-        /// Initializes a new part save info and assigns fields.
+        /// Copies fields of <see cref="PartSaveInfo"/> to a new instance and returns.
         /// </summary>
-        /// <param name="inSave">The save info to replicate</param>
-        public PartSaveInfo(PartSaveInfo inSave)
+        public PartSaveInfo copy()
         {
             // Written, 01.05.2022
 
-            if (inSave != null)
-            {
-                installed = inSave.installed;
-                bolted = inSave.bolted;
-                installedPointIndex = inSave.installedPointIndex;
-                position = inSave.position;
-                rotation = inSave.rotation;
-                boltSaveInfos = inSave.boltSaveInfos;
-            }
+            return copy(this);
         }
+        /// <summary>
+        /// copies part save info and assigns fields.
+        /// </summary>
+        /// <param name="save">The save info to replicate</param>
+        public static PartSaveInfo copy(PartSaveInfo save)
+        {
+            // Written, 01.05.2022
 
-        #endregion
+            PartSaveInfo info = new PartSaveInfo();
+            if (save != null)
+            {
+                info.position = save.position;
+                info.rotation = save.rotation;
+                info.installed = save.installed;
+                info.installPointId = save.installPointId;
+                info.boltTightness = save.boltTightness;
+            }
+            return info;
+        }
     }
 }

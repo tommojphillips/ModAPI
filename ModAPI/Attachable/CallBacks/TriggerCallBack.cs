@@ -16,42 +16,55 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents the on trigger exit event.
         /// </summary>
-        public event Action<Part, TriggerCallback> onTriggerExit;
+        public event Action<Part, Trigger> onTriggerExit;
         /// <summary>
         /// Represents the on trigger enter event.
         /// </summary>
-        public event Action<Part, TriggerCallback> onTriggerEnter;
+        public event Action<Part, Trigger> onTriggerEnter;
 
         #endregion
 
         #region Fields
 
         /// <summary>
-        /// Represents the collider that invoked this callback.
+        /// Represents The Trigger Data. any part can install onto a trigger with the same trigger data.
         /// </summary>
-        public Collider callbackCollider { get; private set; }
-        /// <summary>
-        /// Represents if disassemble logic is enabled or not.
-        /// </summary>
-        public bool disassembleLogicEnabled { get; internal set; } = true;
-        /// <summary>
-        /// Represents the part that is currently installed to this trigger. note null if no installed part.
-        /// </summary>
-        public Part part { get; internal set; }
-        /// <summary>
-        /// Represents the trigger that is instance is linked to.
-        /// </summary>
-        public Trigger trigger { get; internal set; }
+        public TriggerData triggerData;
+
+        private Part _part;
+        private Trigger _trigger;
+
+        #endregion
+
+        #region Properties
+
         /// <summary>
         /// Represents the gui check.
         /// </summary>
-        public static bool guiCheck => !ModClient.guiUse && !ModClient.guiAssemble && !ModClient.playerInMenu;
-
-        private bool colliderCheck;
+        public static bool guiCheck => !ModClient.guiUse && !ModClient.guiAssemble && !ModClient.playerInMenu; 
+        /// <summary>
+        /// Represents the part that is currently installed to this trigger. note null if no installed part.
+        /// </summary>
+        public Part part => _part;
+        /// <summary>
+        /// Represents the trigger that is instance is linked to.
+        /// </summary>
+        public Trigger trigger
+        {
+            get => _trigger;
+            internal set => _trigger = value;
+        }
 
         #endregion
 
         #region Methods
+
+        internal void setPart(Part part)
+        {
+            // Written, 11.09.2023
+
+            _part = part;
+        }
 
         /// <summary>
         /// checks all parts that have this trigger to see if <paramref name="col"/> is a <see cref="Part"/> and that it can be installed to this trigger.
@@ -61,17 +74,14 @@ namespace TommoJProductions.ModApi.Attachable
         /// <returns></returns>
         protected virtual bool triggerCheck(Collider col, out Part part) 
         {
-            // Written, 21.08.2022
+            // Written, 24.08.2023
 
-            for (int i = 0; i < trigger.parts?.Count; i++)
+            part = col.GetComponent<Part>();
+
+            if (part && triggerData == part.triggerData)
             {
-                if (trigger.parts[i].gameObject.GetInstanceID() == col.gameObject.GetInstanceID())
-                {
-                    part = trigger.parts[i];
-                    return true;
-                }
+                return true;
             }
-            part = null;
             return false;
         }
 
@@ -79,49 +89,55 @@ namespace TommoJProductions.ModApi.Attachable
 
         #region Unity runtime methods
 
-        /// <summary>
-        /// awake function of the trigger callback.
-        /// </summary>
-        protected virtual void Awake()
-        {
-            callbackCollider = GetComponent<Collider>();
-        }
+
         /// <summary>
         /// the update function of the trigger callback.
         /// </summary>
         protected virtual void Update()
         {
-            if (part && disassembleLogicEnabled)
+            if (_part)
             {
-                colliderCheck = (part.partSettings.disassembleCollider == null ? part.gameObject : part.partSettings.disassembleCollider.gameObject).isPlayerLookingAt();
-                if (colliderCheck && guiCheck && ModClient.isHandEmpty)
+                if (colliderCheck() && guiCheck && ModClient.isHandEmpty)
                 {
                     if (ModClient.guiDrive)
+                    {
                         ModClient.guiDrive = false;
-
-                    part.mouseOverGuiDisassembleEnable(true);
+                    }
+                    _part.mouseOverGuiDisassembleEnable(true);
                     if (Input.GetMouseButtonDown(1))
                     {
-                        part.disassemble();
+                        _part.disassemble();
                     }
                 }
-                else if (part.mouseOver)
+                else if (_part.mouseOver)
                 {
-                    part.mouseOverGuiDisassembleEnable(false);
+                    _part.mouseOverGuiDisassembleEnable(false);
                 }
             }
         }
+
+        private bool colliderCheck()
+        {
+            // Written, 11.09.2023
+
+            if (_part.partSettings.disassembleCollider)
+            {
+                return _part.partSettings.disassembleCollider.gameObject.isPlayerLookingAt();
+            }
+            return _part.gameObject.isPlayerLookingAt();
+        }
+
         /// <summary>
         /// the disable function of this callback. inactives <see cref="Part.mouseOver"/>.
         /// </summary>
         protected virtual void OnDisable()
         {
-            if (part)
+            if (!_part)
+                return;
+
+            if (_part.mouseOver)
             {
-                if (part.mouseOver)
-                {
-                    part.mouseOverGuiDisassembleEnable(false);
-                }
+                _part.mouseOverGuiDisassembleEnable(false);
             }
         }
         /// <summary>
@@ -132,8 +148,8 @@ namespace TommoJProductions.ModApi.Attachable
         {
             if (triggerCheck(collider, out Part part))
             {
-                part.onTriggerExit(this);
-                onTriggerExit?.Invoke(part, this);
+                part.onTriggerExit(trigger);
+                onTriggerExit?.Invoke(part, trigger);
             }
         }
         /// <summary>
@@ -144,8 +160,8 @@ namespace TommoJProductions.ModApi.Attachable
         {
             if (triggerCheck(collider, out Part part))
             {
-                part.onTriggerEnter(this);
-                onTriggerEnter?.Invoke(part, this);
+                part.onTriggerEnter(trigger);
+                onTriggerEnter?.Invoke(part, trigger);
             }
         }
 

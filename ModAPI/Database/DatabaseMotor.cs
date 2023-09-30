@@ -6,6 +6,9 @@ using System.Linq;
 
 namespace TommoJProductions.ModApi.Database
 {
+    /// <summary>
+    /// Represents the Database Motor.
+    /// </summary>
     public class DatabaseMotor
     {
         private GameObject _databaseMotorGo;
@@ -118,6 +121,9 @@ namespace TommoJProductions.ModApi.Database
         private GamePartTime _inspectionCover;
 
         // Game Part Getters
+        /// <summary>
+        /// The block gamepart.
+        /// </summary>
         public Block block
         {
             get
@@ -133,6 +139,9 @@ namespace TommoJProductions.ModApi.Database
                 return _block;
             }
         }
+        /// <summary>
+        /// The oilpan gamepart.
+        /// </summary>
         public OilPan oilPan
         {
             get
@@ -148,6 +157,9 @@ namespace TommoJProductions.ModApi.Database
                 return _oilPan;
             }
         }
+        /// <summary>
+        /// The head gasket gamepart.
+        /// </summary>
         public GamePartTime headgasket
         {
             get
@@ -163,6 +175,9 @@ namespace TommoJProductions.ModApi.Database
                 return _headgasket;
             }
         }
+        /// <summary>
+        /// The piston 1 gamepart.
+        /// </summary>
         public GamePartWear piston1
         {
             get
@@ -178,6 +193,9 @@ namespace TommoJProductions.ModApi.Database
                 return _piston1;
             }
         }
+        /// <summary>
+        /// The piston 2 gamepart.
+        /// </summary>
         public GamePartWear piston2
         {
             get
@@ -193,6 +211,9 @@ namespace TommoJProductions.ModApi.Database
                 return _piston2;
             }
         }
+        /// <summary>
+        /// The piston 3 gamepart.
+        /// </summary>
         public GamePartWear piston3
         {
             get
@@ -208,6 +229,9 @@ namespace TommoJProductions.ModApi.Database
                 return _piston3;
             }
         }
+        /// <summary>
+        /// The piston 4 gamepart.
+        /// </summary>
         public GamePartWear piston4
         {
             get
@@ -223,6 +247,9 @@ namespace TommoJProductions.ModApi.Database
                 return _piston4;
             }
         }
+        /// <summary>
+        /// The crankshaft gamepart.
+        /// </summary>
         public GamePartTime crankshaft
         {
             get
@@ -238,6 +265,9 @@ namespace TommoJProductions.ModApi.Database
                 return _crankshaft;
             }
         }
+        /// <summary>
+        /// The rockershaft gamepart.
+        /// </summary>
         public RockerShaft rockershaft
         {
             get
@@ -253,6 +283,9 @@ namespace TommoJProductions.ModApi.Database
                 return _rockershaft;
             }
         }
+        /// <summary>
+        /// The alternator gamepart.
+        /// </summary>
         public GamePartTime alternator
         {
             get
@@ -268,6 +301,9 @@ namespace TommoJProductions.ModApi.Database
                 return _alternator;
             }
         }
+        /// <summary>
+        /// The gearbox gamepart.
+        /// </summary>
         public GamePart gearbox
         {
             get
@@ -283,6 +319,9 @@ namespace TommoJProductions.ModApi.Database
                 return _gearbox;
             }
         }
+        /// <summary>
+        /// The water pump gamepart.
+        /// </summary>
         public GamePart waterpump
         {
             get
@@ -298,6 +337,9 @@ namespace TommoJProductions.ModApi.Database
                 return _waterpump;
             }
         }
+        /// <summary>
+        /// The clutch pressure plate gamepart.
+        /// </summary>
         public GamePartTime clutchPressurePlate
         {
             get
@@ -313,6 +355,9 @@ namespace TommoJProductions.ModApi.Database
                 return _clutchPressurePlate;
             }
         }
+        /// <summary>
+        /// The clutch cover plate gamepart.
+        /// </summary>
         public GamePartTime clutchCoverPlate
         {
             get
@@ -328,6 +373,9 @@ namespace TommoJProductions.ModApi.Database
                 return _clutchCoverPlate;
             }
         }
+        /// <summary>
+        /// The clutch friction plate gamepart.
+        /// </summary>
         public GamePart clutchPlate
         {
             get
@@ -343,6 +391,9 @@ namespace TommoJProductions.ModApi.Database
                 return _clutchPlate;
             }
         }
+        /// <summary>
+        /// The crank bearing 1 gamepart.
+        /// </summary>
         public GamePartTime crankBearing1
         {
             get
@@ -358,6 +409,9 @@ namespace TommoJProductions.ModApi.Database
                 return _crankBearing1;
             }
         }
+        /// <summary>
+        /// The crank bearing 2 gamepart.
+        /// </summary>
         public GamePartTime crankBearing2
         {
             get
@@ -373,6 +427,9 @@ namespace TommoJProductions.ModApi.Database
                 return _crankBearing2;
             }
         }
+        /// <summary>
+        /// The crank bearing 3 gamepart.
+        /// </summary>
         public GamePartTime crankBearing3
         {
             get
@@ -388,6 +445,9 @@ namespace TommoJProductions.ModApi.Database
                 return _crankBearing3;
             }
         }
+        /// <summary>
+        /// The stock carburator gamepart.
+        /// </summary>
         public Carburator carburator
         {
             get
@@ -403,6 +463,9 @@ namespace TommoJProductions.ModApi.Database
                 return _carburator;
             }
         }
+        /// <summary>
+        /// The stock air filter gamepart.
+        /// </summary>
         public GamePartTime airFilter
         {
             get
@@ -418,6 +481,9 @@ namespace TommoJProductions.ModApi.Database
                 return _airFilter;
             }
         }
+        /// <summary>
+        /// The drive gear gamepart.
+        /// </summary>
         public GamePartTime driveGear
         {
             get
@@ -433,6 +499,9 @@ namespace TommoJProductions.ModApi.Database
                 return _driveGear;
             }
         }
+        /// <summary>
+        /// The cylinder head gamepart.
+        /// </summary>
         public GamePartTime cylinderHead
         {
             get
@@ -448,6 +517,9 @@ namespace TommoJProductions.ModApi.Database
                 return _cylinderHead;
             }
         }
+        /// <summary>
+        /// The distributor gamepart.
+        /// </summary>
         public Distributor distributor
         {
             get
@@ -463,6 +535,9 @@ namespace TommoJProductions.ModApi.Database
                 return _distributor;
             }
         }
+        /// <summary>
+        /// The engine plate gamepart.
+        /// </summary>
         public GamePartTime enginePlate
         {
             get
@@ -478,6 +553,9 @@ namespace TommoJProductions.ModApi.Database
                 return _enginePlate;
             }
         }
+        /// <summary>
+        /// The fuel pump gamepart.
+        /// </summary>
         public GamePartTime fuelPump
         {
             get
@@ -493,6 +571,9 @@ namespace TommoJProductions.ModApi.Database
                 return _fuelPump;
             }
         }
+        /// <summary>
+        /// The fuel line gamepart.
+        /// </summary>
         public GamePart fuelLine
         {
             get
@@ -508,6 +589,9 @@ namespace TommoJProductions.ModApi.Database
                 return _fuelLine;
             }
         }
+        /// <summary>
+        /// The flywheel gamepart.
+        /// </summary>
         public GamePartTime flywheel
         {
             get
@@ -523,6 +607,9 @@ namespace TommoJProductions.ModApi.Database
                 return _flywheel;
             }
         }
+        /// <summary>
+        /// The timing chain gamepart.
+        /// </summary>
         public GamePartTime timingChain
         {
             get
@@ -538,6 +625,9 @@ namespace TommoJProductions.ModApi.Database
                 return _timingChain;
             }
         }
+        /// <summary>
+        /// The camshaft gamepart.
+        /// </summary>
         public GamePartTime camshaft
         {
             get
@@ -554,6 +644,9 @@ namespace TommoJProductions.ModApi.Database
                 return _camshaft;
             }
         }
+        /// <summary>
+        /// The camshaft gear gamepart.
+        /// </summary>
         public CamshaftGear camshaftGear
         {
             get
@@ -570,6 +663,9 @@ namespace TommoJProductions.ModApi.Database
                 return _camshaftGear;
             }
         }
+        /// <summary>
+        /// The vavle cover gamepart.
+        /// </summary>
         public GamePartTime valveCover
         {
             get
@@ -585,6 +681,9 @@ namespace TommoJProductions.ModApi.Database
                 return _valveCover;
             }
         }
+        /// <summary>
+        /// The starter gamepart.
+        /// </summary>
         public GamePartTime starter
         {
             get
@@ -600,6 +699,9 @@ namespace TommoJProductions.ModApi.Database
                 return _starter;
             }
         }
+        /// <summary>
+        /// The timing cover gamepart.
+        /// </summary>
         public GamePartTime timingCover
         {
             get
@@ -615,6 +717,9 @@ namespace TommoJProductions.ModApi.Database
                 return _timingCover;
             }
         }
+        /// <summary>
+        /// The crank pulley gamepart.
+        /// </summary>
         public GamePartTime crankwheel
         {
             get
@@ -630,6 +735,9 @@ namespace TommoJProductions.ModApi.Database
                 return _crankwheel;
             }
         }
+        /// <summary>
+        /// The water pump pulley gamepart.
+        /// </summary>
         public GamePartTime waterPumpPulley
         {
             get
@@ -645,6 +753,9 @@ namespace TommoJProductions.ModApi.Database
                 return _waterPumpPulley;
             }
         }
+        /// <summary>
+        /// The stock exhaust headers gamepart.
+        /// </summary>
         public GamePartTime headers
         {
             get
@@ -660,6 +771,9 @@ namespace TommoJProductions.ModApi.Database
                 return _headers;
             }
         }
+        /// <summary>
+        /// The clutch inspection cover gamepart.
+        /// </summary>
         public GamePartTime inspectionCover
         {
             get

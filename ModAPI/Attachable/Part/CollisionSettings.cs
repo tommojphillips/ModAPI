@@ -10,6 +10,14 @@ namespace TommoJProductions.ModApi.Attachable
         // Written, 29.05.2022
 
         /// <summary>
+        /// Represents the default part physic material.
+        /// </summary>
+        public static readonly PhysicMaterial defaultPhysicMaterial = new PhysicMaterial("ModAPI.Part.defaultPhysicMaterial")
+        {
+            staticFriction = 0.4f,
+            dynamicFriction = 0.6f,
+        };
+        /// <summary>
         /// Represents all types of applying physic material
         /// </summary>
         public enum PhysicMaterialType
@@ -23,14 +31,6 @@ namespace TommoJProductions.ModApi.Attachable
             /// </summary>
             setOnProvidedColliders,
         }
-        /// <summary>
-        /// Represents the default part physic material.
-        /// </summary>
-        public static readonly PhysicMaterial defaultPhysicMaterial = new PhysicMaterial("ModAPI.Part.defaultPhysicMaterial")
-        {
-            staticFriction = 0.4f,
-            dynamicFriction = 0.6f,
-        };
         /// <summary>
         /// Represents the collision detection mode on installed parts.
         /// </summary>

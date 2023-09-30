@@ -18,7 +18,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// <summary>
         /// Represents '<see cref="AssembleType.joint"/>' settings.
         /// </summary>
-        public AssemblyTypeJointSettings assemblyTypeJointSettings = new AssemblyTypeJointSettings() { installPointRigidbodies = null, breakForce = float.PositiveInfinity };
+        public AssemblyTypeJointSettings assemblyTypeJointSettings = new AssemblyTypeJointSettings() { breakForce = float.PositiveInfinity };
         /// <summary>
         /// Represents the layer to send a part that is installed
         /// </summary>
@@ -28,7 +28,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public LayerMasksEnum notInstalledPartToLayer = LayerMasksEnum.Parts;
         /// <summary>
-        /// Represents if <see cref="Part.initPart(PartSaveInfo, PartSettings, Trigger[])"/> will set pos and rot of part if NOT installed.
+        /// Represents if <see cref="Part.initPart(PartSaveInfo, TriggerData, PartSettings, Bolt[])"/> will set pos and rot of part if NOT installed.
         /// </summary>
         public bool setPositionRotationOnInitialisePart = true;
         /// <summary>
@@ -40,7 +40,7 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public Collider disassembleCollider = null;
         /// <summary>
-        /// Represents the assemble collider. collider must be of IsTrigger. if null, logic uses <see cref="Part.installPointColliders"/> to determine if part is in trigger. otherwise logic uses this collider to determine if part is in trigger.
+        /// Represents the assemble collider. collider must be of IsTrigger. if not null, logic uses this collider to determine if part is in trigger.
         /// </summary>
         public Collider assembleCollider = null;
         /// <summary>
@@ -48,9 +48,13 @@ namespace TommoJProductions.ModApi.Attachable
         /// </summary>
         public bool installEitherDirection = false;
         /// <summary>
-        /// Represents the tightness threshold. 0.25f - 1. at what percent of all bolt tightness does the part trigger disable. 0 = triggers will disable at 25% of total tightness. 1 = triggers will disable at 100% of total tightness (tightness == maxTightness)
+        /// Represents the tightness threshold. (Range: 0.25f - 1f). at what percent of all bolt tightness does the part trigger disable. 0.25f = triggers will disable at 25% of total tightness. 1 = triggers will disable at 100% of total tightness (tightness == maxTightness)
         /// </summary>
         public float tightnessThreshold = 0.3f;
+        /// <summary>
+        /// Represents if the part should autoSave.
+        /// </summary>
+        public bool autoSave = false;
 
         /// <summary>
         /// Initializes a new instance of part settings.
@@ -75,6 +79,7 @@ namespace TommoJProductions.ModApi.Attachable
                 assembleCollider = s.assembleCollider;
                 installEitherDirection = s.installEitherDirection;
                 tightnessThreshold = s.tightnessThreshold;
+                autoSave = s.autoSave;
             }
         }
     }
