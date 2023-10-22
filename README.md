@@ -1,39 +1,46 @@
-# Introduction
- ModAPI is an application programming interface designed for the My Summer Car Modding Community. It allows the developer
- to easily implement a car part that can be attached to the satsuma (or anything really) with little effort. It also allows 
- easy access to common modding items, i.e common playmaker variables. 
+# ModAPI
+ A Moding API for My Summer Car. Allows a mod developer easily implement an attachable part that can be installed to the satsuma (or anything really) with little effort. 
+ - Many settings for parts.
+ - Many parts can be installed to many install points.
+ - A part can be installed to many install points.
+ - Many parts can be installed to one install point.
+ - Parts can be installed in different ways, rigid_del, rigid_kinematic or joint.
+ - Easy access to common modding items, i.e common playmaker variables.
+ - Many extention methods
+ - Cached object references
+ - Autosave feature that saves data (Part, Bolts) just like My Summer Car. Open "ModAPISaveData.txt" in MSCEditor!
+ - Modders can save their own data to this save file as well.
+ - Bolts have been implemented.
+ - Bolts can be linked to either the part itself or a trigger.
+ - Bolt tightness can effect the breakforce of the linked part.
+ - New bolt type, "BoltWithNut". same as a bolt, but has a nut placed on the oposite side of the bolt.
+ - Packages have been implemented.
+ - New Package Type: CardboardBox. Part/s can be packed inside a cardboard box. Press the "Use" button to open the package! Apon opening, the cardboardbox turns into a folding box and plays a sound. The same as the packages found at the shop when purchased parts.
+ - New Package Type: Crate. Part/s can be packed inside a crate. The player will need to pry each corner of a panel on the crate to pry it off. Once a panel has been pryed off, the player will be able to retrieve the packed parts.
+ - INGAME DEV GUI for configuring parts / triggers / bolts.
+ - Matrix Collision GUI for viewing what layer collides with what. 
  
-<h3>Version Definition</h3>
- 
- [Major].[Minor].[Revision].[Build]
- 
- EG => 1.0.100.16
- 
- [Major] => Major number.
- 
- [Minor] => Minor number.
- 
- [Revision] => Days since the date: 01.01.2022.
- 
- [Build] => How many times built that day.
+ # Installation
+ 1. Download the latest version of ModAPI
+ 2. Unpack the folder
+ 3. Copy "Release/ModApi.dll" to "Mods/References" folder.
 
- 1.0.100.16 
-	
- 	=> equals version 1.0
-
- 	=> built on 11.04.2022
-
- 	=> built 16 times that day.
+ [Modders] 
+ Get XML comments on ModAPI members.
+ - Copy "ModAPI.xml" to "Mods/References" folder.
  
-# Getting Started
+ # Mods That use ModAPI
 
-- See Turbo mod to have a mad look at how to implement the new mod api v0.1.4.* structure. its a lot easier and straight forward. here's the link: see "<https://github.com/tommojphillips/TurboMod"
+- See [Jerry Holder Mod](https://github.com/tommojphillips/JerryCanHolderMod) to have a look at how to implement the new ModAPI v0.2.* structure. its a lot easier and straight forward.
 
-- see secure spare tire mod to see how modapi (v0.1.4.2) is implemented in this mod! see "https://github.com/tommojphillips/SecureSpareTire"
+- See [Secure Spare Tire Mod](https://github.com/tommojphillips/SecureSpareTire) to see how ModAPI v0.2.* is implemented in this mod!
 
-- Secure Car jack is a mod that uses <i>mod api v0.1.4.2</i> gives a good representation on how to change/add logic to the assemble/disasemmble logic. I wanted Secure Car Jack to not allow the player to install/secure the jack unless it is folded. so i had to add logic to display an interaction tip to let the player know. See "https://github.com/tommojphillips/SecureCarJack"  
+- See [Secure Car Jack Mod](https://github.com/tommojphillips/SecureCarJack) is a mod that uses ModAPI v0.2.* gives a good representation on how to change/add logic to the assemble/disasemmble logic. I wanted Secure Car Jack to not allow the player to install/secure the jack unless it is folded. so i had to add logic to display an interaction tip to let the player know.  
 
-- [Debugging with an API Referenced by your mod](https://github.com/piotrulos/MSCModLoader/wiki/Debugging-with-an-API-referenced-by-your-mod).
+# Debugging with ModAPI
+
+- See [Debugging with an API Referenced by your mod](https://github.com/piotrulos/MSCModLoader/wiki/Debugging-with-an-API-referenced-by-your-mod).
+- Make sure to Copy The debug version of ModApi.dll to "Mods/Refernces".
 
 
 #### [Obsolete] everything below is outdated infomation and won't exactly work from v0.1.4.1 and on-wards.
