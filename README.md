@@ -20,7 +20,7 @@
  - INGAME DEV GUI for configuring parts / triggers / bolts.
  - Added [Matrix Layer Collision GUI](https://github.com/tommojphillips/ModAPI/wiki/Matrix-Layer-Collision-UI) for viewing what layer collides with what. 
  
- # Installation
+ ## Installation
  1. Download the latest version of ModAPI
  2. Unpack the folder
  3. Copy "Release/ModApi.dll" to "Mods/References" folder.
@@ -29,7 +29,7 @@
  Get XML comments on ModAPI members.
  - Copy "ModAPI.xml" to "Mods/References" folder.
  
- # Mods That use ModAPI
+ ## Examples
 
 - See [Jerry Holder Mod](https://github.com/tommojphillips/JerryCanHolderMod) to have a look at how to implement the new ModAPI v0.2.* structure. its a lot easier and straight forward.
 
@@ -37,11 +37,14 @@
 
 - See [Secure Car Jack Mod](https://github.com/tommojphillips/SecureCarJack) is a mod that uses ModAPI v0.2.* gives a good representation on how to change/add logic to the assemble/disasemmble logic. I wanted Secure Car Jack to not allow the player to install/secure the jack unless it is folded. so i had to add logic to display an interaction tip to let the player know.  
 
-# Debugging with ModAPI
+## Modding
+
+- Mod API [Documentation](https://github.com/tommojphillips/ModAPI/wiki)
+
+## Debugging with ModAPI
 
 - See [Debugging with an API Referenced by your mod](https://github.com/piotrulos/MSCModLoader/wiki/Debugging-with-an-API-referenced-by-your-mod).
 - Make sure to Copy The debug version of ModApi.dll to "Mods/Refernces".
-
 
 #### [Obsolete] everything below is outdated infomation and won't exactly work from v0.1.4.1 and on-wards.
 
