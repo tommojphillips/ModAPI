@@ -18,7 +18,6 @@
  - New Package Type: CardboardBox. Part/s can be packed inside a cardboard box. Press the "Use" button to open the package! Apon opening, the cardboardbox turns into a folding box and plays a sound. The same as the packages found at the shop when purchased parts.
  - New Package Type: Crate. Part/s can be packed inside a crate. The player will need to pry each corner of a panel on the crate to pry it off. Once a panel has been pryed off, the player will be able to retrieve the packed parts.
  - INGAME DEV GUI for configuring parts / triggers / bolts.
- - Added [Matrix Layer Collision GUI](https://github.com/tommojphillips/ModAPI/wiki/Matrix-Layer-Collision-UI) for viewing what layer collides with what. 
  
  ## Installation
  1. Download the latest version of ModAPI
@@ -40,6 +39,7 @@
 ## Modding
 
 - Mod API [Documentation](https://github.com/tommojphillips/ModAPI/wiki)
+- [Matrix Layer Collision GUI](https://github.com/tommojphillips/ModAPI/wiki/Matrix-Layer-Collision-UI)
 
 ## Debugging with ModAPI
 
