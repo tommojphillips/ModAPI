@@ -1,6 +1,6 @@
 ## ModAPI
 * A Moding API for My Summer Car. Allows a mod developer easily implement an attachable part that can be installed to the satsuma (or anything really) with little effort.
-* [Mod API Documentation](https://github.com/tommojphillips/ModAPI/wiki)
+* [Mod API Wiki Home](https://github.com/tommojphillips/ModAPI/wiki)
   
   ### Features
  - Lots of settings for part, trigger, bolt.
